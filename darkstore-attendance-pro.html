@@ -73,7 +73,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .dash-date{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2);margin-top:3px}
 .btn-refresh{background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-size:12px;font-weight:600;padding:8px 14px;cursor:pointer;transition:all .2s;font-family:'Outfit',sans-serif;display:flex;align-items:center;gap:6px}
 .btn-refresh:hover{border-color:var(--accent);color:var(--accent)}
-.dash-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.dash-kpi{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
 .kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
 .kpi.present::before{background:var(--accent2)}
@@ -82,7 +82,8 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .kpi.total::before{background:var(--accent)}
 .kpi-num{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700;line-height:1;margin-bottom:4px}
 .kpi.present .kpi-num{color:var(--accent2)}.kpi.absent .kpi-num{color:var(--accent3)}
-.kpi.leave .kpi-num{color:var(--warn)}.kpi.total .kpi-num{color:var(--accent)}
+.kpi.leave .kpi-num{color:var(--warn)}.kpi.total .kpi-num{color:var(--accent)}.kpi.weekoff .kpi-num{color:var(--accent)}
+.kpi.weekoff::before{background:var(--accent)}
 .kpi-label{font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.8px}
 .kpi-sub{font-size:10px;color:var(--text3);margin-top:3px}
 .dash-sites{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
@@ -312,7 +313,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
 @media(max-width:480px){
   .date-row{grid-template-columns:1fr}
   .stats-grid{grid-template-columns:repeat(2,1fr)}
-  .dash-kpi{grid-template-columns:repeat(2,1fr)}
+  .dash-kpi{grid-template-columns:repeat(3,1fr)}
   .dash-sites{grid-template-columns:1fr}
   .nav-tabs .nav-tab{padding:6px 8px;font-size:11px}
   .suc-actions{flex-direction:column}
@@ -392,6 +393,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
       <div class="kpi total"><div class="kpi-num" id="kpiTotal">0</div><div class="kpi-label">Total Staff</div><div class="kpi-sub">across all sites</div></div>
       <div class="kpi present"><div class="kpi-num" id="kpiPresent">0</div><div class="kpi-label">Present</div><div class="kpi-sub" id="kpiPresentPct">—</div></div>
       <div class="kpi absent"><div class="kpi-num" id="kpiAbsent">0</div><div class="kpi-label">Absent</div><div class="kpi-sub" id="kpiAbsentPct">—</div></div>
+      <div class="kpi weekoff"><div class="kpi-num" id="kpiWeekOff">0</div><div class="kpi-label">Week Off</div><div class="kpi-sub">scheduled off</div></div>
       <div class="kpi leave"><div class="kpi-num" id="kpiLeave">0</div><div class="kpi-label">On Leave</div><div class="kpi-sub">sick + annual + auth</div></div>
     </div>
     <div id="dashLate" class="dash-late" style="display:none">
@@ -832,18 +834,20 @@ function buildDashboard(){
   const todayRecs=history.filter(r=>`${r.day}|${r.month}|${r.year}`===filterKey);
 
   // KPI counts
-  let totStaff=0,totPresent=0,totAbsent=0,totLeave=0;
+  let totStaff=0,totPresent=0,totAbsent=0,totWeekOff=0,totLeave=0;
   todayRecs.forEach(r=>{
     r.rows.forEach(row=>{
       totStaff++;
       if(row.status==='Present') totPresent++;
       else if(row.status==='Absent') totAbsent++;
+      else if(row.status==='Week Off') totWeekOff++;
       else totLeave++;
     });
   });
   document.getElementById('kpiTotal').textContent=totStaff;
   document.getElementById('kpiPresent').textContent=totPresent;
   document.getElementById('kpiAbsent').textContent=totAbsent;
+  document.getElementById('kpiWeekOff').textContent=totWeekOff;
   document.getElementById('kpiLeave').textContent=totLeave;
   document.getElementById('kpiPresentPct').textContent=totStaff?Math.round(totPresent/totStaff*100)+'% attendance rate':'—';
   document.getElementById('kpiAbsentPct').textContent=totStaff?Math.round(totAbsent/totStaff*100)+'% absent rate':'—';
@@ -876,6 +880,8 @@ function buildDashboard(){
     const submitted=siteRecs.reduce((a,r)=>a+r.rows.length,0);
     const present=siteRecs.reduce((a,r)=>a+r.rows.filter(x=>x.status==='Present').length,0);
     const absent=siteRecs.reduce((a,r)=>a+r.rows.filter(x=>x.status==='Absent').length,0);
+    const weekoff=siteRecs.reduce((a,r)=>a+r.rows.filter(x=>x.status==='Week Off').length,0);
+    const onleave=siteRecs.reduce((a,r)=>a+r.rows.filter(x=>['Sick Leave','Annual Leave','Authorize Leave'].includes(x.status)).length,0);
     const pct=Math.round(submitted/totalStaff*100);
     const shifts=siteRecs.map(r=>'Shift '+r.shift).join(', ');
     const isDup=siteRecs.some(r=>r.isDuplicate);
@@ -902,6 +908,8 @@ function buildDashboard(){
       <div class="site-counts">
         <div class="site-count">✅ <span>${present}</span> Present</div>
         <div class="site-count">❌ <span>${absent}</span> Absent</div>
+        <div class="site-count">📅 <span>${weekoff}</span> Week Off</div>
+        <div class="site-count">🌿 <span>${onleave}</span> Leave</div>
       </div>`;
     sg.appendChild(div);
   });
@@ -977,17 +985,7 @@ function selectShift(val,el){
   const site=document.getElementById('siteSelect').value;
   const day=document.getElementById('daySelect').value;
   const month=MONTHS[parseInt(document.getElementById('monthSelect').value)];
-  const year=new Date().getFullYear();
-  if(site && day && month){
-    const key=getSubmitKey(site,val,day,month,year);
-    const dupEl=document.getElementById('dupWarning');
-    if(wasSubmitted(key)){
-      dupEl.classList.add('show');
-      dupEl.innerHTML='🚫 <strong>Shift '+val+' already submitted for '+site+' today.</strong> Please select a different shift.';
-    } else {
-      dupEl.classList.remove('show');
-    }
-  }
+  // Shift always open — no blocking
 }
 
 // ─── DAYS ───
@@ -1134,17 +1132,7 @@ async function submitForm(){
   const monthName=MONTHS[parseInt(month)];
   const key=getSubmitKey(site,selectedShift,day,monthName,year);
 
-  // HARD BLOCK — same site+shift+day already submitted (per device)
-  // Other shifts (A,B,C) remain open independently
-  if(wasSubmitted(key)){
-    showToast('🚫 Shift '+selectedShift+' for '+site+' already submitted today!','terr');
-    const dupEl=document.getElementById('dupWarning');
-    dupEl.classList.add('show');
-    dupEl.innerHTML='🚫 <strong>Shift '+selectedShift+' already submitted for '+site+' today.</strong> Shift B and C can still be submitted separately.';
-    document.getElementById('submitBtn').disabled=false;
-    document.getElementById('submitBtn').textContent='Submit Attendance →';
-    return;
-  }
+  // No shift blocking — all shifts always open. Only individual staff locked per day.
 
   const ts=new Date().toISOString();
   const rows=[];
