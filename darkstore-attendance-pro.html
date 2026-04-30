@@ -526,7 +526,14 @@ select:disabled{opacity:.3;cursor:not-allowed}
         <div id="statusErr" style="display:none;font-size:11px;color:var(--accent3);margin-top:8px">Set status for all staff</div>
       </div>
 
-      <input type="hidden" id="scriptUrl" value="https://script.google.com/macros/s/AKfycbyo6FnaV0DgC9IaWGK7tSXvZxO4SRxuxXI03E2Gezr_s-97043bjW_XfbiCfpzvM65W/exec"/>
+      <div class="card" style="margin-bottom:10px;border-color:rgba(167,139,250,.25);background:rgba(167,139,250,.04)">
+        <div class="card-title"><div class="ctag">🔗</div>Google Script URL <span style="font-size:9px;font-weight:400;color:var(--text3);margin-left:6px;text-transform:none;letter-spacing:0">saved automatically</span></div>
+        <div class="field" style="margin-bottom:0">
+          <input type="text" id="scriptUrl" placeholder="Paste your Apps Script /exec URL here…" style="font-size:12px;font-family:'JetBrains Mono',monospace" oninput="saveScriptUrl()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="https://script.google.com/macros/s/AKfycbxtvVrpdTcwCU2xLMSk53I2m3lVO5YvpM_Y-cETfBSwNEKhKt6OnnpfVt4l4ftm19WS/exec"/>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">Deploy → Web App → Execute as <strong style="color:var(--text2)">Me</strong>, Access: <strong style="color:var(--text2)">Anyone</strong></div>
+        </div>
+      </div>
+      <input type="hidden" id="scriptUrlHidden"/>
       <div class="card" style="margin-top:2px">
         <div class="card-title"><div class="ctag">&#128100;</div>Submitted By</div>
         <div class="field" id="f-submittedby">
@@ -738,6 +745,16 @@ const STAT_CLS     = {Present:"present",Absent:"absent","Week Off":"weekoff","Si
 
 let selectedShift=null, checkedStaff=new Set(), currentSiteStaff=[], loggedInSite=null, lastSubmittedRows=[];
 
+// ─── SCRIPT URL HELPERS ───
+function saveScriptUrl(){
+  const val = document.getElementById('scriptUrl').value.trim();
+  if(val) localStorage.setItem('ds_script_url', val);
+}
+function loadScriptUrl(){
+  const saved = localStorage.getItem('ds_script_url') || '';
+  if(saved) document.getElementById('scriptUrl').value = saved;
+}
+
 // ─── LOCAL STORAGE HELPERS ───
 function getHistory(){ try{ return JSON.parse(localStorage.getItem('ds_history')||'[]'); }catch(e){return [];} }
 function saveHistory(h){ localStorage.setItem('ds_history', JSON.stringify(h)); }
@@ -745,21 +762,40 @@ function getSubmitKey(site,shift,day,month,year){ return `${site}|${shift}|${day
 function wasSubmitted(key){ const h=getHistory(); return h.some(r=>r.key===key); }
 
 // ─── MARKED TODAY HELPER ───
+// ── Fetch marked staff from Google Sheet (shared across all devices) ──
+let markedStaffCache = {}; // cache per site+day
+async function fetchMarkedStaff(site, day, month, year) {
+  const cacheKey = site+'|'+day+'|'+month+'|'+year;
+  const scriptUrl = (document.getElementById('scriptUrl').value || '').trim();
+  if(!scriptUrl || !scriptUrl.includes('script.google.com')) {
+    // No valid URL — fallback to localStorage
+    return getMarkedStaffToday(site, day, month, year);
+  }
+  try {
+    const params = new URLSearchParams({ action:'check', site, day, month, year });
+    const resp = await fetch(scriptUrl + '?' + params.toString());
+    const data = await resp.json();
+    if (data.result === 'success') {
+      const marked = new Set(data.marked.map(m => m.staffName));
+      markedStaffCache[cacheKey] = marked;
+      return marked;
+    }
+  } catch(e) {
+    console.log('fetchMarkedStaff failed, using localStorage fallback');
+  }
+  return getMarkedStaffToday(site, day, month, year);
+}
+
 function getMarkedStaffToday(site, day, month, year) {
-  // Returns staff already submitted in ANY shift for this site+day
+  // Sync fallback from localStorage only
   const hist = getHistory();
   const marked = new Set();
   hist.forEach(r => {
-    if (r.site === site && r.day === parseInt(day) && r.month === month && String(r.year) === String(year)) {
+    if (r.site===site && r.day===parseInt(day) && r.month===month && String(r.year)===String(year)) {
       r.rows.forEach(row => marked.add(row.staffName));
     }
   });
   return marked;
-}
-
-function isShiftSubmitted(site, shift, day, month, year) {
-  const key = getSubmitKey(site, shift, day, month, year);
-  return wasSubmitted(key);
 }
 
 // ─── TOAST ───
@@ -832,6 +868,8 @@ function buildDashboard(){
   const history=getHistory();
   const filterKey=`${filterDate.getDate()}|${MONTHS[filterDate.getMonth()+1]}|${filterDate.getFullYear()}`;
   const todayRecs=history.filter(r=>`${r.day}|${r.month}|${r.year}`===filterKey);
+  // Also fetch from sheet for cross-device data
+  fetchDashboardFromSheet(filterDate);
 
   // KPI counts
   let totStaff=0,totPresent=0,totAbsent=0,totWeekOff=0,totLeave=0;
@@ -915,8 +953,93 @@ function buildDashboard(){
   });
 }
 
+// ─── FETCH DASHBOARD FROM SHEET (cross-device) ───
+async function fetchDashboardFromSheet(filterDate) {
+  const scriptUrl = (document.getElementById('scriptUrl')?.value || '').trim();
+  if (!scriptUrl || !scriptUrl.includes('script.google.com')) return;
+  const day   = filterDate.getDate();
+  const month = MONTHS[filterDate.getMonth()+1];
+  const year  = filterDate.getFullYear();
+  try {
+    const params = new URLSearchParams({ action:'read', day, month, year });
+    const resp   = await fetch(scriptUrl + '?' + params.toString(), { mode:'cors' });
+    const data   = await resp.json();
+    if (data.result !== 'success' || !data.records.length) return;
+
+    // Group records by site
+    const bysite = {};
+    data.records.forEach(r => {
+      if (!bysite[r.site]) bysite[r.site] = [];
+      bysite[r.site].push(r);
+    });
+
+    // Rebuild KPI from sheet data
+    let totStaff=0,totPresent=0,totAbsent=0,totWeekOff=0,totLeave=0;
+    data.records.forEach(r => {
+      totStaff++;
+      if(r.status==='Present') totPresent++;
+      else if(r.status==='Absent') totAbsent++;
+      else if(r.status==='Week Off') totWeekOff++;
+      else totLeave++;
+    });
+    document.getElementById('kpiTotal').textContent    = totStaff;
+    document.getElementById('kpiPresent').textContent  = totPresent;
+    document.getElementById('kpiAbsent').textContent   = totAbsent;
+    document.getElementById('kpiWeekOff').textContent  = totWeekOff;
+    document.getElementById('kpiLeave').textContent    = totLeave;
+    document.getElementById('kpiPresentPct').textContent = totStaff?Math.round(totPresent/totStaff*100)+'% attendance rate':'—';
+    document.getElementById('kpiAbsentPct').textContent  = totStaff?Math.round(totAbsent/totStaff*100)+'% absent rate':'—';
+
+    // Rebuild site cards from sheet data
+    const sg = document.getElementById('dashSites');
+    sg.innerHTML = '';
+    Object.keys(STAFF).forEach(site => {
+      const recs = bysite[site];
+      if (!recs || !recs.length) return;
+      const totalStaff = STAFF[site].length;
+      const present  = recs.filter(x=>x.status==='Present').length;
+      const absent   = recs.filter(x=>x.status==='Absent').length;
+      const weekoff  = recs.filter(x=>x.status==='Week Off').length;
+      const onleave  = recs.filter(x=>['Sick Leave','Annual Leave','Authorize Leave'].includes(x.status)).length;
+      const pct      = Math.round(recs.length/totalStaff*100);
+      const statusLabel = pct>=100?'submitted':pct>0?'partial':'pending';
+
+      // Per shift breakdown
+      const shiftBreakdown = ['A','B','C'].map(sh => {
+        const shRecs = recs.filter(r=>r.shift===sh);
+        if (!shRecs.length) return `<span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.04);color:var(--text3)">Shift ${sh}: —</span>`;
+        const p2 = shRecs.filter(x=>x.status==='Present').length;
+        const a2 = shRecs.filter(x=>x.status==='Absent').length;
+        const by = shRecs[0].submittedBy ? ` · ${shRecs[0].submittedBy}` : '';
+        return `<span style="font-size:10px;padding:2px 8px;border-radius:5px;background:rgba(0,255,136,.08);color:var(--accent2);border:1px solid rgba(0,255,136,.15)">Shift ${sh}: ✅${p2} ❌${a2}${by}</span>`;
+      }).join('');
+
+      const div = document.createElement('div');
+      div.className = 'site-card';
+      div.onclick = ()=>{ document.getElementById('histSiteFilter').value=site; showPage('history'); };
+      div.innerHTML = `
+        <div class="site-card-top">
+          <div class="site-name">${site}</div>
+          <span class="site-status ${statusLabel}">${statusLabel.toUpperCase()}</span>
+        </div>
+        <div class="site-bar-wrap"><div class="site-bar" style="width:${Math.min(pct,100)}%"></div></div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">${shiftBreakdown}</div>
+        <div class="site-counts">
+          <div class="site-count">✅ <span>${present}</span> Present</div>
+          <div class="site-count">❌ <span>${absent}</span> Absent</div>
+          <div class="site-count">📅 <span>${weekoff}</span> Week Off</div>
+          <div class="site-count">🌿 <span>${onleave}</span> Leave</div>
+        </div>`;
+      sg.appendChild(div);
+    });
+  } catch(e) {
+    console.log('Sheet fetch failed:', e);
+  }
+}
+
 // ─── INIT FORM ───
 window.onload=()=>{
+  loadScriptUrl();
   const now=new Date();
   document.getElementById('monthSelect').value=now.getMonth()+1;
   updateDays();
@@ -1004,15 +1127,33 @@ function updateDays(){
 }
 
 // ─── STAFF LIST ───
-function renderStaffList(list){
-  const ul=document.getElementById('staffList');
-  ul.innerHTML='';
-  if(!list.length){ul.innerHTML='<div class="empty-s"><div>🔍</div>No staff found</div>';return;}
+async function renderStaffListAsync(list){
   const site=document.getElementById('siteSelect').value;
   const day=document.getElementById('daySelect').value;
   const month=MONTHS[parseInt(document.getElementById('monthSelect').value)];
   const year=new Date().getFullYear();
-  const markedToday = (site && day && month) ? getMarkedStaffToday(site,day,month,year) : new Set();
+  const markedToday = (site && day && month) ? await fetchMarkedStaff(site,day,month,year) : new Set();
+  renderStaffListWithMarked(list, markedToday);
+}
+
+function renderStaffList(list){
+  const site=document.getElementById('siteSelect').value;
+  const day=document.getElementById('daySelect').value;
+  const month=MONTHS[parseInt(document.getElementById('monthSelect').value)];
+  const year=new Date().getFullYear();
+  // Show list immediately with localStorage data, then refresh with server data
+  const markedLocal = (site && day && month) ? getMarkedStaffToday(site,day,month,year) : new Set();
+  renderStaffListWithMarked(list, markedLocal);
+  // Then fetch real data from sheet
+  if(site && day && month){
+    fetchMarkedStaff(site,day,month,year).then(markedToday => renderStaffListWithMarked(list, markedToday));
+  }
+}
+
+function renderStaffListWithMarked(list, markedToday){
+  const ul=document.getElementById('staffList');
+  ul.innerHTML='';
+  if(!list.length){ul.innerHTML='<div class="empty-s"><div>🔍</div>No staff found</div>';return;}
   list.forEach(s=>{
     const isHK=s.designation==='Housekeeping';
     const isLocked=markedToday.has(s.name);
@@ -1111,7 +1252,13 @@ async function submitForm(){
   const site=document.getElementById('siteSelect').value;
   const month=document.getElementById('monthSelect').value;
   const day=document.getElementById('daySelect').value;
-  const scriptUrl=document.getElementById('scriptUrl').value.trim();
+  const scriptUrl=(document.getElementById('scriptUrl').value||'').trim();
+  if(!scriptUrl||!scriptUrl.includes('script.google.com')){
+    showToast('⚠️ Please paste your Google Script URL first','terr');
+    document.getElementById('scriptUrl').focus();
+    document.getElementById('scriptUrl').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   if(!site){setErr('f-site');valid=false;}
   if(!month){setErr('f-month');valid=false;}
   if(!day){setErr('f-day');valid=false;}
