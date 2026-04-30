@@ -182,10 +182,12 @@ select:disabled{opacity:.3;cursor:not-allowed}
 .staff-item-name{font-size:13px;font-weight:500;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .staff-item-meta{font-size:11px;color:var(--text2);white-space:nowrap}
 .hk-tag{font-size:10px;background:rgba(255,179,71,.1);color:var(--shift-a);border-radius:5px;padding:2px 7px;font-weight:700}
-.staff-item.locked{opacity:.45;cursor:not-allowed;border-color:transparent !important;background:var(--card2) !important}
-.staff-item.locked:hover{border-color:transparent !important;background:var(--card2) !important;transform:none}
+.staff-item.locked{cursor:not-allowed;border-color:rgba(255,77,109,.35) !important;background:rgba(255,77,109,.06) !important}
+.staff-item.locked:hover{border-color:rgba(255,77,109,.35) !important;background:rgba(255,77,109,.06) !important;transform:none}
 .lock-icon{font-size:13px;flex-shrink:0}
-.lock-badge{font-size:10px;background:rgba(255,77,109,.1);color:var(--accent3);border-radius:5px;padding:2px 7px;font-weight:700;white-space:nowrap}
+.lock-badge{font-size:10px;background:rgba(255,77,109,.15);color:var(--accent3);border-radius:5px;padding:3px 9px;font-weight:700;white-space:nowrap;border:1px solid rgba(255,77,109,.3)}
+.lock-name{font-size:13px;font-weight:500;color:var(--accent3);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:line-through;opacity:.7}
+.lock-meta{font-size:11px;color:var(--text3);white-space:nowrap}
 .sel-count{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:12px;border:1px solid var(--border2);color:var(--text2);transition:all .2s}
 .sel-count.has{background:rgba(0,212,255,.07);border-color:rgba(0,212,255,.2);color:var(--accent)}
 
@@ -526,7 +528,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
         <div id="statusErr" style="display:none;font-size:11px;color:var(--accent3);margin-top:8px">Set status for all staff</div>
       </div>
 
-      <input type="hidden" id="scriptUrl" value="https://script.google.com/macros/s/AKfycbxASh7W6QkvowOR95sbTGDKJnsyGKuU36ipfz0BQ3r0suLV7J-2CREJxuXPexJ0fGle/exec"/>
+      <input type="hidden" id="scriptUrl" value="https://script.google.com/macros/s/AKfycbwU-9MbtvwLTSkw-cIqhgnFtkKrQ-QO8F6fFyo2NbLL4sd5TBP4-5dLqT82wXLP1OA/exec"/>
       <div class="card" style="margin-top:2px">
         <div class="card-title"><div class="ctag">&#128100;</div>Submitted By</div>
         <div class="field" id="f-submittedby">
@@ -1119,6 +1121,9 @@ function updateDays(){
   if(prev&&parseInt(prev)<=days)ds.value=prev;
   clearErr('f-month');
   checkLateAndDuplicate();
+  // Re-render staff list with fresh lock data from sheet
+  const site2=document.getElementById('siteSelect').value;
+  if(site2 && currentSiteStaff.length) renderStaffList(currentSiteStaff);
 }
 
 // ─── STAFF LIST ───
@@ -1156,7 +1161,7 @@ function renderStaffListWithMarked(list, markedToday){
     div.dataset.name=s.name;
     if(isLocked){
       div.className='staff-item locked';
-      div.innerHTML=`<div class="lock-icon">🔒</div><div class="custom-cb" style="opacity:.3"></div><div class="staff-item-name" style="color:var(--text3)">${s.name}</div><span class="staff-item-meta">${s.agency}</span>${isHK?'<span class="hk-tag">HK</span>':''}<span class="lock-badge">Done today</span>`;
+      div.innerHTML=`<div class="lock-icon">🔒</div><div class="custom-cb" style="opacity:.2;border-color:var(--accent3)"></div><div class="lock-name">${s.name}</div><span class="lock-meta">${s.agency}</span>${isHK?'<span class="hk-tag">HK</span>':''}<span class="lock-badge">✓ Done Today</span>`;
     } else {
       div.className='staff-item'+(checkedStaff.has(s.name)?' checked':'');
       div.innerHTML=`<input type="checkbox" ${checkedStaff.has(s.name)?'checked':''}><div class="custom-cb"><svg viewBox="0 0 12 9" fill="none" stroke="#070b12" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4.5 4.5,8 11,1"/></svg></div><div class="staff-item-name">${s.name}</div><span class="staff-item-meta">${s.agency}</span>${isHK?'<span class="hk-tag">HK</span>':''}`;
@@ -1172,8 +1177,8 @@ function renderStaffListWithMarked(list, markedToday){
     if(!availEl){
       const info = document.createElement('div');
       info.id='lockedInfo';
-      info.style.cssText='font-size:11px;color:var(--accent3);margin-bottom:8px;padding:6px 10px;background:rgba(255,77,109,.06);border-radius:7px;border:1px solid rgba(255,77,109,.15)';
-      info.textContent='🔒 '+lockedCount+' staff already marked today — greyed out';
+      info.style.cssText='font-size:12px;color:var(--accent3);margin-bottom:10px;padding:10px 14px;background:rgba(255,77,109,.08);border-radius:9px;border:1px solid rgba(255,77,109,.25);font-weight:600;display:flex;align-items:center;gap:8px';
+      info.innerHTML='🔒 <span>'+lockedCount+' staff already submitted today — shown in red, cannot be selected again</span>';
       countEl.parentNode.insertBefore(info, countEl);
     }
   }
