@@ -525,7 +525,15 @@ select:disabled{opacity:.3;cursor:not-allowed}
       </div>
 
       <input type="hidden" id="scriptUrl" value="https://script.google.com/macros/s/AKfycbyo6FnaV0DgC9IaWGK7tSXvZxO4SRxuxXI03E2Gezr_s-97043bjW_XfbiCfpzvM65W/exec"/>
-      <button class="btn-submit" id="submitBtn" onclick="submitForm()">Submit Attendance →</button>
+      <div class="card" style="margin-top:2px">
+        <div class="card-title"><div class="ctag">&#128100;</div>Submitted By</div>
+        <div class="field" id="f-submittedby">
+          <label class="lbl">Your Name <span class="req">*</span></label>
+          <input type="text" id="submittedBy" placeholder="Enter your name (TL or staff name)&hellip;"/>
+          <span class="err">Please enter your name</span>
+        </div>
+      </div>
+      <button class="btn-submit" id="submitBtn" onclick="submitForm()">Submit Attendance &rarr;</button>
     </div>
   </div>
 
@@ -736,6 +744,7 @@ function wasSubmitted(key){ const h=getHistory(); return h.some(r=>r.key===key);
 
 // ─── MARKED TODAY HELPER ───
 function getMarkedStaffToday(site, day, month, year) {
+  // Returns staff already submitted in ANY shift for this site+day
   const hist = getHistory();
   const marked = new Set();
   hist.forEach(r => {
@@ -744,6 +753,11 @@ function getMarkedStaffToday(site, day, month, year) {
     }
   });
   return marked;
+}
+
+function isShiftSubmitted(site, shift, day, month, year) {
+  const key = getSubmitKey(site, shift, day, month, year);
+  return wasSubmitted(key);
 }
 
 // ─── TOAST ───
@@ -869,17 +883,25 @@ function buildDashboard(){
     const div=document.createElement('div');
     div.className='site-card';
     div.onclick=()=>{ document.getElementById('histSiteFilter').value=site; showPage('history'); };
+    // Per-shift breakdown
+    const shiftBreakdown=['A','B','C'].map(sh=>{
+      const shRec=siteRecs.find(r=>r.shift===sh);
+      if(!shRec) return `<span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.04);color:var(--text3)">Shift ${sh}: —</span>`;
+      const p=shRec.rows.filter(x=>x.status==='Present').length;
+      const a=shRec.rows.filter(x=>x.status==='Absent').length;
+      const by=shRec.submittedBy?` · ${shRec.submittedBy}`:'';
+      return `<span style="font-size:10px;padding:2px 8px;border-radius:5px;background:rgba(0,255,136,.08);color:var(--accent2);border:1px solid rgba(0,255,136,.15)">Shift ${sh}: ✅${p} ❌${a}${by}</span>`;
+    }).join('');
     div.innerHTML=`
       <div class="site-card-top">
         <div class="site-name">${site}</div>
         <span class="site-status ${statusLabel}">${statusLabel.toUpperCase()}</span>
       </div>
       <div class="site-bar-wrap"><div class="site-bar" style="width:${Math.min(pct,100)}%"></div></div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">${shiftBreakdown}</div>
       <div class="site-counts">
         <div class="site-count">✅ <span>${present}</span> Present</div>
         <div class="site-count">❌ <span>${absent}</span> Absent</div>
-        <div class="site-count">📋 <span>${shifts}</span></div>
-        ${isDup?'<div class="site-count" style="color:var(--purple)">⚠️ Duplicate</div>':''}
       </div>`;
     sg.appendChild(div);
   });
@@ -951,6 +973,21 @@ function selectShift(val,el){
   selectedShift=val;
   document.getElementById('shiftErr').style.display='none';
   checkLateAndDuplicate();
+  // Check if this shift already submitted — show warning on shift card
+  const site=document.getElementById('siteSelect').value;
+  const day=document.getElementById('daySelect').value;
+  const month=MONTHS[parseInt(document.getElementById('monthSelect').value)];
+  const year=new Date().getFullYear();
+  if(site && day && month){
+    const key=getSubmitKey(site,val,day,month,year);
+    const dupEl=document.getElementById('dupWarning');
+    if(wasSubmitted(key)){
+      dupEl.classList.add('show');
+      dupEl.innerHTML='🚫 <strong>Shift '+val+' already submitted for '+site+' today.</strong> Please select a different shift.';
+    } else {
+      dupEl.classList.remove('show');
+    }
+  }
 }
 
 // ─── DAYS ───
@@ -1088,18 +1125,33 @@ async function submitForm(){
   else document.getElementById('statusErr').style.display='none';
   if(!valid){showToast('⚠️ Complete all required fields','terr');document.querySelector('.has-error')?.scrollIntoView({behavior:'smooth',block:'center'});return;}
 
+  // Submitted By validation
+  const submittedBy = document.getElementById('submittedBy')?.value.trim() || '';
+  if(!submittedBy){ setErr('f-submittedby'); showToast('⚠️ Please enter your name','terr'); return; }
+
   const now=new Date();
   const year=now.getFullYear();
   const monthName=MONTHS[parseInt(month)];
   const key=getSubmitKey(site,selectedShift,day,monthName,year);
-  const isDuplicate=wasSubmitted(key);
 
-  const ts=now.toISOString();
+  // HARD BLOCK — same site+shift+day already submitted (per device)
+  // Other shifts (A,B,C) remain open independently
+  if(wasSubmitted(key)){
+    showToast('🚫 Shift '+selectedShift+' for '+site+' already submitted today!','terr');
+    const dupEl=document.getElementById('dupWarning');
+    dupEl.classList.add('show');
+    dupEl.innerHTML='🚫 <strong>Shift '+selectedShift+' already submitted for '+site+' today.</strong> Shift B and C can still be submitted separately.';
+    document.getElementById('submitBtn').disabled=false;
+    document.getElementById('submitBtn').textContent='Submit Attendance →';
+    return;
+  }
+
+  const ts=new Date().toISOString();
   const rows=[];
   document.querySelectorAll('#statusTableBody tr').forEach(tr=>{
     const name=tr.dataset.name;
     const s=STAFF[site]?.find(x=>x.name===name)||{designation:'—',agency:'—'};
-    rows.push({staffName:name,designation:s.designation,agency:s.agency,status:tr.querySelector('.status-select').value,remarks:tr.querySelector('.remark-input').value.trim(),isDuplicate});
+    rows.push({staffName:name,designation:s.designation,agency:s.agency,status:tr.querySelector('.status-select').value,remarks:tr.querySelector('.remark-input').value.trim(),submittedBy});
   });
 
   const btn=document.getElementById('submitBtn');
@@ -1116,7 +1168,7 @@ async function submitForm(){
       shift:selectedShift, shiftName:SHIFTS[selectedShift].name,
       staffName:r.staffName, designation:r.designation,
       agency:r.agency, status:r.status, remarks:r.remarks,
-      isDuplicate:isDuplicate?'YES':'NO'
+      submittedBy:r.submittedBy||submittedBy
     });
     await new Promise(resolve=>{
       const img=new Image();
@@ -1127,7 +1179,7 @@ async function submitForm(){
   }
 
   // Save to local history
-  const histEntry={key,site,shift:selectedShift,day:parseInt(day),month:monthName,year,timestamp:ts,isDuplicate,rows};
+  const histEntry={key,site,shift:selectedShift,day:parseInt(day),month:monthName,year,timestamp:ts,isDuplicate:false,submittedBy,rows};
   const hist=getHistory();
   hist.unshift(histEntry);
   if(hist.length>100)hist.splice(100);
@@ -1137,10 +1189,9 @@ async function submitForm(){
   // Build success screen
   document.getElementById('formMain').style.display='none';
   document.getElementById('successView').style.display='block';
-  document.getElementById('sucSite').textContent=site+' · '+day+' '+monthName+' '+year;
+  document.getElementById('sucSite').textContent=site+' · '+day+' '+monthName+' '+year+' · Submitted by: '+submittedBy;
   document.getElementById('sucShift').textContent='Shift '+selectedShift+' — '+SHIFTS[selectedShift].name+' ('+SHIFTS[selectedShift].time+')';
-  const dupFlag=document.getElementById('sucDupFlag');
-  isDuplicate?dupFlag.style.display='inline-flex':dupFlag.style.display='none';
+  document.getElementById('sucDupFlag').style.display='none';
 
   // Stats
   const counts={};
@@ -1169,7 +1220,7 @@ async function submitForm(){
 
   setStep(4);
   window.scrollTo({top:0,behavior:'smooth'});
-  showToast(isDuplicate?'⚠️ Saved — flagged as duplicate':'✓ Attendance submitted!',isDuplicate?'twarn':'tok');
+  showToast('✓ Attendance submitted successfully!','tok');
 }
 
 // ─── PDF EXPORT ───
@@ -1239,6 +1290,8 @@ function resetForm(){
   document.querySelectorAll('.sc').forEach(c=>c.className='sc');
   document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);
   selectedShift=null; checkedStaff.clear();
+  const sbEl=document.getElementById('submittedBy'); if(sbEl) sbEl.value='';
+  clearErr('f-submittedby');
   document.getElementById('staffPanel').style.display=loggedInSite?'block':'none';
   document.getElementById('staffPlaceholder').style.display=loggedInSite?'none':'block';
   document.getElementById('staffSearch').value='';
