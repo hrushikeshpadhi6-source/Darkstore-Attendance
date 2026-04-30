@@ -1,163 +1,106 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Darkstore Attendance Pro</title>
+  <meta charset="UTF-8">
+  <title>Site Under Maintenance</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <style>
     body {
-      font-family: Arial;
-      background:#0b1018;
-      color:white;
-      padding:20px;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #070b12, #0f1724);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
     }
-    select, input, button {
-      padding:10px;
-      margin:5px;
-      border-radius:6px;
-      border:none;
+
+    .box {
+      max-width: 420px;
+      padding: 30px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 0 20px rgba(0,212,255,0.1);
     }
-    button {
-      background:#00d4ff;
-      cursor:pointer;
-      font-weight:bold;
+
+    h1 {
+      font-size: 26px;
+      margin-bottom: 10px;
     }
-    .locked {
-      opacity:0.4;
-      pointer-events:none;
+
+    p {
+      font-size: 14px;
+      color: #ccc;
+      line-height: 1.6;
     }
-    .card {
-      background:#141c28;
-      padding:15px;
-      border-radius:10px;
-      margin-bottom:15px;
+
+    .icon {
+      font-size: 42px;
+      margin-bottom: 15px;
+    }
+
+    .countdown {
+      margin-top: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #00d4ff;
+    }
+
+    .label {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 5px;
     }
   </style>
 </head>
 
 <body>
 
-<h2>📦 Darkstore Attendance</h2>
+  <div class="box">
+    <div class="icon">🚧</div>
 
-<div class="card">
-  <h3>Submit Attendance</h3>
+    <h1>Site Under Maintenance</h1>
 
-  <select id="site">
-    <option>Al Raha</option>
-    <option>Yas Mall</option>
-  </select>
+    <p>
+      Our system is currently under maintenance.<br><br>
+      We are working to improve your experience.<br>
+      We will notify you once the service is restored.
+    </p>
 
-  <input type="number" id="day" placeholder="Day">
-  <input type="number" id="month" placeholder="Month">
-  <input type="text" id="name" placeholder="Your Name">
-
-  <br>
-
-  <select id="staff"></select>
-
-  <select id="status">
-    <option>Present</option>
-    <option>Absent</option>
-    <option>Week Off</option>
-    <option>Sick Leave</option>
-  </select>
-
-  <button onclick="submitData()">Submit</button>
-</div>
-
-<div class="card">
-  <h3>📊 Dashboard</h3>
-  <p id="dashboard">Loading...</p>
-</div>
+    <div class="countdown" id="timer">Loading...</div>
+    <div class="label">Estimated time remaining</div>
+  </div>
 
 <script>
 
-const SCRIPT_URL = "PASTE_YOUR_WEB_APP_URL_HERE";
+  // ⏳ CHANGE THIS DATE/TIME
+  // Format: YYYY-MM-DDTHH:MM:SS
+  const endTime = new Date("2026-05-01T18:00:00").getTime();
 
-const STAFF = {
-  "Al Raha":["Aaron Ajuna","Mukesh Rajbanshi"],
-  "Yas Mall":["Allan Titus","Arnold Owingo"]
-};
+  function updateTimer() {
+    const now = new Date().getTime();
+    const distance = endTime - now;
 
-// Load staff dropdown
-function loadStaff() {
-  const site = document.getElementById("site").value;
-  const staffList = STAFF[site];
+    if (distance <= 0) {
+      document.getElementById("timer").innerHTML = "✅ We're Back!";
+      return;
+    }
 
-  const select = document.getElementById("staff");
-  select.innerHTML = "";
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((distance / (1000 * 60)) % 60);
+    const seconds = Math.floor((distance / 1000) % 60);
 
-  staffList.forEach(name => {
-    const option = document.createElement("option");
-    option.textContent = name;
-    select.appendChild(option);
-  });
-}
-
-// 🔒 Check locked staff
-async function getLocked() {
-  const site = document.getElementById("site").value;
-  const day = document.getElementById("day").value;
-  const month = document.getElementById("month").value;
-  const year = new Date().getFullYear();
-
-  const res = await fetch(`${SCRIPT_URL}?action=getMarked&site=${site}&day=${day}&month=${month}&year=${year}`);
-  return await res.json();
-}
-
-// 📝 Submit
-async function submitData() {
-  const site = document.getElementById("site").value;
-  const day = document.getElementById("day").value;
-  const month = document.getElementById("month").value;
-  const name = document.getElementById("name").value;
-  const staff = document.getElementById("staff").value;
-  const status = document.getElementById("status").value;
-
-  if (!day || !month || !name) {
-    alert("Fill all fields");
-    return;
+    document.getElementById("timer").innerHTML =
+      `${days}d ${hours}h ${minutes}m ${seconds}s`;
   }
 
-  const locked = await getLocked();
-
-  if (locked.includes(staff)) {
-    alert("❌ Already marked!");
-    return;
-  }
-
-  const payload = [{
-    site,
-    day,
-    month,
-    year: new Date().getFullYear(),
-    staff,
-    status,
-    shift: "A",
-    submittedBy: name
-  }];
-
-  await fetch(`${SCRIPT_URL}?action=submit&data=${encodeURIComponent(JSON.stringify(payload))}`);
-
-  alert("✅ Saved");
-  loadDashboard();
-}
-
-// 📊 Dashboard
-async function loadDashboard() {
-  const res = await fetch(`${SCRIPT_URL}?action=getDashboard`);
-  const data = await res.json();
-
-  document.getElementById("dashboard").innerText =
-    `Total: ${data.total} | Present: ${data.present} | Absent: ${data.absent}`;
-}
-
-// Init
-loadStaff();
-loadDashboard();
-
-document.getElementById("site").addEventListener("change", loadStaff);
-
-setInterval(loadDashboard, 30000);
+  setInterval(updateTimer, 1000);
+  updateTimer();
 
 </script>
 
