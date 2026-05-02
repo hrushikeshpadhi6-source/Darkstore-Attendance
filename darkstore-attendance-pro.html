@@ -528,7 +528,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
         <div id="statusErr" style="display:none;font-size:11px;color:var(--accent3);margin-top:8px">Set status for all staff</div>
       </div>
 
-      <input type="hidden" id="scriptUrl" value="https://script.google.com/macros/s/AKfycbwU-9MbtvwLTSkw-cIqhgnFtkKrQ-QO8F6fFyo2NbLL4sd5TBP4-5dLqT82wXLP1OA/exec"/>
+      <input type="hidden" id="scriptUrl" value="https://script.google.com/macros/s/AKfycbzqIRcrltQGzyEyk4PoUJUzlnPhrhqNUwkjPS8CjF2AkZ3se-t7p4DvoNvUYrS1rwMR/exec"/>
       <div class="card" style="margin-top:2px">
         <div class="card-title"><div class="ctag">&#128100;</div>Submitted By</div>
         <div class="field" id="f-submittedby">
@@ -739,6 +739,7 @@ const STATUS_EMOJI = {Present:"✅",Absent:"❌","Week Off":"📅","Sick Leave":
 const STAT_CLS     = {Present:"present",Absent:"absent","Week Off":"weekoff","Sick Leave":"sick","Annual Leave":"annual","Authorize Leave":"authorize"};
 
 let selectedShift=null, checkedStaff=new Set(), currentSiteStaff=[], loggedInSite=null, lastSubmittedRows=[];
+let globalMarkedStaff = new Set(); // synced from sheet — shared across all renders
 
 // ─── LOCAL STORAGE HELPERS ───
 function getHistory(){ try{ return JSON.parse(localStorage.getItem('ds_history')||'[]'); }catch(e){return [];} }
@@ -747,42 +748,152 @@ function getSubmitKey(site,shift,day,month,year){ return `${site}|${shift}|${day
 function wasSubmitted(key){ const h=getHistory(); return h.some(r=>r.key===key); }
 
 // ─── MARKED TODAY HELPER ───
-// JSONP — bypasses CORS for Google Apps Script reads
-function jsonpFetch(url) {
-  return new Promise((resolve, reject) => {
-    const cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
-    const script  = document.createElement('script');
-    const timeout = setTimeout(() => { delete window[cbName]; script.remove(); reject(new Error('Timeout')); }, 8000);
-    window[cbName] = (data) => { clearTimeout(timeout); delete window[cbName]; script.remove(); resolve(data); };
-    script.src = url + '&callback=' + cbName;
+// Fetch via no-cors image ping for WRITE
+// Fetch via script tag JSONP for READ
+// ── Image ping for WRITE (no-cors, fire and forget) ──
+function pingWrite(url) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = img.onerror = () => resolve();
+    img.src = url;
+    setTimeout(resolve, 6000);
+  });
+}
+
+// ── Read Google Sheet _LOG tab as CSV (public, no CORS issues) ──
+// Sheet must be published: File → Share → Publish to web → _LOG sheet → CSV
+const SHEET_ID = '1oUBC1p0XfqaM5xPpriSTRGPacFjSa-rdd6POM5qVeXo';
+
+async function readLogCSV() {
+  const scriptUrl = document.getElementById('scriptUrl').value.trim();
+  // Use Apps Script JSONP — wraps response in callback function
+  return new Promise((resolve) => {
+    const cbName = 'gs_' + Date.now();
+    const script = document.createElement('script');
+    let done     = false;
+
+    const cleanup = () => {
+      done = true;
+      delete window[cbName];
+      if (script.parentNode) script.remove();
+    };
+
+    window[cbName] = (data) => {
+      cleanup();
+      if (data && data.result === 'success') {
+        resolve(data.records || []);
+      } else {
+        resolve([]);
+      }
+    };
+
+    script.onerror = () => { cleanup(); resolve([]); };
+    setTimeout(() => { if (!done) { cleanup(); resolve([]); } }, 10000);
+
+    // action=readall returns ALL records so we can filter client-side
+    script.src = scriptUrl + '?action=readall&callback=' + cbName;
     document.head.appendChild(script);
   });
 }
 
-// ── Fetch marked staff from Google Sheet (shared across all devices) ──
-let markedStaffCache = {}; // cache per site+day
+function parseCSV(csv) {
+  const lines = csv.trim().split('\n');
+  if (lines.length < 2) return [];
+  // Skip header row (row 0)
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',').map(c => c.replace(/^"|"$/g, '').trim());
+    if (cols.length >= 10) {
+      rows.push({
+        timestamp:   cols[0],
+        site:        cols[1],
+        staffName:   cols[2],
+        designation: cols[3],
+        agency:      cols[4],
+        shift:       cols[5],
+        day:         cols[6],
+        month:       cols[7],
+        year:        cols[8],
+        status:      cols[9],
+        remarks:     cols[10] || '',
+        submittedBy: cols[11] || ''
+      });
+    }
+  }
+  return rows;
+}
+
 async function fetchMarkedStaff(site, day, month, year) {
-  const cacheKey = site+'|'+day+'|'+month+'|'+year;
-  const scriptUrl = document.getElementById('scriptUrl').value.trim();
   try {
-    const params = new URLSearchParams({ action:'check', site, day, month, year });
-    const data = await jsonpFetch(scriptUrl + '?' + params.toString());
-    if (data.result === 'success') {
-      const marked = new Set(data.marked.map(m => m.staffName));
-      markedStaffCache[cacheKey] = marked;
-      return marked;
+    const rows = await readLogCSV();
+    const marked = new Set();
+    rows.forEach(r => {
+      if (r.site === site && String(r.day) === String(day) &&
+          r.month === month && String(r.year) === String(year)) {
+        marked.add(r.staffName);
+      }
+    });
+    if (marked.size > 0 || rows.length > 0) {
+      globalMarkedStaff = marked;
+      console.log('✓ CSV sync: ' + marked.size + ' staff marked today for ' + site);
+      return globalMarkedStaff;
     }
   } catch(e) {
-    console.log('fetchMarkedStaff fallback:', e.message);
+    console.log('CSV fetch failed:', e.message);
   }
-  // Fallback localStorage
+  // Fallback: localStorage
   const hist = getHistory();
   const marked = new Set();
   hist.forEach(r => {
-    if (r.site===site && r.day===parseInt(day) && r.month===month && String(r.year)===String(year))
+    if(r.site===site && r.day===parseInt(day) && r.month===month && String(r.year)===String(year))
       r.rows.forEach(row => marked.add(row.staffName));
   });
+  globalMarkedStaff = marked;
   return marked;
+}
+
+async function fetchDashboardCSV(filterDate) {
+  const day   = filterDate.getDate();
+  const month = MONTHS[filterDate.getMonth()+1];
+  const year  = filterDate.getFullYear();
+  try {
+    const csv  = await fetchCSV('_LOG');
+    const rows = parseCSV(csv);
+    const records = [];
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r || r.length < 10) continue;
+      const rSite  = r[1]?.replace(/^"|"$/g,'');
+      const rName  = r[2]?.replace(/^"|"$/g,'');
+      const rDesg  = r[3]?.replace(/^"|"$/g,'');
+      const rAgency= r[4]?.replace(/^"|"$/g,'');
+      const rShift = r[5]?.replace(/^"|"$/g,'');
+      const rDay   = r[6]?.replace(/^"|"$/g,'');
+      const rMonth = r[7]?.replace(/^"|"$/g,'');
+      const rYear  = r[8]?.replace(/^"|"$/g,'');
+      const rStatus= r[9]?.replace(/^"|"$/g,'');
+      const rBy    = r[11]?.replace(/^"|"$/g,'') || '';
+      if (rDay===String(day) && rMonth===month && rYear===String(year)) {
+        records.push({ site:rSite, staffName:rName, designation:rDesg, agency:rAgency,
+          shift:rShift, status:rStatus, submittedBy:rBy });
+      }
+    }
+    return records;
+  } catch(e) {
+    console.log('Dashboard CSV failed:', e.message);
+    return [];
+  }
+}
+
+// Save marked staff to sessionStorage after submission so same device blocks immediately
+function saveMarkedLocally(site, day, month, year, staffNames) {
+  const cacheKey = site+'|'+day+'|'+month+'|'+year;
+  try {
+    const existing = JSON.parse(sessionStorage.getItem('marked_'+cacheKey)||'[]');
+    const merged   = [...new Set([...existing, ...staffNames])];
+    sessionStorage.setItem('marked_'+cacheKey, JSON.stringify(merged));
+    markedStaffCache[cacheKey] = new Set(merged);
+  } catch(e) {}
 }
 
 function getMarkedStaffToday(site, day, month, year) {
@@ -954,26 +1065,25 @@ function buildDashboard(){
 
 // ─── FETCH DASHBOARD FROM SHEET (cross-device) ───
 async function fetchDashboardFromSheet(filterDate) {
-  const scriptUrl = document.getElementById('scriptUrl')?.value?.trim();
-  if (!scriptUrl || scriptUrl.includes('YOUR_APPS')) return;
-  const day   = filterDate.getDate();
-  const month = MONTHS[filterDate.getMonth()+1];
-  const year  = filterDate.getFullYear();
   try {
-    const params = new URLSearchParams({ action:'read', day, month, year });
-    const data   = await jsonpFetch(scriptUrl + '?' + params.toString());
-    if (data.result !== 'success' || !data.records.length) return;
+    const day   = filterDate.getDate();
+    const month = MONTHS[filterDate.getMonth()+1];
+    const year  = filterDate.getFullYear();
 
-    // Group records by site
-    const bysite = {};
-    data.records.forEach(r => {
-      if (!bysite[r.site]) bysite[r.site] = [];
-      bysite[r.site].push(r);
-    });
+    const rows = await readLogCSV();
+    if (!rows.length) return;
 
-    // Rebuild KPI from sheet data
-    let totStaff=0,totPresent=0,totAbsent=0,totWeekOff=0,totLeave=0;
-    data.records.forEach(r => {
+    // Filter for this date
+    const dayRecs = rows.filter(r =>
+      String(r.day) === String(day) &&
+      r.month === month &&
+      String(r.year) === String(year)
+    );
+    if (!dayRecs.length) return;
+
+    // KPI counts
+    let totStaff=0, totPresent=0, totAbsent=0, totWeekOff=0, totLeave=0;
+    dayRecs.forEach(r => {
       totStaff++;
       if(r.status==='Present') totPresent++;
       else if(r.status==='Absent') totAbsent++;
@@ -985,12 +1095,18 @@ async function fetchDashboardFromSheet(filterDate) {
     document.getElementById('kpiAbsent').textContent   = totAbsent;
     document.getElementById('kpiWeekOff').textContent  = totWeekOff;
     document.getElementById('kpiLeave').textContent    = totLeave;
-    document.getElementById('kpiPresentPct').textContent = totStaff?Math.round(totPresent/totStaff*100)+'% attendance rate':'—';
-    document.getElementById('kpiAbsentPct').textContent  = totStaff?Math.round(totAbsent/totStaff*100)+'% absent rate':'—';
+    document.getElementById('kpiPresentPct').textContent = totStaff ? Math.round(totPresent/totStaff*100)+'% attendance rate' : '—';
+    document.getElementById('kpiAbsentPct').textContent  = totStaff ? Math.round(totAbsent/totStaff*100)+'% absent rate' : '—';
 
-    // Rebuild site cards from sheet data
+    // Site cards
     const sg = document.getElementById('dashSites');
     sg.innerHTML = '';
+    const bysite = {};
+    dayRecs.forEach(r => {
+      if (!bysite[r.site]) bysite[r.site] = [];
+      bysite[r.site].push(r);
+    });
+
     Object.keys(STAFF).forEach(site => {
       const recs = bysite[site];
       if (!recs || !recs.length) return;
@@ -1002,7 +1118,6 @@ async function fetchDashboardFromSheet(filterDate) {
       const pct      = Math.round(recs.length/totalStaff*100);
       const statusLabel = pct>=100?'submitted':pct>0?'partial':'pending';
 
-      // Per shift breakdown
       const shiftBreakdown = ['A','B','C'].map(sh => {
         const shRecs = recs.filter(r=>r.shift===sh);
         if (!shRecs.length) return `<span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.04);color:var(--text3)">Shift ${sh}: —</span>`;
@@ -1014,7 +1129,7 @@ async function fetchDashboardFromSheet(filterDate) {
 
       const div = document.createElement('div');
       div.className = 'site-card';
-      div.onclick = ()=>{ document.getElementById('histSiteFilter').value=site; showPage('history'); };
+      div.onclick = () => { document.getElementById('histSiteFilter').value=site; showPage('history'); };
       div.innerHTML = `
         <div class="site-card-top">
           <div class="site-name">${site}</div>
@@ -1031,7 +1146,7 @@ async function fetchDashboardFromSheet(filterDate) {
       sg.appendChild(div);
     });
   } catch(e) {
-    console.log('Sheet fetch failed:', e);
+    console.log('Dashboard fetch error:', e);
   }
 }
 
@@ -1043,6 +1158,19 @@ window.onload=()=>{
   document.getElementById('daySelect').value=now.getDate();
   buildDashboard();
   renderHistory();
+  // Auto-refresh every 30 seconds — keeps staff locks in sync across all devices
+  setInterval(()=>{
+    const site  = document.getElementById('siteSelect').value;
+    const day   = document.getElementById('daySelect').value;
+    const month = MONTHS[parseInt(document.getElementById('monthSelect').value)];
+    const year  = new Date().getFullYear();
+    if(site && day && month && currentSiteStaff.length){
+      fetchMarkedStaff(site,day,month,year).then(marked=>{
+        renderStaffListWithMarked(currentSiteStaff, marked);
+      });
+    }
+    buildDashboard();
+  }, 30000);
 };
 
 // ─── STEPS ───
@@ -1137,16 +1265,17 @@ async function renderStaffListAsync(list){
 }
 
 function renderStaffList(list){
-  const site=document.getElementById('siteSelect').value;
-  const day=document.getElementById('daySelect').value;
-  const month=MONTHS[parseInt(document.getElementById('monthSelect').value)];
-  const year=new Date().getFullYear();
-  // Show list immediately with localStorage data, then refresh with server data
-  const markedLocal = (site && day && month) ? getMarkedStaffToday(site,day,month,year) : new Set();
-  renderStaffListWithMarked(list, markedLocal);
-  // Then fetch real data from sheet
+  const site  = document.getElementById('siteSelect').value;
+  const day   = document.getElementById('daySelect').value;
+  const month = MONTHS[parseInt(document.getElementById('monthSelect').value)];
+  const year  = new Date().getFullYear();
+  // Show with current globalMarkedStaff immediately (no flicker)
+  renderStaffListWithMarked(list, globalMarkedStaff);
+  // Then fetch fresh from sheet and re-render
   if(site && day && month){
-    fetchMarkedStaff(site,day,month,year).then(markedToday => renderStaffListWithMarked(list, markedToday));
+    fetchMarkedStaff(site, day, month, year).then(marked => {
+      renderStaffListWithMarked(list, marked);
+    });
   }
 }
 
@@ -1299,12 +1428,7 @@ async function submitForm(){
       agency:r.agency, status:r.status, remarks:r.remarks,
       submittedBy:r.submittedBy||submittedBy
     });
-    await new Promise(resolve=>{
-      const img=new Image();
-      img.onload=img.onerror=()=>resolve();
-      img.src=scriptUrl+'?'+params.toString();
-      setTimeout(resolve,6000);
-    });
+    await pingWrite(scriptUrl + '?' + params.toString());
   }
 
   // Save to local history
@@ -1313,7 +1437,11 @@ async function submitForm(){
   hist.unshift(histEntry);
   if(hist.length>100)hist.splice(100);
   saveHistory(hist);
+  // Update globalMarkedStaff immediately so same device also blocks
+  rows.forEach(r => globalMarkedStaff.add(r.staffName));
   lastSubmittedRows=rows;
+  // Save marked staff to sessionStorage immediately so same device blocks right away
+  saveMarkedLocally(site, day, monthName, year, rows.map(r=>r.staffName));
 
   // Build success screen
   document.getElementById('formMain').style.display='none';
