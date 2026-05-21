@@ -592,14 +592,10 @@ select.sel option{background:#141c28}
     </div>
 
     <div class="card">
-      <div class="card-title"><div class="ctag" style="background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.2)">🔗</div>Google Apps Script Sync</div>
+      <div class="card-title"><div class="ctag" style="background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.2)">🔐</div>Admin Settings</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">
-        Your deployed Apps Script Web App URL. Must handle <code style="background:var(--card2);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:11px">action=addEmployee</code> and <code style="background:var(--card2);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:11px">action=removeEmployee</code>.
+        Google Sheet sync is configured automatically. Set an admin PIN to restrict employee removal.
       </p>
-      <div class="config-field">
-        <label>Apps Script Web App URL</label>
-        <input class="config-input" type="text" id="settingsScriptUrl" placeholder="https://script.google.com/macros/s/YOUR_ID/exec"/>
-      </div>
       <div class="config-field">
         <label>Admin PIN</label>
         <input class="config-input" type="password" id="settingsAdminPin" placeholder="4-digit PIN"/>
@@ -607,8 +603,8 @@ select.sel option{background:#141c28}
       <div class="btn-row">
         <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
         <div class="sync-status" id="settingsSyncStatus">
-          <div class="sync-dot pending" id="settingsDot"></div>
-          <span id="settingsStatusText">Not configured</span>
+          <div class="sync-dot synced" id="settingsDot"></div>
+          <span id="settingsStatusText">Connected to Google Sheet</span>
         </div>
       </div>
     </div>
@@ -629,47 +625,7 @@ select.sel option{background:#141c28}
       <div id="rosterContainer"></div>
     </div>
 
-    <!-- APPS SCRIPT CODE HELPER -->
-    <div class="card">
-      <div class="card-title"><div class="ctag" style="background:rgba(255,179,71,.08);border-color:rgba(255,179,71,.2)">📜</div>Apps Script — Required Actions</div>
-      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Add these cases to your existing Apps Script <code style="color:var(--accent)">doGet(e)</code> handler:</p>
-      <pre style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text2);overflow-x:auto;line-height:1.8"><code id="appsScriptSnippet">// In your doGet(e) switch/if block:
 
-case 'addEmployee': {
-  const data = JSON.parse(e.parameter.data || '{}');
-  const sheet = SpreadsheetApp.openById('YOUR_SHEET_ID')
-    .getSheetByName('Employees') || ss.insertSheet('Employees');
-  if(sheet.getLastRow() === 0)
-    sheet.appendRow(['Name','Site','Store','Dept','Designation','Agency','Status','AddedAt']);
-  sheet.appendRow([
-    data.name, data.site, data.store||data.site,
-    data.dept, data.designation, data.agency,
-    'Active', new Date().toISOString()
-  ]);
-  return ContentService.createTextOutput(
-    e.parameter.callback+'({"ok":true})'
-  ).setMimeType(ContentService.MimeType.JAVASCRIPT);
-}
-
-case 'removeEmployee': {
-  const data = JSON.parse(e.parameter.data || '{}');
-  const sheet = SpreadsheetApp.openById('YOUR_SHEET_ID')
-    .getSheetByName('Employees');
-  if(!sheet) break;
-  const vals = sheet.getDataRange().getValues();
-  for(let i=1;i&lt;vals.length;i++){
-    if(vals[i][0]===data.name &amp;&amp; vals[i][1]===data.site){
-      sheet.getRange(i+1,7).setValue('Removed');
-      sheet.getRange(i+1,9).setValue(data.reason||'');
-      break;
-    }
-  }
-  return ContentService.createTextOutput(
-    e.parameter.callback+'({"ok":true})'
-  ).setMimeType(ContentService.MimeType.JAVASCRIPT);
-}</code></pre>
-      <button class="btn-dl" style="margin-top:10px" onclick="copySnippet()">📋 Copy Snippet</button>
-    </div>
   </div>
 </div>
 
@@ -822,12 +778,16 @@ let addMethod = null;
 function getRosterKey(){ return getSettings().rosterKey || DEFAULT_ROSTER_KEY; }
 function getAttKey(){    return getSettings().attKey    || DEFAULT_ATT_KEY; }
 
+// ─── HARDCODED APPS SCRIPT URL ───
+// Single source of truth — every device uses this same Web App.
+const HARDCODED_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzYh-POi6vYL4vY5-I_TRqv-guoRbz8vpHFaNt0JLudxFNZM4vg8CkmwVRdLUG4BQ/exec';
+
 // ─── STORAGE HELPERS ───
 function getSettings(){
   try{ return JSON.parse(localStorage.getItem('em_settings')||'{}'); }catch(e){ return {}; }
 }
 function saveSettingsData(s){ localStorage.setItem('em_settings', JSON.stringify(s)); }
-function getScriptUrl(){ return getSettings().scriptUrl || ''; }
+function getScriptUrl(){ return HARDCODED_SCRIPT_URL; }
 
 function getLogs(){
   try{ return JSON.parse(localStorage.getItem('em_logs')||'[]'); }catch(e){ return []; }
@@ -1362,19 +1322,17 @@ function exportLogs(){
 // ─── SETTINGS ───
 function loadSettings(){
   const s = getSettings();
-  document.getElementById('settingsScriptUrl').value = s.scriptUrl||'';
   document.getElementById('settingsAdminPin').value  = s.adminPin||'';
   document.getElementById('settingsRosterKey').value = s.rosterKey||DEFAULT_ROSTER_KEY;
   document.getElementById('settingsAttKey').value    = s.attKey||DEFAULT_ATT_KEY;
   const dot=document.getElementById('settingsDot');
   const txt=document.getElementById('settingsStatusText');
-  if(s.scriptUrl){ dot.className='sync-dot synced'; txt.textContent='Script configured'; }
-  else{ dot.className='sync-dot failed'; txt.textContent='Not configured'; }
+  dot.className='sync-dot synced';
+  txt.textContent='Connected to Google Sheet';
 }
 
 function saveSettings(){
   const s = {
-    scriptUrl: document.getElementById('settingsScriptUrl').value.trim(),
     adminPin:  document.getElementById('settingsAdminPin').value.trim(),
     rosterKey: document.getElementById('settingsRosterKey').value.trim() || DEFAULT_ROSTER_KEY,
     attKey:    document.getElementById('settingsAttKey').value.trim()    || DEFAULT_ATT_KEY,
@@ -1382,8 +1340,8 @@ function saveSettings(){
   saveSettingsData(s);
   const dot=document.getElementById('settingsDot');
   const txt=document.getElementById('settingsStatusText');
-  if(s.scriptUrl){ dot.className='sync-dot synced'; txt.textContent='Saved & ready'; }
-  else{ dot.className='sync-dot failed'; txt.textContent='No script URL'; }
+  dot.className='sync-dot synced';
+  txt.textContent='Saved & ready';
   showToast('✅ Settings saved!','tok');
   renderRoster();
   checkSyncHealth();
@@ -1473,6 +1431,8 @@ function syncToSheet(action, rows, resultElId){
         syncEl.innerHTML=`<div style="display:flex;justify-content:center">
           <div class="sync-status"><div class="sync-dot synced"></div>Synced to Google Sheets</div>
         </div>`;
+        // Pull back the authoritative roster from GS so this device matches the sheet
+        if(typeof fetchRosterFromGS === 'function') setTimeout(()=>fetchRosterFromGS(true), 600);
       }
     };
 
@@ -1489,10 +1449,44 @@ function syncToSheet(action, rows, resultElId){
   });
 }
 
-// ─── COPY SNIPPET ───
-function copySnippet(){
-  const code = document.getElementById('appsScriptSnippet').innerText;
-  navigator.clipboard.writeText(code).then(()=>showToast('📋 Snippet copied!','tok')).catch(()=>showToast('Select & copy manually','warn'));
+// ─── PULL CENTRAL ROSTER FROM GOOGLE SHEET (single source of truth) ───
+function fetchRosterFromGS(silent){
+  const url = getScriptUrl();
+  if(!url) return Promise.resolve(null);
+  return new Promise(resolve => {
+    const cbName = 'emRoster_' + Date.now();
+    const script = document.createElement('script');
+    let done = false;
+    const cleanup = () => { done = true; delete window[cbName]; if(script.parentNode) script.remove(); };
+    window[cbName] = (data) => {
+      cleanup();
+      if(data && data.result==='success' && data.roster && typeof data.roster==='object'){
+        try{
+          const key = getRosterKey();
+          // Merge: GS roster wins, baseline fills missing sites
+          const merged = {};
+          const allSites = new Set([...Object.keys(BASELINE_STAFF), ...Object.keys(data.roster)]);
+          allSites.forEach(site => {
+            const gsList = Array.isArray(data.roster[site]) ? data.roster[site] : null;
+            merged[site] = gsList ? gsList : (BASELINE_STAFF[site]||[]).map(e => ({...e}));
+          });
+          localStorage.setItem(key, JSON.stringify(merged));
+          if(!silent) showToast('🔄 Roster synced from Google Sheet','tok');
+          // Refresh visible roster table if user is on settings page
+          if(typeof renderRoster === 'function') renderRoster();
+          if(typeof checkSyncHealth === 'function') checkSyncHealth();
+          resolve(merged);
+        }catch(e){ console.warn('Roster merge failed', e); resolve(null); }
+      } else {
+        if(!silent && data && data.error) showToast('⚠️ '+data.error,'terr');
+        resolve(null);
+      }
+    };
+    script.onerror = () => { cleanup(); resolve(null); };
+    setTimeout(() => { if(!done){ cleanup(); resolve(null); } }, 10000);
+    script.src = url + '?action=readRoster&callback=' + cbName;
+    document.head.appendChild(script);
+  });
 }
 
 // ─── INIT ───
@@ -1501,6 +1495,11 @@ window.onload = ()=>{
   getRoster();
   loadSettings();
   checkSyncHealth();
+
+  // Pull centralized roster from Google Sheet on load
+  fetchRosterFromGS(true);
+  // Re-sync every 60s so adds/removes from any device show up
+  setInterval(() => fetchRosterFromGS(true), 60000);
 
   // Listen for m-name changes to check dup live
   document.getElementById('m-name').addEventListener('input', checkManualDup);
