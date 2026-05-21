@@ -2038,9 +2038,558 @@ function checkAdminPwd(pwd){
   </div>
   <div style="margin-top:10px;font-size:11px;color:var(--text3)">
     📞 Contact Us &nbsp;·&nbsp;
-    <a href="/cdn-cgi/l/email-protection#650d1710160d0c0e00160d1504010d0c5325090c13004b060a08" style="color:var(--accent);text-decoration:none"><span class="__cf_email__" data-cfemail="771f0502041f1e1c12041f0716131f1e41371b1e01125914181a">[email&#160;protected]</span></a>
+    <a href="/cdn-cgi/l/email-protection#8ce4fef9ffe4e5e7e9ffe4fcede8e4e5bacce0e5fae9a2efe3e1" style="color:var(--accent);text-decoration:none"><span class="__cf_email__" data-cfemail="d7bfa5a2a4bfbebcb2a4bfa7b6b3bfbee197bbbea1b2f9b4b8ba">[email&#160;protected]</span></a>
     
   </div>
 </div>
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SIDEBAR TOOLS — Export Monthly Excel · Staff Status Dashboard · Date Filter
+     Purely additive — does not change any existing layout/UI.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<style>
+  /* Floating launcher */
+  .tools-fab{
+    position:fixed;right:18px;bottom:22px;width:56px;height:56px;border-radius:50%;
+    background:linear-gradient(135deg,var(--purple),#7c3aed);border:none;cursor:pointer;
+    box-shadow:0 8px 28px rgba(167,139,250,.35),0 2px 6px rgba(0,0,0,.4);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;
+    z-index:998;transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .tools-fab:hover{transform:translateY(-2px) scale(1.04);box-shadow:0 12px 36px rgba(167,139,250,.5)}
+  .tools-fab:active{transform:translateY(0) scale(.98)}
+  .tools-fab .badge-dot{
+    position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;
+    background:var(--accent2);box-shadow:0 0 8px var(--accent2);
+  }
+  .tools-backdrop{
+    position:fixed;inset:0;background:rgba(2,4,8,.55);backdrop-filter:blur(3px);
+    opacity:0;pointer-events:none;transition:opacity .22s ease;z-index:999;
+  }
+  .tools-backdrop.open{opacity:1;pointer-events:auto}
+  .tools-drawer{
+    position:fixed;top:0;right:0;height:100vh;width:min(420px,92vw);
+    background:var(--bg);border-left:1px solid var(--border);
+    transform:translateX(102%);transition:transform .26s cubic-bezier(.2,.7,.2,1);
+    z-index:1000;display:flex;flex-direction:column;
+    box-shadow:-20px 0 60px rgba(0,0,0,.5);
+  }
+  .tools-drawer.open{transform:translateX(0)}
+  .tools-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 20px;border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,rgba(167,139,250,.06),transparent);
+  }
+  .tools-head h3{font-size:15px;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+  .tools-head h3::before{content:'';width:6px;height:18px;border-radius:3px;background:var(--purple)}
+  .tools-close{
+    background:var(--card2);border:1px solid var(--border2);color:var(--text2);
+    width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;line-height:1;
+    display:flex;align-items:center;justify-content:center;transition:all .18s;
+  }
+  .tools-close:hover{color:var(--text);border-color:var(--accent)}
+  .tools-body{flex:1;overflow-y:auto;padding:16px 20px 30px;display:flex;flex-direction:column;gap:14px}
+  .tools-body::-webkit-scrollbar{width:4px}
+  .tools-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+  .tool-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s}
+  .tool-card:hover{border-color:var(--border2)}
+  .tool-card-head{padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+  .tool-card-head:hover{background:var(--card2)}
+  .tool-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .tool-icon.export{background:rgba(0,255,136,.1);color:var(--accent2);border:1px solid rgba(0,255,136,.25)}
+  .tool-icon.status{background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.25)}
+  .tool-icon.filter{background:rgba(255,179,71,.1);color:var(--warn);border:1px solid rgba(255,179,71,.25)}
+  .tool-meta{flex:1;min-width:0}
+  .tool-name{font-size:13px;font-weight:700;color:var(--text);line-height:1.2}
+  .tool-sub{font-size:11px;color:var(--text3);margin-top:2px}
+  .tool-chev{color:var(--text3);font-size:12px;transition:transform .2s}
+  .tool-card.open .tool-chev{transform:rotate(180deg);color:var(--accent)}
+  .tool-body{max-height:0;overflow:hidden;transition:max-height .28s ease}
+  .tool-card.open .tool-body{max-height:900px}
+  .tool-body-inner{padding:0 16px 16px;border-top:1px solid var(--border)}
+  .tool-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .tool-row > *{flex:1;min-width:0}
+  .tool-label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;letter-spacing:.3px;text-transform:uppercase}
+  .tool-input,.tool-select{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:'Outfit',sans-serif;font-size:12px;padding:9px 11px;outline:none;transition:border-color .15s}
+  .tool-input:focus,.tool-select:focus{border-color:var(--accent)}
+  .tool-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='%233a4f6a'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:26px}
+  .tool-select option{background:#141c28}
+  .tool-input[type=date]{font-family:'JetBrains Mono',monospace}
+  .tool-btn{width:100%;margin-top:12px;background:var(--purple);border:none;color:#070b12;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;padding:11px;border-radius:8px;cursor:pointer;letter-spacing:.3px;transition:opacity .2s, transform .12s;display:flex;align-items:center;justify-content:center;gap:6px}
+  .tool-btn:hover{opacity:.92}.tool-btn:active{transform:scale(.98)}
+  .tool-btn.busy{opacity:.6;cursor:wait}
+  .tool-btn.accent{background:var(--accent)}
+  .tool-btn.green{background:var(--accent2)}
+  .tool-result{margin-top:14px;display:none;animation:fadein .25s ease}
+  .tool-result.show{display:block}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  .tool-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+  .tool-stat{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 8px;text-align:center}
+  .tool-stat-num{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;line-height:1}
+  .tool-stat-lbl{font-size:9px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
+  .tool-stat.present .tool-stat-num{color:var(--accent2)}
+  .tool-stat.absent  .tool-stat-num{color:var(--accent3)}
+  .tool-stat.off     .tool-stat-num{color:var(--warn)}
+  .tool-stat.total   .tool-stat-num{color:var(--accent)}
+  .tool-stat.leave   .tool-stat-num{color:var(--purple)}
+  .tool-list{max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--bg2)}
+  .tool-list::-webkit-scrollbar{width:3px}
+  .tool-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+  .tool-row-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;gap:8px}
+  .tool-row-item:last-child{border-bottom:none}
+  .tool-row-item .nm{color:var(--text);font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tool-row-item .sub{font-size:10px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tool-row-item .st{font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;white-space:nowrap;letter-spacing:.3px}
+  .st.present{background:rgba(0,255,136,.1);color:var(--accent2)}
+  .st.absent{background:rgba(255,77,109,.1);color:var(--accent3)}
+  .st.weekoff{background:rgba(167,139,250,.1);color:var(--purple)}
+  .st.sick,.st.annual,.st.authorize{background:rgba(255,179,71,.1);color:var(--warn)}
+  .tool-empty{padding:24px 16px;text-align:center;color:var(--text3);font-size:12px}
+  .tool-summary{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--text2);margin-bottom:8px;font-family:'JetBrains Mono',monospace;line-height:1.5}
+  .tool-summary strong{color:var(--text);font-weight:700}
+</style>
+
+<button class="tools-fab" id="toolsFab" onclick="openToolsDrawer()" aria-label="Open tools" title="Quick Tools">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+  </svg>
+  <span class="badge-dot"></span>
+</button>
+
+<div class="tools-backdrop" id="toolsBackdrop" onclick="closeToolsDrawer()"></div>
+
+<aside class="tools-drawer" id="toolsDrawer" role="dialog" aria-label="Quick Tools">
+  <div class="tools-head">
+    <h3>🛠 Quick Tools</h3>
+    <button class="tools-close" onclick="closeToolsDrawer()" aria-label="Close">✕</button>
+  </div>
+  <div class="tools-body">
+
+    <div class="tool-card" id="toolCardExport">
+      <div class="tool-card-head" onclick="toggleToolCard('toolCardExport')">
+        <div class="tool-icon export">⬇</div>
+        <div class="tool-meta">
+          <div class="tool-name">Export Monthly Attendance</div>
+          <div class="tool-sub">Excel-compatible CSV from Google Sheet</div>
+        </div>
+        <div class="tool-chev">▼</div>
+      </div>
+      <div class="tool-body"><div class="tool-body-inner">
+        <div class="tool-row">
+          <div><label class="tool-label">Month</label><select class="tool-select" id="exportMonth"></select></div>
+          <div><label class="tool-label">Year</label><select class="tool-select" id="exportYear"></select></div>
+        </div>
+        <div class="tool-row">
+          <div><label class="tool-label">Site (optional)</label>
+            <select class="tool-select" id="exportSite">
+              <option value="">All Sites</option>
+              <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
+              <option>Khalifa City</option><option>Al Qusais</option>
+              <option>Business Bay</option><option>NIP</option>
+            </select></div>
+        </div>
+        <button class="tool-btn green" id="exportBtn" onclick="toolExportMonthly()">⬇ Download Excel (.csv)</button>
+        <div class="tool-summary" id="exportSummary" style="display:none"></div>
+      </div></div>
+    </div>
+
+    <div class="tool-card" id="toolCardStatus">
+      <div class="tool-card-head" onclick="toggleToolCard('toolCardStatus')">
+        <div class="tool-icon status">📊</div>
+        <div class="tool-meta">
+          <div class="tool-name">Staff Status Dashboard</div>
+          <div class="tool-sub">Present / Absent / Off in one place</div>
+        </div>
+        <div class="tool-chev">▼</div>
+      </div>
+      <div class="tool-body"><div class="tool-body-inner">
+        <div class="tool-row">
+          <div><label class="tool-label">Date</label><input type="date" class="tool-input" id="statusDate"/></div>
+          <div><label class="tool-label">Site</label>
+            <select class="tool-select" id="statusSite">
+              <option value="">All Sites</option>
+              <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
+              <option>Khalifa City</option><option>Al Qusais</option>
+              <option>Business Bay</option><option>NIP</option>
+            </select></div>
+        </div>
+        <button class="tool-btn accent" id="statusBtn" onclick="toolLoadStatus()">📊 Load Status</button>
+        <div class="tool-result" id="statusResult"></div>
+      </div></div>
+    </div>
+
+    <div class="tool-card" id="toolCardFilter">
+      <div class="tool-card-head" onclick="toggleToolCard('toolCardFilter')">
+        <div class="tool-icon filter">🔍</div>
+        <div class="tool-meta">
+          <div class="tool-name">Date Filter</div>
+          <div class="tool-sub">Browse attendance records by date range</div>
+        </div>
+        <div class="tool-chev">▼</div>
+      </div>
+      <div class="tool-body"><div class="tool-body-inner">
+        <div class="tool-row">
+          <div><label class="tool-label">From</label><input type="date" class="tool-input" id="filterFrom"/></div>
+          <div><label class="tool-label">To</label><input type="date" class="tool-input" id="filterTo"/></div>
+        </div>
+        <div class="tool-row">
+          <div><label class="tool-label">Site (optional)</label>
+            <select class="tool-select" id="filterSite">
+              <option value="">All Sites</option>
+              <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
+              <option>Khalifa City</option><option>Al Qusais</option>
+              <option>Business Bay</option><option>NIP</option>
+            </select></div>
+          <div><label class="tool-label">Status</label>
+            <select class="tool-select" id="filterStatus">
+              <option value="">All Statuses</option>
+              <option>Present</option><option>Absent</option>
+              <option>Week Off</option><option>Sick Leave</option>
+              <option>Annual Leave</option><option>Authorize Leave</option>
+            </select></div>
+        </div>
+        <button class="tool-btn" id="filterBtn" onclick="toolApplyDateFilter()">🔍 Apply Filter</button>
+        <div class="tool-result" id="filterResult"></div>
+      </div></div>
+    </div>
+
+  </div>
+</aside>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+/* ═══════════ SIDEBAR TOOLS — uses existing readLogCSV() endpoint ═══════════ */
+function openToolsDrawer(){
+  document.getElementById('toolsDrawer').classList.add('open');
+  document.getElementById('toolsBackdrop').classList.add('open');
+  if(!window.__toolsInit){ window.__toolsInit = true; initToolsDefaults(); }
+}
+function closeToolsDrawer(){
+  document.getElementById('toolsDrawer').classList.remove('open');
+  document.getElementById('toolsBackdrop').classList.remove('open');
+}
+function toggleToolCard(id){
+  const card = document.getElementById(id);
+  document.querySelectorAll('.tool-card.open').forEach(c => { if(c !== card) c.classList.remove('open'); });
+  card.classList.toggle('open');
+}
+
+function initToolsDefaults(){
+  const now = new Date();
+  const today = now.toISOString().slice(0,10);
+  const monthSel = document.getElementById('exportMonth');
+  const yearSel  = document.getElementById('exportYear');
+  monthSel.innerHTML = '';
+  MONTHS.slice(1).forEach((m,i)=>{
+    const o=document.createElement('option');
+    o.value=i+1; o.textContent=m;
+    if(i+1===now.getMonth()+1) o.selected=true;
+    monthSel.appendChild(o);
+  });
+  yearSel.innerHTML='';
+  for(let y=now.getFullYear()-3; y<=now.getFullYear()+1; y++){
+    const o=document.createElement('option');
+    o.value=y; o.textContent=y;
+    if(y===now.getFullYear()) o.selected=true;
+    yearSel.appendChild(o);
+  }
+  document.getElementById('statusDate').value = today;
+  document.getElementById('filterFrom').value = today;
+  document.getElementById('filterTo').value   = today;
+  document.getElementById('toolCardExport').classList.add('open');
+}
+
+async function toolFetchAll(){
+  if(typeof readLogCSV === 'function'){ return await readLogCSV(); }
+  return [];
+}
+
+async function toolExportMonthly(){
+  const monthNum = parseInt(document.getElementById('exportMonth').value);
+  const year     = parseInt(document.getElementById('exportYear').value);
+  const siteFilt = document.getElementById('exportSite').value;
+  const monthName = MONTHS[monthNum];
+  const btn = document.getElementById('exportBtn');
+  const sum = document.getElementById('exportSummary');
+
+  btn.classList.add('busy'); btn.textContent = '⏳ Fetching from Google Sheet…';
+  sum.style.display='none';
+
+  const all = await toolFetchAll();
+  const filtered = all.filter(r =>
+    String(r.month).trim().toLowerCase() === monthName.toLowerCase() &&
+    String(r.year)  === String(year) &&
+    (!siteFilt || r.site === siteFilt)
+  );
+
+  btn.classList.remove('busy'); btn.textContent = '⬇ Download Excel (.csv)';
+
+  // Days in the selected month
+  const daysInMonth = new Date(year, monthNum, 0).getDate();
+
+  // Status → code map (matches the Google Sheet tab format)
+  const STATUS_CODE = {
+    'Present':'P', 'Absent':'A', 'Week Off':'WO',
+    'Sick Leave':'SL', 'Annual Leave':'AL', 'Authorize Leave':'AUL'
+  };
+
+  // Build the staff list:
+  //  Start from current STAFF roster (Employee Manager data — every staff appears
+  //  even if they have no records this month). Then add any staff that exist
+  //  only in the log (defensive: e.g. ex-employees).
+  const staffMap = new Map(); // key = site|name → {name, site, designation, agency, shift, byDay:{}}
+  const rosterSites = siteFilt ? [siteFilt] : Object.keys(STAFF);
+  rosterSites.forEach(site => {
+    (STAFF[site] || []).forEach(s => {
+      const key = site + '|' + s.name;
+      staffMap.set(key, {
+        name: s.name, site,
+        designation: s.designation || '',
+        agency: s.agency || '',
+        shift: '',          // filled below from this month's most-common shift
+        byDay: {}           // day -> status code
+      });
+    });
+  });
+
+  // Track shift frequency per staff for the month
+  const shiftCount = new Map(); // key → {A:n,B:n,C:n}
+
+  filtered.forEach(r => {
+    const key = (r.site||'') + '|' + (r.staffName||'');
+    if(!staffMap.has(key)){
+      // Staff in log but no longer in roster — include them anyway
+      staffMap.set(key, {
+        name: r.staffName||'', site: r.site||'',
+        designation: r.designation||'', agency: r.agency||'',
+        shift:'', byDay:{}
+      });
+    }
+    const entry = staffMap.get(key);
+    const day = parseInt(r.day);
+    if(day >= 1 && day <= daysInMonth){
+      entry.byDay[day] = STATUS_CODE[r.status] || (r.status||'').slice(0,3).toUpperCase();
+    }
+    // Shift tally
+    if(r.shift){
+      if(!shiftCount.has(key)) shiftCount.set(key, {A:0,B:0,C:0});
+      const t = shiftCount.get(key);
+      if(t[r.shift] !== undefined) t[r.shift]++;
+    }
+  });
+
+  // Pick the dominant shift per staff (most-used in this month, blank if none)
+  staffMap.forEach((entry, key) => {
+    const t = shiftCount.get(key);
+    if(t){
+      const top = Object.entries(t).sort((a,b)=>b[1]-a[1])[0];
+      if(top && top[1] > 0) entry.shift = top[0];
+    }
+  });
+
+  const staffRows = [...staffMap.values()].sort((a,b)=>{
+    const s = (a.site||'').localeCompare(b.site||'');
+    if(s) return s;
+    return (a.name||'').localeCompare(b.name||'');
+  });
+
+  if(!staffRows.length){
+    sum.style.display='block';
+    sum.innerHTML = `<strong style="color:var(--accent3)">⚠ No staff</strong> for ${monthName} ${year}${siteFilt?' · '+siteFilt:''}`;
+    return;
+  }
+
+  // Header: #, Staff Name, Site, Designation, Agency, Shift, 1..N
+  const header = ['#','Staff Name','Site','Designation','Agency','Shift'];
+  for(let d=1; d<=daysInMonth; d++) header.push(String(d));
+
+  const lines = [header];
+  staffRows.forEach((s, i) => {
+    const row = [i+1, s.name, s.site, s.designation, s.agency, s.shift];
+    for(let d=1; d<=daysInMonth; d++) row.push(s.byDay[d] || '');
+    lines.push(row);
+  });
+
+  // BOM so Excel reads UTF-8 correctly
+  const csv = '\uFEFF' + lines.map(r =>
+    r.map(v => `"${(v==null?'':String(v)).replace(/"/g,'""')}"`).join(',')
+  ).join('\n');
+
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${monthName} ${year}${siteFilt?' - '+siteFilt:''}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+
+  // Stats
+  const recordCount = filtered.length;
+  sum.style.display='block';
+  sum.innerHTML = `<strong style="color:var(--accent2)">✓ Exported</strong> · ${monthName} ${year}${siteFilt?' · '+siteFilt:''}<br>
+    <strong>${staffRows.length}</strong> staff × <strong>${daysInMonth}</strong> days · <strong>${recordCount}</strong> attendance entries<br>
+    <span style="color:var(--text3);font-size:10px">Codes: P=Present · A=Absent · WO=Week Off · SL=Sick · AL=Annual · AUL=Authorize</span>`;
+  if(typeof showToast==='function') showToast('✅ Excel downloaded','tok');
+}
+
+async function toolLoadStatus(){
+  const dateStr = document.getElementById('statusDate').value;
+  const site    = document.getElementById('statusSite').value;
+  const result  = document.getElementById('statusResult');
+  const btn     = document.getElementById('statusBtn');
+  if(!dateStr){ if(typeof showToast==='function') showToast('Pick a date','warn'); return; }
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.getDate();
+  const monthName = MONTHS[d.getMonth()+1];
+  const year = d.getFullYear();
+
+  btn.classList.add('busy'); btn.textContent='⏳ Loading…';
+  result.classList.remove('show');
+
+  const all = await toolFetchAll();
+  const recs = all.filter(r =>
+    String(r.day) === String(day) &&
+    String(r.month).trim().toLowerCase() === monthName.toLowerCase() &&
+    String(r.year) === String(year) &&
+    (!site || r.site === site)
+  );
+
+  btn.classList.remove('busy'); btn.textContent='📊 Load Status';
+
+  const buckets = {Present:0, Absent:0, 'Week Off':0, 'Sick Leave':0, 'Annual Leave':0, 'Authorize Leave':0};
+  recs.forEach(r => { if(buckets[r.status] !== undefined) buckets[r.status]++; });
+  const total = recs.length;
+  const present = buckets['Present']||0;
+  const absent  = buckets['Absent']||0;
+  const off     = (buckets['Week Off']||0);
+  const leave   = (buckets['Sick Leave']||0) + (buckets['Annual Leave']||0) + (buckets['Authorize Leave']||0);
+
+  if(!total){
+    result.innerHTML = `<div class="tool-empty">No records for ${day} ${monthName} ${year}${site?' · '+site:''}</div>`;
+    result.classList.add('show');
+    return;
+  }
+
+  const seen = new Map();
+  recs.forEach(r => seen.set((r.site||'')+'|'+(r.staffName||''), r));
+  const staffRows = [...seen.values()].sort((a,b)=>(a.staffName||'').localeCompare(b.staffName||''));
+
+  result.innerHTML = `
+    <div class="tool-summary"><strong>${day} ${monthName} ${year}</strong>${site?' · '+site:''} · <strong>${total}</strong> records · <strong>${staffRows.length}</strong> unique staff</div>
+    <div class="tool-stats">
+      <div class="tool-stat total"><div class="tool-stat-num">${total}</div><div class="tool-stat-lbl">Total</div></div>
+      <div class="tool-stat present"><div class="tool-stat-num">${present}</div><div class="tool-stat-lbl">Present</div></div>
+      <div class="tool-stat absent"><div class="tool-stat-num">${absent}</div><div class="tool-stat-lbl">Absent</div></div>
+    </div>
+    <div class="tool-stats">
+      <div class="tool-stat off"><div class="tool-stat-num">${off}</div><div class="tool-stat-lbl">Week Off</div></div>
+      <div class="tool-stat leave"><div class="tool-stat-num">${leave}</div><div class="tool-stat-lbl">Leave</div></div>
+      <div class="tool-stat"><div class="tool-stat-num" style="color:var(--text)">${total ? Math.round(present/total*100) : 0}%</div><div class="tool-stat-lbl">Present %</div></div>
+    </div>
+    <div class="tool-list">
+      ${staffRows.map(r => {
+        const cls = ({'Present':'present','Absent':'absent','Week Off':'weekoff','Sick Leave':'sick','Annual Leave':'annual','Authorize Leave':'authorize'})[r.status] || '';
+        return `<div class="tool-row-item">
+          <div class="nm">${r.staffName||'—'}<div class="sub">${r.site||''} · Shift ${r.shift||'—'}</div></div>
+          <span class="st ${cls}">${r.status||'—'}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  result.classList.add('show');
+}
+
+async function toolApplyDateFilter(){
+  const fromStr = document.getElementById('filterFrom').value;
+  const toStr   = document.getElementById('filterTo').value;
+  const site    = document.getElementById('filterSite').value;
+  const status  = document.getElementById('filterStatus').value;
+  const result  = document.getElementById('filterResult');
+  const btn     = document.getElementById('filterBtn');
+
+  if(!fromStr || !toStr){ if(typeof showToast==='function') showToast('Pick a date range','warn'); return; }
+  const from = new Date(fromStr+'T00:00:00');
+  const to   = new Date(toStr+'T23:59:59');
+  if(from > to){ if(typeof showToast==='function') showToast('"From" must be before "To"','warn'); return; }
+
+  btn.classList.add('busy'); btn.textContent='⏳ Loading…';
+  result.classList.remove('show');
+
+  const all = await toolFetchAll();
+  const monthIndexByName = {};
+  MONTHS.forEach((m,i)=>{ if(m) monthIndexByName[m.toLowerCase()] = i; });
+
+  const filtered = all.filter(r => {
+    const mIdx = monthIndexByName[String(r.month||'').trim().toLowerCase()];
+    if(!mIdx) return false;
+    const d = new Date(parseInt(r.year), mIdx-1, parseInt(r.day));
+    if(isNaN(d)) return false;
+    if(d < from || d > to) return false;
+    if(site && r.site !== site) return false;
+    if(status && r.status !== status) return false;
+    return true;
+  });
+
+  btn.classList.remove('busy'); btn.textContent='🔍 Apply Filter';
+
+  if(!filtered.length){
+    result.innerHTML = `<div class="tool-empty">No records match this filter</div>`;
+    result.classList.add('show');
+    return;
+  }
+
+  filtered.sort((a,b)=>{
+    const ad = new Date(parseInt(a.year), (monthIndexByName[String(a.month).toLowerCase()]||1)-1, parseInt(a.day));
+    const bd = new Date(parseInt(b.year), (monthIndexByName[String(b.month).toLowerCase()]||1)-1, parseInt(b.day));
+    return bd - ad;
+  });
+
+  const top = filtered.slice(0,200);
+  const fromLabel = from.toLocaleDateString('en-AE',{day:'2-digit',month:'short'});
+  const toLabel   = to.toLocaleDateString('en-AE',{day:'2-digit',month:'short',year:'numeric'});
+
+  result.innerHTML = `
+    <div class="tool-summary">
+      <strong>${filtered.length}</strong> records · ${fromLabel} → ${toLabel}${site?' · '+site:''}${status?' · '+status:''}
+      ${filtered.length>200?' · <span style="color:var(--warn)">showing first 200</span>':''}
+    </div>
+    <div class="tool-list">
+      ${top.map(r => {
+        const cls = ({'Present':'present','Absent':'absent','Week Off':'weekoff','Sick Leave':'sick','Annual Leave':'annual','Authorize Leave':'authorize'})[r.status] || '';
+        return `<div class="tool-row-item">
+          <div class="nm">${r.staffName||'—'}<div class="sub">${r.day} ${r.month} · ${r.site||''} · Shift ${r.shift||'—'}</div></div>
+          <span class="st ${cls}">${r.status||'—'}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <button class="tool-btn green" style="margin-top:10px" onclick="toolExportFilteredCSV()">
+      ⬇ Export These ${filtered.length} Records (.csv)
+    </button>`;
+  window.__filteredRows = filtered;
+  result.classList.add('show');
+}
+
+function toolExportFilteredCSV(){
+  const rows = window.__filteredRows || [];
+  if(!rows.length){ if(typeof showToast==='function') showToast('Nothing to export','warn'); return; }
+  const cols = ['Date','Site','Shift','Staff Name','Designation','Agency','Status','Remarks','Submitted By','Timestamp'];
+  const lines = rows.map(r => [
+    `${r.day} ${r.month} ${r.year}`,
+    r.site||'', r.shift||'',
+    r.staffName||'', r.designation||'', r.agency||'',
+    r.status||'', (r.remarks||''),
+    r.submittedBy||'', r.timestamp||''
+  ]);
+  const csv = '\uFEFF' + cols.join(',') + '\n' +
+    lines.map(r => r.map(v => `"${(v==null?'':String(v)).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Attendance_filtered_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  if(typeof showToast==='function') showToast('✅ CSV downloaded','tok');
+}
+
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeToolsDrawer(); });
+</script>
+
+</body>
 </html>
