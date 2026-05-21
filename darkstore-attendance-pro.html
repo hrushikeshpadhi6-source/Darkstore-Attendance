@@ -700,7 +700,7 @@ const SITE_PINS = {
 
 const SHIFT_START = { A:6, B:14, C:22 }; // hour in 24h
 
-const STAFF = {
+const BASELINE_STAFF = {
   "Al Raha":[
     {name:"Aaron Ajuna",designation:"Warehouse Assistant",agency:"Flexitalent"},
     {name:"Abius Twinomugisha",designation:"Warehouse Assistant",agency:"Flexitalent"},
@@ -825,6 +825,80 @@ const STAFF = {
   ]
 };
 
+/* ─── SHARED ROSTER BRIDGE ───────────────────────────────────────────
+   Reads the same localStorage key that darkstore-employee-manager.html
+   writes to, so staff added/removed there appear here automatically.
+   Key MUST match DEFAULT_ROSTER_KEY in the Employee Manager file.
+   ─────────────────────────────────────────────────────────────────── */
+const ROSTER_STORAGE_KEY = 'darkstore_staff_roster';
+const EM_SETTINGS_KEY    = 'em_settings';
+
+function getRosterKey(){
+  try{
+    const s = JSON.parse(localStorage.getItem(EM_SETTINGS_KEY) || '{}');
+    return s.rosterKey || ROSTER_STORAGE_KEY;
+  }catch(e){ return ROSTER_STORAGE_KEY; }
+}
+
+// Mutable STAFF — starts as baseline, gets overwritten by hydrateStaffFromRoster()
+let STAFF = JSON.parse(JSON.stringify(BASELINE_STAFF));
+
+function hydrateStaffFromRoster(){
+  try{
+    const key = getRosterKey();
+    const raw = localStorage.getItem(key);
+    if(!raw){
+      // First run on this device — seed the shared key with baseline so the Manager sees it too.
+      localStorage.setItem(key, JSON.stringify(BASELINE_STAFF));
+      STAFF = JSON.parse(JSON.stringify(BASELINE_STAFF));
+      return;
+    }
+    const parsed = JSON.parse(raw);
+    const merged = {};
+    // Preserve baseline site keys + accept any new sites from manager
+    const allSites = new Set([...Object.keys(BASELINE_STAFF), ...Object.keys(parsed||{})]);
+    allSites.forEach(site => {
+      const list = (parsed && Array.isArray(parsed[site])) ? parsed[site] : (BASELINE_STAFF[site] || []);
+      // Drop staff flagged as Removed by the Employee Manager
+      merged[site] = list
+        .filter(e => e && e.name && (e.status || 'Active') !== 'Removed')
+        .map(e => ({
+          name: e.name,
+          designation: e.designation || '—',
+          agency: e.agency || '—'
+        }));
+    });
+    STAFF = merged;
+  }catch(e){
+    console.warn('Roster hydrate failed, using baseline:', e);
+    STAFF = JSON.parse(JSON.stringify(BASELINE_STAFF));
+  }
+}
+
+// Re-hydrate + refresh whenever the Employee Manager saves changes (cross-tab + same-tab dispatch)
+function onRosterChanged(){
+  hydrateStaffFromRoster();
+  // Refresh current site's staff list if user is in the form
+  try{
+    const siteSel = document.getElementById('siteSelect');
+    const site = siteSel ? siteSel.value : '';
+    if(site && STAFF[site]){
+      currentSiteStaff = [...STAFF[site]].sort((a,b)=>a.name.localeCompare(b.name));
+      if(typeof renderStaffList === 'function') renderStaffList(currentSiteStaff);
+    }
+    if(typeof buildDashboard === 'function') buildDashboard();
+  }catch(e){}
+}
+
+window.addEventListener('storage', (ev) => {
+  if(!ev || ev.key === getRosterKey() || ev.key === EM_SETTINGS_KEY){
+    onRosterChanged();
+  }
+});
+
+// Hydrate immediately so STAFF is populated before any render runs
+hydrateStaffFromRoster();
+
 const MONTHS = ["","January","February","March","April","May","June","July","August","September","October","November","December"];
 const SHIFTS  = { A:{name:"Morning",time:"06:00–14:00"}, B:{name:"Evening",time:"14:00–22:00"}, C:{name:"Night",time:"22:00–06:00"} };
 const STATUS_OPTS  = ["Present","Absent","Week Off","Sick Leave","Annual Leave","Authorize Leave"];
@@ -887,6 +961,73 @@ async function readLogCSV() {
 
     // action=readall returns ALL records so we can filter client-side
     script.src = scriptUrl + '?action=readall&callback=' + cbName;
+    document.head.appendChild(script);
+  });
+}
+
+// ── Fetch the centralized employee roster from Google Sheet (_EMPLOYEES tab) ──
+// This is the SOURCE OF TRUTH — every device pulls from here, no localStorage drift.
+async function fetchRosterFromGS() {
+  const scriptUrlEl = document.getElementById('scriptUrl');
+  const scriptUrl = scriptUrlEl ? scriptUrlEl.value.trim() : '';
+  if (!scriptUrl) return null;
+
+  return new Promise((resolve) => {
+    const cbName = 'gsRoster_' + Date.now();
+    const script = document.createElement('script');
+    let done     = false;
+
+    const cleanup = () => {
+      done = true;
+      delete window[cbName];
+      if (script.parentNode) script.remove();
+    };
+
+    window[cbName] = (data) => {
+      cleanup();
+      if (data && data.result === 'success' && data.roster && typeof data.roster === 'object') {
+        try {
+          // Mirror the GS roster into the shared localStorage key so the Employee
+          // Manager (and offline reloads) see the same source of truth.
+          const key = (typeof getRosterKey === 'function') ? getRosterKey() : 'darkstore_staff_roster';
+          // Build a merged shape: GS sites win, baseline fills any missing sites
+          const merged = {};
+          const allSites = new Set([
+            ...Object.keys(BASELINE_STAFF),
+            ...Object.keys(data.roster)
+          ]);
+          allSites.forEach(site => {
+            const gsList = Array.isArray(data.roster[site]) ? data.roster[site] : null;
+            merged[site] = gsList ? gsList : (BASELINE_STAFF[site] || []).map(e => ({...e, status:'Active'}));
+          });
+          localStorage.setItem(key, JSON.stringify(merged));
+          // Rebuild in-memory STAFF + refresh UI
+          hydrateStaffFromRoster();
+          try {
+            const siteSel = document.getElementById('siteSelect');
+            const site = siteSel ? siteSel.value : '';
+            if (site && STAFF[site]) {
+              currentSiteStaff = [...STAFF[site]].sort((a,b)=>a.name.localeCompare(b.name));
+              if (typeof renderStaffList === 'function') renderStaffList(currentSiteStaff);
+            }
+          } catch(e){}
+          console.log('✓ Roster synced from Google Sheet ('
+            + Object.values(merged).reduce((s,a)=>s+(a||[]).filter(x=>(x.status||'Active')!=='Removed').length,0)
+            + ' active staff)');
+          resolve(merged);
+        } catch(e) {
+          console.warn('Roster save failed:', e);
+          resolve(null);
+        }
+      } else {
+        resolve(null);
+      }
+    };
+
+    script.onerror = () => { cleanup(); resolve(null); };
+    setTimeout(() => { if (!done) { cleanup(); resolve(null); } }, 10000);
+
+    script.src = scriptUrl + '?action=readRoster&callback=' + cbName;
     document.head.appendChild(script);
   });
 }
@@ -1248,6 +1389,10 @@ async function fetchDashboardFromSheet(filterDate) {
 
 // ─── INIT FORM ───
 window.onload=()=>{
+  // Pull the latest shared roster from localStorage before first paint
+  hydrateStaffFromRoster();
+  // Then pull the authoritative roster from the Google Sheet (async)
+  fetchRosterFromGS();
   const now=new Date();
   document.getElementById('monthSelect').value=now.getMonth()+1;
   updateDays();
@@ -1256,6 +1401,10 @@ window.onload=()=>{
   renderHistory();
   // Auto-refresh every 30 seconds — keeps staff locks in sync across all devices
   setInterval(()=>{
+    // Re-pick up roster edits made in the Employee Manager
+    hydrateStaffFromRoster();
+    // Pull centralized roster from Google Sheet so add/remove from any device propagates
+    fetchRosterFromGS();
     const site  = document.getElementById('siteSelect').value;
     const day   = document.getElementById('daySelect').value;
     const month = MONTHS[parseInt(document.getElementById('monthSelect').value)];
@@ -1889,9 +2038,9 @@ function checkAdminPwd(pwd){
   </div>
   <div style="margin-top:10px;font-size:11px;color:var(--text3)">
     📞 Contact Us &nbsp;·&nbsp;
-    <a href="mailto:hrushikeshpadhi6@live.com" style="color:var(--accent);text-decoration:none">hrushikeshpadhi6@live.com</a>
+    <a href="/cdn-cgi/l/email-protection#650d1710160d0c0e00160d1504010d0c5325090c13004b060a08" style="color:var(--accent);text-decoration:none"><span class="__cf_email__" data-cfemail="771f0502041f1e1c12041f0716131f1e41371b1e01125914181a">[email&#160;protected]</span></a>
     
   </div>
 </div>
-</body>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
 </html>
