@@ -570,42 +570,23 @@ select.sel option{background:#141c28}
   <div class="main-wrap">
     <div style="margin-bottom:24px">
       <div style="font-size:18px;font-weight:700;margin-bottom:4px">⚙️ Settings</div>
-      <div style="font-size:12px;color:var(--text2)">Shared storage keys, Apps Script URL, admin PIN</div>
+      <div style="font-size:12px;color:var(--text2)">Shared storage keys &amp; Google Sheet sync</div>
     </div>
 
-    <!-- KEY INFO -->
-    <div class="card">
-      <div class="card-title"><div class="ctag" style="background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.2)">🔑</div>Shared localStorage Keys</div>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">
-        Both <strong style="color:var(--text)">Employee Manager</strong> and <strong style="color:var(--text)">Attendance Pro</strong> must use the <strong style="color:var(--accent2)">exact same localStorage key</strong> for the staff roster. Configure the key name that your Attendance Pro app reads.
-      </p>
-      <div class="config-field">
-        <label>Roster localStorage Key (must match Attendance Pro's key)</label>
-        <input class="config-input" type="text" id="settingsRosterKey" placeholder="e.g. darkstore_staff_roster"/>
-        <div style="font-size:11px;color:var(--text2);margin-top:4px">Default: <code style="color:var(--accent)">darkstore_staff_roster</code> — change this only if your Attendance Pro uses a different key name</div>
-      </div>
-      <div class="config-field">
-        <label>Attendance Pro localStorage Key (for live link check)</label>
-        <input class="config-input" type="text" id="settingsAttKey" placeholder="e.g. darkstore_attendance"/>
-        <div style="font-size:11px;color:var(--text2);margin-top:4px">Used to verify both apps share storage</div>
-      </div>
-    </div>
+    <!-- KEY INFO card removed: app is now Google Sheet only -->
 
     <div class="card">
-      <div class="card-title"><div class="ctag" style="background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.2)">🔐</div>Admin Settings</div>
+      <div class="card-title"><div class="ctag" style="background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.2)">✓</div>Sync Status</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">
-        Google Sheet sync is configured automatically. Set an admin PIN to restrict employee removal.
+        Google Sheet sync is configured automatically. All employee changes save directly to the central sheet — no local storage, no PIN required.
       </p>
-      <div class="config-field">
-        <label>Admin PIN</label>
-        <input class="config-input" type="password" id="settingsAdminPin" placeholder="4-digit PIN"/>
+      <div class="sync-status" id="settingsSyncStatus">
+        <div class="sync-dot synced" id="settingsDot"></div>
+        <span id="settingsStatusText">Connected to Google Sheet</span>
       </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
-        <div class="sync-status" id="settingsSyncStatus">
-          <div class="sync-dot synced" id="settingsDot"></div>
-          <span id="settingsStatusText">Connected to Google Sheet</span>
-        </div>
+      <div id="seedMissingWrap" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:none">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px" id="seedMissingMsg"></div>
+        <button class="btn btn-primary" id="seedMissingBtn" onclick="seedMissingToGS()">⬆ Seed Missing Employees to Google Sheet</button>
       </div>
     </div>
 
@@ -795,57 +776,119 @@ function getLogs(){
 function saveLogs(l){ localStorage.setItem('em_logs', JSON.stringify(l)); }
 
 /* ──────────────────────────────────────────────────────
-   ROSTER: reads/writes the SHARED key that Attendance Pro also reads
+   ROSTER: in-memory cache only — Google Sheet is the single source of truth.
+   No localStorage. Fresh fetch on load + every 60s (see fetchRosterFromGS).
    ────────────────────────────────────────────────────── */
+let _rosterCache = null; // populated by fetchRosterFromGS / saveRoster
+
 function getRoster(){
-  try{
-    const key = getRosterKey();
-    const stored = localStorage.getItem(key);
-    if(stored){
-      const parsed = JSON.parse(stored);
-      // Merge baseline for any missing sites (non-destructive)
-      let changed = false;
-      Object.keys(BASELINE_STAFF).forEach(site => {
-        if(!parsed[site]){
-          parsed[site] = BASELINE_STAFF[site].map(e => ({...e}));
-          changed = true;
-        }
-      });
-      if(changed){ localStorage.setItem(key, JSON.stringify(parsed)); }
-      return parsed;
-    }
-    // First run: seed with baseline
-    const fresh = JSON.parse(JSON.stringify(BASELINE_STAFF));
-    localStorage.setItem(key, JSON.stringify(fresh));
-    return fresh;
-  }catch(e){
-    return JSON.parse(JSON.stringify(BASELINE_STAFF));
-  }
+  if(_rosterCache) return _rosterCache;
+  // Fall back to baseline shape until GS responds. Returns a deep copy so callers can't pollute the baseline.
+  _rosterCache = JSON.parse(JSON.stringify(BASELINE_STAFF));
+  return _rosterCache;
 }
+
 function saveRoster(r){
-  const key = getRosterKey();
-  localStorage.setItem(key, JSON.stringify(r));
-  // Also dispatch a storage event so other tabs (Attendance Pro) see the change
-  try{
-    // storageEvent trick for same-tab communication if needed
-    window.dispatchEvent(new StorageEvent('storage',{key, newValue: JSON.stringify(r)}));
-  }catch(e){}
+  // In-memory only. Persistence happens through syncToSheet() which POSTs each change to Google Sheet.
+  _rosterCache = r;
+  // Notify any other listeners in the same page (no cross-tab — GS poll handles that)
+  try{ window.dispatchEvent(new CustomEvent('rosterChanged', {detail: r})); }catch(e){}
 }
 
 // ─── SYNC HEALTH CHECK ───
 function checkSyncHealth(){
   const el = document.getElementById('syncHealthBanner');
-  if(!el) return;
-  const key = getRosterKey();
   const roster = getRoster();
-  const total = Object.values(roster).reduce((s,arr)=>s+(arr||[]).filter(e=>e.status!=='Removed').length,0);
-  el.innerHTML = `<div class="sync-banner">
-    <div>
-      <span style="color:var(--accent2);font-weight:700">✅ Shared Roster Active</span>
-      <span style="color:var(--text2);font-size:12px;margin-left:8px">Key: <code style="color:var(--accent);font-family:monospace">${key}</code> · <strong style="color:var(--text)">${total}</strong> active staff</span>
-    </div>
-    <span class="key-badge">${key}</span>
-  </div>`;
+  const total = Object.values(roster).reduce((s,arr)=>s+(arr||[]).filter(e=>(e.status||'Active')!=='Removed').length,0);
+  if(el){
+    el.innerHTML = `<div class="sync-banner">
+      <div>
+        <span style="color:var(--accent2);font-weight:700">✅ Google Sheet Connected</span>
+        <span style="color:var(--text2);font-size:12px;margin-left:8px">All changes save directly to the central sheet · <strong style="color:var(--text)">${total}</strong> active staff</span>
+      </div>
+      <span class="key-badge">SHEET</span>
+    </div>`;
+  }
+  // Show the "Seed Missing" prompt only if baseline has employees that GS doesn't
+  checkMissingFromGS();
+}
+
+// ─── DETECT EMPLOYEES IN BASELINE BUT MISSING FROM GOOGLE SHEET ───
+function getMissingFromGS(){
+  const roster = getRoster();
+  const missing = [];
+  Object.keys(BASELINE_STAFF).forEach(site => {
+    const gsNames = new Set(
+      (roster[site] || [])
+        .filter(e => e._src === 'gs')
+        .map(e => (e.name||'').toLowerCase().trim())
+    );
+    BASELINE_STAFF[site].forEach(e => {
+      if(!gsNames.has((e.name||'').toLowerCase().trim())){
+        missing.push({...e, site});
+      }
+    });
+  });
+  return missing;
+}
+
+function checkMissingFromGS(){
+  const wrap = document.getElementById('seedMissingWrap');
+  const msg  = document.getElementById('seedMissingMsg');
+  if(!wrap || !msg) return;
+  const missing = getMissingFromGS();
+  if(missing.length === 0){
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'block';
+  msg.innerHTML = `<strong style="color:var(--warn)">⚠ ${missing.length} employee${missing.length>1?'s':''}</strong> ${missing.length>1?'are':'is'} in the app baseline but missing from the central Google Sheet. Click below to push them to the sheet so every device sees them.`;
+}
+
+// ─── PUSH MISSING BASELINE EMPLOYEES TO GOOGLE SHEET ───
+async function seedMissingToGS(){
+  const missing = getMissingFromGS();
+  if(!missing.length){ showToast('Nothing to seed','warn'); return; }
+  const btn = document.getElementById('seedMissingBtn');
+  btn.disabled = true;
+  btn.textContent = `⏳ Syncing ${missing.length}…`;
+
+  // Push one-by-one via JSONP (same as syncToSheet but inline so we get a clean count)
+  let okCount = 0;
+  for(let i=0; i<missing.length; i++){
+    const emp = missing[i];
+    btn.textContent = `⏳ Syncing ${i+1}/${missing.length}…`;
+    const ok = await new Promise(resolve => {
+      const cbName = '_seed_' + Date.now() + '_' + i;
+      const script = document.createElement('script');
+      let done = false;
+      const cleanup = () => { done=true; delete window[cbName]; if(script.parentNode) script.remove(); };
+      const payload = {
+        action: 'addEmployee',
+        name: emp.name, site: emp.site, store: emp.site,
+        designation: emp.designation || '', agency: emp.agency || '',
+        dept: emp.dept || emp.designation || '',
+        reason: '', remarks: 'seeded from baseline',
+        timestamp: new Date().toISOString()
+      };
+      const params = Object.entries(payload).map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+      window[cbName] = (resp) => { cleanup(); resolve(true); };
+      script.onerror = () => { cleanup(); resolve(false); };
+      setTimeout(() => { if(!done){ cleanup(); resolve(false); } }, 8000);
+      script.src = `${HARDCODED_SCRIPT_URL}?${params}&callback=${cbName}`;
+      document.head.appendChild(script);
+    });
+    if(ok) okCount++;
+  }
+
+  btn.disabled = false;
+  btn.textContent = '⬆ Seed Missing Employees to Google Sheet';
+  showToast(`✅ Seeded ${okCount} of ${missing.length} to Google Sheet`,'tok');
+
+  // Re-pull from GS so the UI reflects the new state
+  await fetchRosterFromGS(true);
+  renderRoster();
+  checkSyncHealth();
 }
 
 // ─── TOAST ───
@@ -865,7 +908,7 @@ function showPage(name){
   const idx = {add:0,remove:1,logs:2,settings:3}[name];
   document.querySelectorAll('.nav-tab')[idx]?.classList.add('active');
   if(name==='logs')     renderLogs();
-  if(name==='settings'){ loadSettings(); renderRoster(); }
+  if(name==='settings'){ loadSettings(); renderRoster(); checkSyncHealth(); }
   if(name==='remove')   resetRemFlow();
   if(name==='add')      checkSyncHealth();
 }
@@ -1321,30 +1364,18 @@ function exportLogs(){
 
 // ─── SETTINGS ───
 function loadSettings(){
-  const s = getSettings();
-  document.getElementById('settingsAdminPin').value  = s.adminPin||'';
-  document.getElementById('settingsRosterKey').value = s.rosterKey||DEFAULT_ROSTER_KEY;
-  document.getElementById('settingsAttKey').value    = s.attKey||DEFAULT_ATT_KEY;
   const dot=document.getElementById('settingsDot');
   const txt=document.getElementById('settingsStatusText');
-  dot.className='sync-dot synced';
-  txt.textContent='Connected to Google Sheet';
+  if(dot && txt){ dot.className='sync-dot synced'; txt.textContent='Connected to Google Sheet'; }
 }
 
 function saveSettings(){
-  const s = {
-    adminPin:  document.getElementById('settingsAdminPin').value.trim(),
-    rosterKey: document.getElementById('settingsRosterKey').value.trim() || DEFAULT_ROSTER_KEY,
-    attKey:    document.getElementById('settingsAttKey').value.trim()    || DEFAULT_ATT_KEY,
-  };
-  saveSettingsData(s);
-  const dot=document.getElementById('settingsDot');
-  const txt=document.getElementById('settingsStatusText');
-  dot.className='sync-dot synced';
-  txt.textContent='Saved & ready';
-  showToast('✅ Settings saved!','tok');
-  renderRoster();
-  checkSyncHealth();
+  // No-op: nothing user-configurable anymore. Kept for compatibility.
+  showToast('✅ Already synced — no settings to save','tok');
+}
+
+function saveSettings_LEGACY(){
+  // settings save no longer needed
 }
 
 // ─── ROSTER ───
@@ -1462,17 +1493,24 @@ function fetchRosterFromGS(silent){
       cleanup();
       if(data && data.result==='success' && data.roster && typeof data.roster==='object'){
         try{
-          const key = getRosterKey();
-          // Merge: GS roster wins, baseline fills missing sites
+          // UNION merge: baseline employees + GS employees (GS values win per name).
+          // This guarantees the UI shows every baseline staff, even if GS is missing them.
           const merged = {};
           const allSites = new Set([...Object.keys(BASELINE_STAFF), ...Object.keys(data.roster)]);
           allSites.forEach(site => {
-            const gsList = Array.isArray(data.roster[site]) ? data.roster[site] : null;
-            merged[site] = gsList ? gsList : (BASELINE_STAFF[site]||[]).map(e => ({...e}));
+            const byName = new Map(); // lowercase name → record
+            // 1. Seed with baseline
+            (BASELINE_STAFF[site] || []).forEach(e => {
+              byName.set((e.name||'').toLowerCase().trim(), {...e, _src:'baseline'});
+            });
+            // 2. Overlay GS — GS wins if same name (keeps Removed status, custom designations, etc.)
+            (Array.isArray(data.roster[site]) ? data.roster[site] : []).forEach(e => {
+              byName.set((e.name||'').toLowerCase().trim(), {...e, _src:'gs'});
+            });
+            merged[site] = [...byName.values()];
           });
-          localStorage.setItem(key, JSON.stringify(merged));
+          _rosterCache = merged;
           if(!silent) showToast('🔄 Roster synced from Google Sheet','tok');
-          // Refresh visible roster table if user is on settings page
           if(typeof renderRoster === 'function') renderRoster();
           if(typeof checkSyncHealth === 'function') checkSyncHealth();
           resolve(merged);
@@ -1491,13 +1529,11 @@ function fetchRosterFromGS(silent){
 
 // ─── INIT ───
 window.onload = ()=>{
-  // Seed shared roster if not yet present
-  getRoster();
   loadSettings();
-  checkSyncHealth();
-
-  // Pull centralized roster from Google Sheet on load
-  fetchRosterFromGS(true);
+  // Pull centralized roster from Google Sheet on load (populates _rosterCache)
+  fetchRosterFromGS(true).then(() => {
+    checkSyncHealth();
+  });
   // Re-sync every 60s so adds/removes from any device show up
   setInterval(() => fetchRosterFromGS(true), 60000);
 
