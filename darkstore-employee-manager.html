@@ -982,7 +982,7 @@ function submitManualAdd(){
 
   // Add
   if(!roster[site]) roster[site] = [];
-  const newEmp = { name, designation:desig, agency, dept, store, status:'Active', addedAt:new Date().toISOString(), _src:'local-pending' };
+  const newEmp = { name, site, designation:desig, agency, dept, store, status:'Active', addedAt:new Date().toISOString(), _src:'local-pending' };
   roster[site].push(newEmp);
   saveRoster(roster);
 
