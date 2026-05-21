@@ -956,7 +956,7 @@ function checkManualDup(){
   const site = document.getElementById('m-site').value;
   if(!name || !site){ document.getElementById('manualDupWarning').style.display='none'; return; }
   const roster = getRoster();
-  const dup = (roster[site]||[]).some(e=>e.name.toLowerCase()===name && e.status!=='Removed');
+  const dup = (roster[site]||[]).some(e=>e.name.toLowerCase()===name && e.status!=='Removed' && e._src==='gs');
   document.getElementById('manualDupWarning').style.display = dup ? 'block' : 'none';
 }
 
@@ -977,12 +977,12 @@ function submitManualAdd(){
 
   // Duplicate check
   const roster = getRoster();
-  const dup = (roster[site]||[]).some(e=>e.name.toLowerCase()===name.toLowerCase() && e.status!=='Removed');
+  const dup = (roster[site]||[]).some(e=>e.name.toLowerCase()===name.toLowerCase() && e.status!=='Removed' && e._src==='gs');
   if(dup){ showToast('⚠️ Employee already exists at this site','warn'); return; }
 
   // Add
   if(!roster[site]) roster[site] = [];
-  const newEmp = { name, designation:desig, agency, dept, store, status:'Active', addedAt:new Date().toISOString() };
+  const newEmp = { name, designation:desig, agency, dept, store, status:'Active', addedAt:new Date().toISOString(), _src:'local-pending' };
   roster[site].push(newEmp);
   saveRoster(roster);
 
@@ -993,7 +993,7 @@ function submitManualAdd(){
 
   // Show success
   document.getElementById('importSummary').innerHTML = `
-    <strong>${name}</strong> added to <strong>${site}</strong> · ${designation||desig} · ${agency}<br>
+    <strong>${name}</strong> added to <strong>${site}</strong> · ${desig} · ${agency}<br>
     <span style="color:var(--accent2)">✅ Now visible in Attendance Pro for marking present/absent</span>`;
   syncToSheet('addEmployee', [newEmp], 'syncResult');
   document.getElementById('addStep2Manual').style.display = 'none';
@@ -1067,7 +1067,7 @@ function validateBulkRows(){
     if(!row.designation) errs.push('Missing Designation');
     if(!row.agency)      errs.push('Missing Agency');
 
-    const isDup = row.site && (roster[row.site]||[]).some(e=>e.name.toLowerCase()===row.name.toLowerCase()&&e.status!=='Removed');
+    const isDup = row.site && (roster[row.site]||[]).some(e=>e.name.toLowerCase()===row.name.toLowerCase()&&e.status!=='Removed'&&e._src==='gs');
     row._errors = errs;
     row._isDup  = isDup;
 
@@ -1462,8 +1462,13 @@ function syncToSheet(action, rows, resultElId){
         syncEl.innerHTML=`<div style="display:flex;justify-content:center">
           <div class="sync-status"><div class="sync-dot synced"></div>Synced to Google Sheets</div>
         </div>`;
-        // Pull back the authoritative roster from GS so this device matches the sheet
-        if(typeof fetchRosterFromGS === 'function') setTimeout(()=>fetchRosterFromGS(true), 600);
+        // Pull back the authoritative roster from GS so this device matches the sheet.
+        // Wait longer (2.5s) because GS often takes a beat to commit the write before readRoster sees it.
+        // Then a second pass at 6s to catch any laggy commits.
+        if(typeof fetchRosterFromGS === 'function'){
+          setTimeout(()=>fetchRosterFromGS(true), 2500);
+          setTimeout(()=>fetchRosterFromGS(true), 6000);
+        }
       }
     };
 
@@ -1493,17 +1498,28 @@ function fetchRosterFromGS(silent){
       cleanup();
       if(data && data.result==='success' && data.roster && typeof data.roster==='object'){
         try{
-          // UNION merge: baseline employees + GS employees (GS values win per name).
-          // This guarantees the UI shows every baseline staff, even if GS is missing them.
+          // 3-LAYER union merge (preserves pending local adds awaiting GS commit):
+          //   1. baseline   2. existing cache (manual adds)   3. GS (wins)
+          const prevCache = _rosterCache || {};
           const merged = {};
-          const allSites = new Set([...Object.keys(BASELINE_STAFF), ...Object.keys(data.roster)]);
+          const allSites = new Set([
+            ...Object.keys(BASELINE_STAFF),
+            ...Object.keys(prevCache),
+            ...Object.keys(data.roster)
+          ]);
           allSites.forEach(site => {
-            const byName = new Map(); // lowercase name → record
-            // 1. Seed with baseline
+            const byName = new Map();
+            // 1. baseline
             (BASELINE_STAFF[site] || []).forEach(e => {
               byName.set((e.name||'').toLowerCase().trim(), {...e, _src:'baseline'});
             });
-            // 2. Overlay GS — GS wins if same name (keeps Removed status, custom designations, etc.)
+            // 2. previously-cached non-baseline entries (pending local adds, etc.)
+            (prevCache[site] || []).forEach(e => {
+              if(e._src !== 'baseline'){
+                byName.set((e.name||'').toLowerCase().trim(), {...e});
+              }
+            });
+            // 3. GS wins
             (Array.isArray(data.roster[site]) ? data.roster[site] : []).forEach(e => {
               byName.set((e.name||'').toLowerCase().trim(), {...e, _src:'gs'});
             });
