@@ -2036,13 +2036,11 @@ function checkAdminPwd(pwd){
     Hrushikesh Padhi &nbsp;·&nbsp;
     <span style="color:var(--warn)">ENWPP9081D/2019</span>
   </div>
- <div style="margin-top:10px;font-size:11px;color:var(--text3)">
-  📞 Contact Us &nbsp;·&nbsp;
-  <a href="mailto:hrushikeshpadhi6@live.com" 
-     style="color:var(--accent);text-decoration:none">
-     hrushikeshpadhi6@live.com
-  </a>
-</div>
+  <div style="margin-top:10px;font-size:11px;color:var(--text3)">
+    📞 Contact Us &nbsp;·&nbsp;
+    <a href="/cdn-cgi/l/email-protection#68001a1d1b0001030d1b0018090c00015e2804011e0d460b0705" style="color:var(--accent);text-decoration:none"><span class="__cf_email__" data-cfemail="660e1413150e0f0d03150e1607020e0f50260a0f10034805090b">[email&#160;protected]</span></a>
+    
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════
@@ -2070,10 +2068,10 @@ function checkAdminPwd(pwd){
   }
   .tools-backdrop.open{opacity:1;pointer-events:auto}
   .tools-drawer{
-    position:fixed;top:0;right:0;height:100vh;width:min(420px,92vw);
+    position:fixed;top:0;right:0;height:100vh;height:100dvh;width:min(440px,92vw);
     background:var(--bg);border-left:1px solid var(--border);
     transform:translateX(102%);transition:transform .26s cubic-bezier(.2,.7,.2,1);
-    z-index:1000;display:flex;flex-direction:column;
+    z-index:1000;display:flex;flex-direction:column;min-height:0;
     box-shadow:-20px 0 60px rgba(0,0,0,.5);
   }
   .tools-drawer.open{transform:translateX(0)}
@@ -2090,9 +2088,11 @@ function checkAdminPwd(pwd){
     display:flex;align-items:center;justify-content:center;transition:all .18s;
   }
   .tools-close:hover{color:var(--text);border-color:var(--accent)}
-  .tools-body{flex:1;overflow-y:auto;padding:16px 20px 30px;display:flex;flex-direction:column;gap:14px}
-  .tools-body::-webkit-scrollbar{width:4px}
-  .tools-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+  .tools-body{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:16px 20px 30px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin;scrollbar-color:var(--purple) var(--card2);min-height:0}
+  .tools-body::-webkit-scrollbar{width:8px}
+  .tools-body::-webkit-scrollbar-track{background:var(--card2);border-radius:4px}
+  .tools-body::-webkit-scrollbar-thumb{background:var(--purple);border-radius:4px;border:2px solid var(--card2)}
+  .tools-body::-webkit-scrollbar-thumb:hover{background:#7c3aed}
   .tool-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s}
   .tool-card:hover{border-color:var(--border2)}
   .tool-card-head{padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
@@ -2107,7 +2107,7 @@ function checkAdminPwd(pwd){
   .tool-chev{color:var(--text3);font-size:12px;transition:transform .2s}
   .tool-card.open .tool-chev{transform:rotate(180deg);color:var(--accent)}
   .tool-body{max-height:0;overflow:hidden;transition:max-height .28s ease}
-  .tool-card.open .tool-body{max-height:900px}
+  .tool-card.open .tool-body{max-height:2000px}
   .tool-body-inner{padding:0 16px 16px;border-top:1px solid var(--border)}
   .tool-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
   .tool-row > *{flex:1;min-width:0}
@@ -2134,7 +2134,8 @@ function checkAdminPwd(pwd){
   .tool-stat.off     .tool-stat-num{color:var(--warn)}
   .tool-stat.total   .tool-stat-num{color:var(--accent)}
   .tool-stat.leave   .tool-stat-num{color:var(--purple)}
-  .tool-list{max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--bg2)}
+  .tool-list{max-height:340px;overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--border);border-radius:8px;background:var(--bg2)}
+  @media (min-width:900px){ .tool-list{max-height:420px} }
   .tool-list::-webkit-scrollbar{width:3px}
   .tool-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
   .tool-row-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;gap:8px}
@@ -2149,6 +2150,29 @@ function checkAdminPwd(pwd){
   .tool-empty{padding:24px 16px;text-align:center;color:var(--text3);font-size:12px}
   .tool-summary{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--text2);margin-bottom:8px;font-family:'JetBrains Mono',monospace;line-height:1.5}
   .tool-summary strong{color:var(--text);font-weight:700}
+
+  /* Sub-mode tabs inside Staff Status */
+  .status-mode-tabs{display:flex;gap:4px;background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:3px;margin-top:12px;margin-bottom:6px}
+  .status-mode-tab{flex:1;padding:7px 10px;border:none;background:transparent;color:var(--text2);font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;border-radius:6px;cursor:pointer;transition:all .18s;letter-spacing:.3px}
+  .status-mode-tab.active{background:var(--accent);color:#070b12}
+  .status-mode-tab:not(.active):hover{color:var(--text)}
+
+  /* Absenteeism rows */
+  .abs-rank{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;gap:10px}
+  .abs-rank:last-child{border-bottom:none}
+  .abs-rank .rk{width:24px;height:24px;border-radius:6px;background:var(--card2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--text2);flex-shrink:0}
+  .abs-rank.top1 .rk{background:rgba(255,77,109,.15);border-color:rgba(255,77,109,.4);color:var(--accent3)}
+  .abs-rank.top2 .rk{background:rgba(255,179,71,.12);border-color:rgba(255,179,71,.35);color:var(--warn)}
+  .abs-rank.top3 .rk{background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.35);color:var(--purple)}
+  .abs-rank .info{flex:1;min-width:0}
+  .abs-rank .nm{color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .abs-rank .sub{font-size:10px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .abs-rank .bar-wrap{flex:1;max-width:80px;height:5px;background:var(--card2);border-radius:3px;overflow:hidden}
+  .abs-rank .bar-fill{height:100%;background:linear-gradient(90deg,var(--warn),var(--accent3));border-radius:3px}
+  .abs-rank .ct{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--accent3);min-width:30px;text-align:right}
+  .abs-rank .pct{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);text-align:right}
+  .abs-section-head{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 6px;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
+  .abs-section-head .badge{background:var(--card2);border:1px solid var(--border2);color:var(--text3);padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:none}
 </style>
 
 <button class="tools-fab" id="toolsFab" onclick="openToolsDrawer()" aria-label="Open tools" title="Quick Tools">
@@ -2200,58 +2224,56 @@ function checkAdminPwd(pwd){
         <div class="tool-icon status">📊</div>
         <div class="tool-meta">
           <div class="tool-name">Staff Status Dashboard</div>
-          <div class="tool-sub">Present / Absent / Off in one place</div>
+          <div class="tool-sub">Present / Absent / Off + date filter</div>
         </div>
         <div class="tool-chev">▼</div>
       </div>
       <div class="tool-body"><div class="tool-body-inner">
-        <div class="tool-row">
-          <div><label class="tool-label">Date</label><input type="date" class="tool-input" id="statusDate"/></div>
-          <div><label class="tool-label">Site</label>
-            <select class="tool-select" id="statusSite">
-              <option value="">All Sites</option>
-              <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
-              <option>Khalifa City</option><option>Al Qusais</option>
-              <option>Business Bay</option><option>NIP</option>
-            </select></div>
-        </div>
-        <button class="tool-btn accent" id="statusBtn" onclick="toolLoadStatus()">📊 Load Status</button>
-        <div class="tool-result" id="statusResult"></div>
-      </div></div>
-    </div>
 
-    <div class="tool-card" id="toolCardFilter">
-      <div class="tool-card-head" onclick="toggleToolCard('toolCardFilter')">
-        <div class="tool-icon filter">🔍</div>
-        <div class="tool-meta">
-          <div class="tool-name">Date Filter</div>
-          <div class="tool-sub">Browse attendance records by date range</div>
+        <div class="status-mode-tabs">
+          <button class="status-mode-tab active" data-mode="daily" onclick="switchStatusMode('daily')">📅 Daily</button>
+          <button class="status-mode-tab" data-mode="absent" onclick="switchStatusMode('absent')">⚠ Absenteeism</button>
         </div>
-        <div class="tool-chev">▼</div>
-      </div>
-      <div class="tool-body"><div class="tool-body-inner">
-        <div class="tool-row">
-          <div><label class="tool-label">From</label><input type="date" class="tool-input" id="filterFrom"/></div>
-          <div><label class="tool-label">To</label><input type="date" class="tool-input" id="filterTo"/></div>
+
+        <!-- DAILY MODE -->
+        <div id="statusDaily">
+          <div class="tool-row">
+            <div><label class="tool-label">Date</label><input type="date" class="tool-input" id="statusDate"/></div>
+            <div><label class="tool-label">Site</label>
+              <select class="tool-select" id="statusSite">
+                <option value="">All Sites</option>
+                <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
+                <option>Khalifa City</option><option>Al Qusais</option>
+                <option>Business Bay</option><option>NIP</option>
+              </select></div>
+          </div>
+          <button class="tool-btn accent" id="statusBtn" onclick="toolLoadStatus()">📊 Load Status</button>
+          <div class="tool-result" id="statusResult"></div>
         </div>
-        <div class="tool-row">
-          <div><label class="tool-label">Site (optional)</label>
-            <select class="tool-select" id="filterSite">
-              <option value="">All Sites</option>
-              <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
-              <option>Khalifa City</option><option>Al Qusais</option>
-              <option>Business Bay</option><option>NIP</option>
-            </select></div>
-          <div><label class="tool-label">Status</label>
-            <select class="tool-select" id="filterStatus">
-              <option value="">All Statuses</option>
-              <option>Present</option><option>Absent</option>
-              <option>Week Off</option><option>Sick Leave</option>
-              <option>Annual Leave</option><option>Authorize Leave</option>
-            </select></div>
+
+        <!-- ABSENTEEISM MODE -->
+        <div id="statusAbsent" style="display:none">
+          <div class="tool-row">
+            <div><label class="tool-label">Month</label><select class="tool-select" id="absMonth"></select></div>
+            <div><label class="tool-label">Year</label><select class="tool-select" id="absYear"></select></div>
+          </div>
+          <div class="tool-row">
+            <div><label class="tool-label">Site (optional)</label>
+              <select class="tool-select" id="absSite">
+                <option value="">All Sites</option>
+                <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
+                <option>Khalifa City</option><option>Al Qusais</option>
+                <option>Business Bay</option><option>NIP</option>
+              </select></div>
+            <div><label class="tool-label">Min Absent Days</label>
+              <input type="number" class="tool-input" id="absThreshold" value="3" min="1" max="31"/>
+            </div>
+          </div>
+          <button class="tool-btn accent" id="absBtn" onclick="toolLoadAbsenteeism()">⚠ Analyze Absenteeism</button>
+          <button class="tool-btn green" id="absExportBtn" onclick="toolExportAbsenteeism()" style="display:none">⬇ Export Excel (.csv)</button>
+          <div class="tool-result" id="absResult"></div>
         </div>
-        <button class="tool-btn" id="filterBtn" onclick="toolApplyDateFilter()">🔍 Apply Filter</button>
-        <div class="tool-result" id="filterResult"></div>
+
       </div></div>
     </div>
 
@@ -2295,9 +2317,245 @@ function initToolsDefaults(){
     yearSel.appendChild(o);
   }
   document.getElementById('statusDate').value = today;
-  document.getElementById('filterFrom').value = today;
-  document.getElementById('filterTo').value   = today;
   document.getElementById('toolCardExport').classList.add('open');
+
+  // Populate Absenteeism month/year dropdowns
+  const absMonth = document.getElementById('absMonth');
+  const absYear  = document.getElementById('absYear');
+  if(absMonth && absYear){
+    absMonth.innerHTML='';
+    MONTHS.slice(1).forEach((m,i)=>{
+      const o=document.createElement('option');
+      o.value=i+1; o.textContent=m;
+      if(i+1===now.getMonth()+1) o.selected=true;
+      absMonth.appendChild(o);
+    });
+    absYear.innerHTML='';
+    for(let y=now.getFullYear()-3; y<=now.getFullYear()+1; y++){
+      const o=document.createElement('option');
+      o.value=y; o.textContent=y;
+      if(y===now.getFullYear()) o.selected=true;
+      absYear.appendChild(o);
+    }
+  }
+}
+
+/* ── Staff Status: switch between Daily and Absenteeism modes ── */
+function switchStatusMode(mode){
+  document.querySelectorAll('.status-mode-tab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.mode===mode);
+  });
+  document.getElementById('statusDaily').style.display  = (mode==='daily')  ? '' : 'none';
+  document.getElementById('statusAbsent').style.display = (mode==='absent') ? '' : 'none';
+}
+
+/* ── Monthly absenteeism analysis ── */
+window.__absLastReport = null;
+
+async function toolLoadAbsenteeism(){
+  const monthNum = parseInt(document.getElementById('absMonth').value);
+  const year     = parseInt(document.getElementById('absYear').value);
+  const site     = document.getElementById('absSite').value;
+  const threshold= Math.max(1, parseInt(document.getElementById('absThreshold').value)||3);
+  const monthName= MONTHS[monthNum];
+  const btn      = document.getElementById('absBtn');
+  const exportBtn= document.getElementById('absExportBtn');
+  const result   = document.getElementById('absResult');
+
+  btn.classList.add('busy'); btn.textContent='⏳ Analyzing…';
+  result.classList.remove('show');
+  exportBtn.style.display='none';
+
+  const all = await toolFetchAll();
+  const filtered = all.filter(r =>
+    String(r.month).trim().toLowerCase() === monthName.toLowerCase() &&
+    String(r.year) === String(year) &&
+    (!site || r.site === site)
+  );
+
+  btn.classList.remove('busy'); btn.textContent='⚠ Analyze Absenteeism';
+
+  if(!filtered.length){
+    result.innerHTML = `<div class="tool-empty">No records for ${monthName} ${year}${site?' · '+site:''}</div>`;
+    result.classList.add('show');
+    return;
+  }
+
+  // Per-staff tally
+  const staffMap = new Map(); // key site|name -> {name,site,agency,designation,absent,total,days:Set}
+  // Per-agency tally
+  const agencyMap = new Map(); // agency -> {absent,total,staff:Set}
+
+  filtered.forEach(r => {
+    const key = (r.site||'')+'|'+(r.staffName||'');
+    if(!staffMap.has(key)){
+      staffMap.set(key, {
+        name: r.staffName||'—', site: r.site||'',
+        agency: r.agency||'Unassigned', designation: r.designation||'',
+        absent:0, total:0, absentDays:[]
+      });
+    }
+    const s = staffMap.get(key);
+    s.total++;
+    if(r.status === 'Absent'){
+      s.absent++;
+      s.absentDays.push(parseInt(r.day));
+    }
+    if(r.status === 'Present') s.present = (s.present||0) + 1;
+
+    const ag = r.agency || 'Unassigned';
+    if(!agencyMap.has(ag)) agencyMap.set(ag, {absent:0,present:0,total:0,staffSet:new Set(),absentStaff:new Set()});
+    const a = agencyMap.get(ag);
+    a.total++;
+    a.staffSet.add(key);
+    if(r.status === 'Absent'){ a.absent++; a.absentStaff.add(key); }
+    if(r.status === 'Present') a.present++;
+  });
+
+  // Sort staff by absent count desc
+  const staffArr = [...staffMap.values()]
+    .filter(s => s.absent > 0)
+    .sort((a,b) => b.absent - a.absent || (a.name||'').localeCompare(b.name||''));
+
+  const flagged = staffArr.filter(s => s.absent >= threshold);
+  const maxAbsent = staffArr[0]?.absent || 1;
+
+  // Sort agencies — show ALL (not just those with absences), highest absent first then by rate
+  const agencyArr = [...agencyMap.entries()]
+    .map(([name,v]) => ({
+      name,
+      absent: v.absent,
+      present: v.present,
+      total:  v.total,
+      staffCount: v.staffSet.size,
+      flaggedStaff: [...v.absentStaff].filter(k => staffMap.get(k).absent >= threshold).length,
+      rate: v.total ? (v.absent/v.total*100) : 0,
+      presentRate: v.total ? (v.present/v.total*100) : 0
+    }))
+    .sort((a,b) => b.absent - a.absent || b.rate - a.rate || a.name.localeCompare(b.name));
+
+  const maxAgency = Math.max(1, ...agencyArr.map(a=>a.absent));
+  const totalAbsent = staffArr.reduce((s,r)=>s+r.absent, 0);
+
+  // Stash for export
+  window.__absLastReport = {
+    monthName, year, site, threshold,
+    staffArr, agencyArr, flagged, totalAbsent
+  };
+
+  result.innerHTML = `
+    <div class="tool-summary">
+      <strong>${monthName} ${year}</strong>${site?' · '+site:''} ·
+      <strong style="color:var(--accent3)">${flagged.length}</strong> staff over threshold (≥${threshold}) ·
+      <strong>${totalAbsent}</strong> total absent days
+    </div>
+    <div class="tool-stats">
+      <div class="tool-stat absent"><div class="tool-stat-num">${flagged.length}</div><div class="tool-stat-lbl">Flagged Staff</div></div>
+      <div class="tool-stat off"><div class="tool-stat-num">${agencyArr.length}</div><div class="tool-stat-lbl">Agencies</div></div>
+      <div class="tool-stat total"><div class="tool-stat-num">${totalAbsent}</div><div class="tool-stat-lbl">Absent Days</div></div>
+    </div>
+
+    <div class="abs-section-head">
+      <span>👤 Top Absent Staff</span>
+      <span class="badge">${staffArr.length} with absences · top 15 shown</span>
+    </div>
+    <div class="tool-list">
+      ${staffArr.slice(0,15).map((s,i) => {
+        const rankCls = i===0?'top1':i===1?'top2':i===2?'top3':'';
+        const flagged = s.absent >= threshold;
+        const pctOfMax = Math.round(s.absent/maxAbsent*100);
+        return `<div class="abs-rank ${rankCls}">
+          <div class="rk">${i+1}</div>
+          <div class="info">
+            <div class="nm">${escapeHTML(s.name)} ${flagged?'<span style="color:var(--accent3);font-size:10px;margin-left:4px">⚠</span>':''}</div>
+            <div class="sub">${escapeHTML(s.site)} · ${escapeHTML(s.agency)}</div>
+          </div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:${pctOfMax}%"></div></div>
+          <div class="ct">${s.absent}</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="abs-section-head">
+      <span>🏢 Agency / Company Performance</span>
+      <span class="badge">${agencyArr.length} agencies · all shown</span>
+    </div>
+    <div class="tool-list">
+      ${agencyArr.length === 0 ? '<div class="tool-empty">No agency data this month</div>' : agencyArr.map((a,i) => {
+        const rankCls = a.absent === 0 ? '' : (i===0?'top1':i===1?'top2':i===2?'top3':'');
+        const pctOfMax = Math.round(a.absent/maxAgency*100);
+        return `<div class="abs-rank ${rankCls}">
+          <div class="rk">${i+1}</div>
+          <div class="info">
+            <div class="nm">${escapeHTML(a.name)}</div>
+            <div class="sub">${a.staffCount} staff${a.flaggedStaff?' · <span style="color:var(--accent3)">'+a.flaggedStaff+' flagged</span>':''} · ${a.present} present · ${a.absent} absent · ${a.rate.toFixed(1)}% absent rate</div>
+          </div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:${pctOfMax}%"></div></div>
+          <div class="ct">${a.absent}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+  result.classList.add('show');
+  exportBtn.style.display='';
+}
+
+function escapeHTML(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function toolExportAbsenteeism(){
+  const rep = window.__absLastReport;
+  if(!rep){ if(typeof showToast==='function') showToast('Run analysis first','warn'); return; }
+  const {monthName, year, site, threshold, staffArr, agencyArr, totalAbsent} = rep;
+
+  const lines = [];
+  // Header block
+  lines.push([`Monthly Absenteeism Report`]);
+  lines.push([`Period`, `${monthName} ${year}`]);
+  lines.push([`Site`, site || 'All Sites']);
+  lines.push([`Threshold (Min Absent Days)`, threshold]);
+  lines.push([`Total Absent Days`, totalAbsent]);
+  lines.push([`Staff Over Threshold`, staffArr.filter(s=>s.absent>=threshold).length]);
+  lines.push([]);
+
+  // Staff section
+  lines.push([`STAFF RANKED BY ABSENT DAYS`]);
+  lines.push(['Rank','Staff Name','Site','Agency / Company','Designation','Absent Days','Total Logged Days','Absent %','Flagged','Absent On (Days)']);
+  staffArr.forEach((s,i) => {
+    const pct = s.total ? (s.absent/s.total*100).toFixed(1) : '0.0';
+    lines.push([
+      i+1, s.name, s.site, s.agency, s.designation,
+      s.absent, s.total, pct + '%',
+      s.absent >= threshold ? 'YES' : '',
+      s.absentDays.sort((a,b)=>a-b).join('; ')
+    ]);
+  });
+  lines.push([]);
+
+  // Agency section
+  lines.push([`AGENCY / COMPANY PERFORMANCE (ALL AGENCIES)`]);
+  lines.push(['Rank','Agency / Company','Total Staff','Flagged Staff (≥'+threshold+')','Present Days','Absent Days','Total Logged Days','Absent Rate %','Present Rate %']);
+  agencyArr.forEach((a,i) => {
+    lines.push([
+      i+1, a.name, a.staffCount, a.flaggedStaff,
+      a.present, a.absent, a.total,
+      a.rate.toFixed(2) + '%',
+      a.presentRate.toFixed(2) + '%'
+    ]);
+  });
+
+  const csv = '\uFEFF' + lines.map(r =>
+    (r||[]).map(v => `"${(v==null?'':String(v)).replace(/"/g,'""')}"`).join(',')
+  ).join('\n');
+
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Absenteeism ${monthName} ${year}${site?' - '+site:''}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  if(typeof showToast==='function') showToast('✅ Absenteeism report exported','tok');
 }
 
 async function toolFetchAll(){
@@ -2496,98 +2754,6 @@ async function toolLoadStatus(){
       }).join('')}
     </div>`;
   result.classList.add('show');
-}
-
-async function toolApplyDateFilter(){
-  const fromStr = document.getElementById('filterFrom').value;
-  const toStr   = document.getElementById('filterTo').value;
-  const site    = document.getElementById('filterSite').value;
-  const status  = document.getElementById('filterStatus').value;
-  const result  = document.getElementById('filterResult');
-  const btn     = document.getElementById('filterBtn');
-
-  if(!fromStr || !toStr){ if(typeof showToast==='function') showToast('Pick a date range','warn'); return; }
-  const from = new Date(fromStr+'T00:00:00');
-  const to   = new Date(toStr+'T23:59:59');
-  if(from > to){ if(typeof showToast==='function') showToast('"From" must be before "To"','warn'); return; }
-
-  btn.classList.add('busy'); btn.textContent='⏳ Loading…';
-  result.classList.remove('show');
-
-  const all = await toolFetchAll();
-  const monthIndexByName = {};
-  MONTHS.forEach((m,i)=>{ if(m) monthIndexByName[m.toLowerCase()] = i; });
-
-  const filtered = all.filter(r => {
-    const mIdx = monthIndexByName[String(r.month||'').trim().toLowerCase()];
-    if(!mIdx) return false;
-    const d = new Date(parseInt(r.year), mIdx-1, parseInt(r.day));
-    if(isNaN(d)) return false;
-    if(d < from || d > to) return false;
-    if(site && r.site !== site) return false;
-    if(status && r.status !== status) return false;
-    return true;
-  });
-
-  btn.classList.remove('busy'); btn.textContent='🔍 Apply Filter';
-
-  if(!filtered.length){
-    result.innerHTML = `<div class="tool-empty">No records match this filter</div>`;
-    result.classList.add('show');
-    return;
-  }
-
-  filtered.sort((a,b)=>{
-    const ad = new Date(parseInt(a.year), (monthIndexByName[String(a.month).toLowerCase()]||1)-1, parseInt(a.day));
-    const bd = new Date(parseInt(b.year), (monthIndexByName[String(b.month).toLowerCase()]||1)-1, parseInt(b.day));
-    return bd - ad;
-  });
-
-  const top = filtered.slice(0,200);
-  const fromLabel = from.toLocaleDateString('en-AE',{day:'2-digit',month:'short'});
-  const toLabel   = to.toLocaleDateString('en-AE',{day:'2-digit',month:'short',year:'numeric'});
-
-  result.innerHTML = `
-    <div class="tool-summary">
-      <strong>${filtered.length}</strong> records · ${fromLabel} → ${toLabel}${site?' · '+site:''}${status?' · '+status:''}
-      ${filtered.length>200?' · <span style="color:var(--warn)">showing first 200</span>':''}
-    </div>
-    <div class="tool-list">
-      ${top.map(r => {
-        const cls = ({'Present':'present','Absent':'absent','Week Off':'weekoff','Sick Leave':'sick','Annual Leave':'annual','Authorize Leave':'authorize'})[r.status] || '';
-        return `<div class="tool-row-item">
-          <div class="nm">${r.staffName||'—'}<div class="sub">${r.day} ${r.month} · ${r.site||''} · Shift ${r.shift||'—'}</div></div>
-          <span class="st ${cls}">${r.status||'—'}</span>
-        </div>`;
-      }).join('')}
-    </div>
-    <button class="tool-btn green" style="margin-top:10px" onclick="toolExportFilteredCSV()">
-      ⬇ Export These ${filtered.length} Records (.csv)
-    </button>`;
-  window.__filteredRows = filtered;
-  result.classList.add('show');
-}
-
-function toolExportFilteredCSV(){
-  const rows = window.__filteredRows || [];
-  if(!rows.length){ if(typeof showToast==='function') showToast('Nothing to export','warn'); return; }
-  const cols = ['Date','Site','Shift','Staff Name','Designation','Agency','Status','Remarks','Submitted By','Timestamp'];
-  const lines = rows.map(r => [
-    `${r.day} ${r.month} ${r.year}`,
-    r.site||'', r.shift||'',
-    r.staffName||'', r.designation||'', r.agency||'',
-    r.status||'', (r.remarks||''),
-    r.submittedBy||'', r.timestamp||''
-  ]);
-  const csv = '\uFEFF' + cols.join(',') + '\n' +
-    lines.map(r => r.map(v => `"${(v==null?'':String(v)).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `Attendance_filtered_${new Date().toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
-  if(typeof showToast==='function') showToast('✅ CSV downloaded','tok');
 }
 
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeToolsDrawer(); });
