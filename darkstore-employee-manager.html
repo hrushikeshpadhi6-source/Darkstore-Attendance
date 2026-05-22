@@ -21,8 +21,6 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
 .orb1{width:400px;height:400px;background:rgba(0,212,255,.06);top:-100px;right:-100px}
 .orb2{width:300px;height:300px;background:rgba(167,139,250,.05);bottom:20%;left:-80px}
-
-/* NAV */
 .nav{background:rgba(7,11,18,.95);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
 .nav-logo{display:flex;align-items:center;gap:10px}
 .nav-logo-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--purple),var(--accent));display:flex;align-items:center;justify-content:center;font-size:16px}
@@ -34,35 +32,25 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .nav-right{display:flex;align-items:center;gap:8px}
 .back-link{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--accent);background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:8px;padding:6px 12px;cursor:pointer;text-decoration:none;transition:all .2s;font-family:'JetBrains Mono',monospace}
 .back-link:hover{background:rgba(0,212,255,.12);border-color:var(--accent)}
-
-/* SYNC BANNER */
 .sync-banner{background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;font-size:12px;animation:fadeup .3s ease}
 .sync-banner.warn{background:rgba(255,179,71,.06);border-color:rgba(255,179,71,.25)}
 .sync-banner.err{background:rgba(255,77,109,.06);border-color:rgba(255,77,109,.25)}
 @keyframes fadeup{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-
-/* PAGES */
 .page{display:none;position:relative;z-index:1}
 .page.active{display:block}
 .main-wrap{max-width:760px;margin:0 auto;padding:24px 16px 80px}
-
-/* HERO */
 .hero{text-align:center;padding:36px 20px 28px;animation:fadeup .4s ease both}
 .hero-icon{width:64px;height:64px;border-radius:18px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:28px}
 .hero-icon.add{background:linear-gradient(135deg,rgba(0,255,136,.15),rgba(0,212,255,.1));border:1px solid rgba(0,255,136,.3)}
 .hero-icon.remove{background:linear-gradient(135deg,rgba(255,77,109,.15),rgba(255,179,71,.08));border:1px solid rgba(255,77,109,.3)}
 .hero h2{font-size:22px;font-weight:700;margin-bottom:6px}
 .hero p{font-size:13px;color:var(--text2);line-height:1.6;max-width:460px;margin:0 auto}
-
-/* CARDS */
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:12px;animation:fadeup .3s ease both}
 .card-title{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .ctag{width:22px;height:22px;border-radius:6px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.15);display:flex;align-items:center;justify-content:center;font-size:11px}
 .ctag.green{background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.2)}
 .ctag.red{background:rgba(255,77,109,.08);border-color:rgba(255,77,109,.2)}
 .ctag.warn{background:rgba(255,179,71,.08);border-color:rgba(255,179,71,.2)}
-
-/* FIELDS */
 .field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
 .lbl{font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.3px}
 .req{color:var(--accent3)}
@@ -74,11 +62,7 @@ select.sel option{background:#141c28}
 .err-msg{font-size:11px;color:var(--accent3);display:none}
 .field.has-error .inp,.field.has-error .sel{border-color:var(--accent3)}
 .field.has-error .err-msg{display:block}
-
-/* MANUAL ADD FORM */
 .manual-form{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:12px}
-
-/* PREVIEW TABLE */
 .preview-wrap{border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-top:12px}
 .preview-table{width:100%;border-collapse:collapse;font-size:12px}
 .preview-table th{background:var(--card2);padding:9px 12px;text-align:left;font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border)}
@@ -89,22 +73,16 @@ select.sel option{background:#141c28}
 .row-ok{color:var(--accent2);font-size:11px;font-weight:600}
 .row-err{color:var(--accent3);font-size:11px;font-weight:600}
 .row-dup{color:var(--warn);font-size:11px;font-weight:600}
-
-/* UPLOAD ZONE */
 .upload-zone{border:2px dashed var(--border2);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .25s;background:var(--card2);position:relative}
 .upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(0,212,255,.04)}
 .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .upload-icon{font-size:32px;margin-bottom:10px}
 .upload-title{font-size:14px;font-weight:600;margin-bottom:4px}
 .upload-sub{font-size:12px;color:var(--text2)}
-
-/* VALIDATION BANNER */
 .val-banner{border-radius:10px;padding:12px 16px;margin:10px 0;display:flex;align-items:flex-start;gap:10px;font-size:13px}
 .val-banner.ok{background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);color:var(--accent2)}
 .val-banner.warn{background:rgba(255,179,71,.06);border:1px solid rgba(255,179,71,.2);color:var(--warn)}
 .val-banner.err{background:rgba(255,77,109,.06);border:1px solid rgba(255,77,109,.2);color:var(--accent3)}
-
-/* BUTTONS */
 .btn{border:none;border-radius:10px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;padding:13px 22px;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:7px}
 .btn-primary{background:linear-gradient(135deg,var(--accent2),#00cc6a);color:#070b12;box-shadow:0 4px 20px rgba(0,255,136,.15)}
 .btn-primary:hover{opacity:.9;box-shadow:0 6px 28px rgba(0,255,136,.25)}
@@ -116,8 +94,6 @@ select.sel option{background:#141c28}
 .btn-dl:hover{background:rgba(167,139,250,.18);border-color:var(--purple)}
 .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
 .btn:disabled,.btn[disabled]{opacity:.4;cursor:not-allowed}
-
-/* STAFF SELECTOR */
 .staff-select-list{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;padding-right:4px;margin-top:8px}
 .staff-select-list::-webkit-scrollbar{width:4px}
 .staff-select-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
@@ -131,8 +107,7 @@ select.sel option{background:#141c28}
 .s-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600}
 .s-badge.active{background:rgba(0,255,136,.1);color:var(--accent2);border:1px solid rgba(0,255,136,.2)}
 .s-badge.removed{background:rgba(255,77,109,.1);color:var(--accent3);border:1px solid rgba(255,77,109,.2)}
-
-/* MODAL */
+.s-badge.transferred{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
 .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(7,11,18,.85);backdrop-filter:blur(6px);z-index:500;align-items:center;justify-content:center;padding:20px}
 .modal-backdrop.open{display:flex}
 .modal{background:var(--card);border:1px solid var(--border2);border-radius:16px;padding:28px;max-width:440px;width:100%;animation:fadeup .25s ease}
@@ -141,24 +116,18 @@ select.sel option{background:#141c28}
 .modal-detail{background:var(--card2);border-radius:8px;padding:14px;margin-bottom:20px;font-size:13px;line-height:1.8}
 .modal-detail strong{color:var(--text)}
 .modal-btns{display:flex;gap:10px}
-
-/* LOGS TABLE */
 .logs-wrap{border-radius:10px;overflow:hidden;border:1px solid var(--border)}
 .logs-table{width:100%;border-collapse:collapse;font-size:12px}
 .logs-table th{background:var(--card2);padding:9px 12px;text-align:left;font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border)}
 .logs-table td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text2)}
 .logs-table tr:last-child td{border-bottom:none}
 .logs-table td:first-child{color:var(--text);font-weight:600}
-
-/* SYNC STATUS */
 .sync-status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-family:'JetBrains Mono',monospace;padding:5px 10px;border-radius:6px;background:var(--card2);border:1px solid var(--border)}
 .sync-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .sync-dot.synced{background:var(--accent2);box-shadow:0 0 6px var(--accent2)}
 .sync-dot.pending{background:var(--warn);animation:blink 1.5s infinite}
 .sync-dot.failed{background:var(--accent3)}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-
-/* STEP BAR */
 .steps{display:flex;align-items:center;gap:0;margin-bottom:20px;padding:0 4px}
 .step{display:flex;align-items:center;flex:1}
 .step-c{width:26px;height:26px;border-radius:50%;background:var(--card2);border:1.5px solid var(--border2);color:var(--text3);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;flex-shrink:0;transition:all .2s}
@@ -173,51 +142,33 @@ select.sel option{background:#141c28}
 .steps.remove-steps .step.active .step-c{background:var(--accent3);border-color:var(--accent3);color:#fff}
 .steps.remove-steps .step.active .step-l{color:var(--accent3)}
 .steps.remove-steps .step.done .step-c{border-color:var(--accent3);color:var(--accent3)}
-
-/* PROG BAR */
 .prog-bar{height:3px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:20px}
 .prog-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .4s ease}
-
-/* TOAST */
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(30px);background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:12px 20px;font-size:13px;font-weight:600;z-index:1000;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.tok{border-color:var(--accent2);color:var(--accent2);background:rgba(0,255,136,.08)}
 #toast.err{border-color:var(--accent3);color:var(--accent3);background:rgba(255,77,109,.08)}
 #toast.warn{border-color:var(--warn);color:var(--warn);background:rgba(255,179,71,.08)}
-
-/* EMPTY STATE */
 .empty-state{text-align:center;padding:36px 20px;color:var(--text2);font-size:13px}
 .empty-state div:first-child{font-size:36px;margin-bottom:10px}
-
-/* CONFIG */
 .config-field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
 .config-field label{font-size:12px;font-weight:600;color:var(--text2)}
 .config-input{background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:10px 14px;outline:none;width:100%;transition:border-color .2s}
 .config-input:focus{border-color:var(--purple)}
-
-/* SEARCH BAR */
 .search-bar{position:relative;margin-bottom:12px}
 .search-bar input{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;padding:10px 14px 10px 36px;outline:none;transition:border-color .2s}
 .search-bar input:focus{border-color:var(--accent)}
 .search-bar::before{content:'🔍';position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px}
-
-/* REASON CHIPS */
 .reason-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
 .reason-chip{padding:10px 14px;border-radius:8px;background:var(--card2);border:1.5px solid var(--border);cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);transition:all .18s;text-align:center}
 .reason-chip:hover{border-color:var(--border2)}
 .reason-chip.sel{border-color:var(--accent3);background:rgba(255,77,109,.08);color:var(--accent3)}
-
-/* PILL */
 .pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px}
 .pill.active{background:rgba(0,255,136,.1);color:var(--accent2);border:1px solid rgba(0,255,136,.2)}
 .pill.removed{background:rgba(255,77,109,.1);color:var(--accent3);border:1px solid rgba(255,77,109,.2)}
-
-/* SECTION BACK */
 .section-back{display:flex;align-items:center;gap:10px;margin-bottom:20px}
 .btn-back-sm{background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-size:12px;font-weight:600;padding:7px 12px;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .2s;display:flex;align-items:center;gap:5px}
 .btn-back-sm:hover{border-color:var(--accent);color:var(--accent)}
-
-/* KEY BADGE */
 .key-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-family:'JetBrains Mono',monospace;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:6px;padding:4px 10px;color:var(--accent)}
 </style>
 </head>
@@ -226,7 +177,18 @@ select.sel option{background:#141c28}
 <div class="orb orb2"></div>
 <div id="toast"></div>
 
-<!-- CONFIRM MODAL -->
+<!-- TRANSFER CONFIRM MODAL -->
+<div class="modal-backdrop" id="txConfirmModal">
+  <div class="modal">
+    <h3>🔄 Confirm Transfer</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Review the transfer details below. The employee will be removed from the current site and added to the new site immediately.</p>
+    <div class="modal-detail" id="txModalDetail"></div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" style="flex:1" onclick="closeTxModal()">Cancel</button>
+      <button class="btn" style="flex:1;background:linear-gradient(135deg,var(--purple),#7c5cdb);color:#fff" id="txModalConfirmBtn">Confirm Transfer</button>
+    </div>
+  </div>
+</div>
 <div class="modal-backdrop" id="confirmModal">
   <div class="modal">
     <h3 id="modalTitle">⚠️ Confirm Removal</h3>
@@ -238,8 +200,6 @@ select.sel option{background:#141c28}
     </div>
   </div>
 </div>
-
-<!-- NAV -->
 <nav class="nav">
   <div class="nav-logo">
     <div class="nav-logo-icon">👥</div>
@@ -248,6 +208,7 @@ select.sel option{background:#141c28}
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('add')">➕ Add Employee</button>
     <button class="nav-tab" onclick="showPage('remove')">🗑 Remove</button>
+    <button class="nav-tab" onclick="showPage('transfer')">🔄 Transfer</button>
     <button class="nav-tab" onclick="showPage('logs')">📋 Logs</button>
     <button class="nav-tab" onclick="showPage('settings')">⚙️ Settings</button>
   </div>
@@ -255,8 +216,6 @@ select.sel option{background:#141c28}
     <a class="back-link" href="darkstore-attendance-pro.html">← Attendance Pro</a>
   </div>
 </nav>
-
-<!-- ═══ ADD PAGE ═══ -->
 <div class="page active" id="page-add">
   <div class="main-wrap">
     <div class="hero">
@@ -264,11 +223,7 @@ select.sel option{background:#141c28}
       <h2>Add Employee</h2>
       <p>Add employees manually or bulk-import via CSV. Staff appear instantly in <strong style="color:var(--accent2)">Attendance Pro</strong> for marking present/absent.</p>
     </div>
-
-    <!-- SYNC HEALTH -->
     <div id="syncHealthBanner"></div>
-
-    <!-- STEP BAR -->
     <div class="steps" id="addSteps">
       <div class="step active" id="as1"><div class="step-c"><span>1</span></div><div class="step-l">Method</div></div>
       <div class="step-line"></div>
@@ -279,8 +234,6 @@ select.sel option{background:#141c28}
       <div class="step" id="as4"><div class="step-c"><span>4</span></div><div class="step-l">Import</div></div>
     </div>
     <div class="prog-bar"><div class="prog-fill" id="addProg" style="width:25%"></div></div>
-
-    <!-- STEP 1: METHOD -->
     <div id="addStep1">
       <div class="card">
         <div class="card-title"><div class="ctag green">🎯</div>Choose Method</div>
@@ -298,8 +251,6 @@ select.sel option{background:#141c28}
         </div>
       </div>
     </div>
-
-    <!-- STEP 2A: MANUAL FORM -->
     <div id="addStep2Manual" style="display:none">
       <div class="card">
         <div class="section-back">
@@ -370,8 +321,6 @@ select.sel option{background:#141c28}
         </div>
       </div>
     </div>
-
-    <!-- STEP 2B: CSV UPLOAD -->
     <div id="addStep2Bulk" style="display:none">
       <div class="card">
         <div class="section-back">
@@ -399,8 +348,6 @@ select.sel option{background:#141c28}
         <div id="uploadStatus" style="display:none;margin-top:12px"></div>
       </div>
     </div>
-
-    <!-- STEP 3: VALIDATE + PREVIEW (bulk only) -->
     <div id="addStep3Bulk" style="display:none">
       <div class="card">
         <div class="card-title"><div class="ctag green">🔍</div>Validation Results</div>
@@ -415,8 +362,6 @@ select.sel option{background:#141c28}
         </div>
       </div>
     </div>
-
-    <!-- STEP 4: SUCCESS -->
     <div id="addStepDone" style="display:none">
       <div class="card" style="text-align:center;padding:40px 20px">
         <div style="font-size:48px;margin-bottom:16px">✅</div>
@@ -434,8 +379,6 @@ select.sel option{background:#141c28}
     </div>
   </div>
 </div>
-
-<!-- ═══ REMOVE PAGE ═══ -->
 <div class="page" id="page-remove">
   <div class="main-wrap">
     <div class="hero">
@@ -443,7 +386,6 @@ select.sel option{background:#141c28}
       <h2>Remove Employee</h2>
       <p>Soft-delete staff from the roster. Attendance history is fully preserved. Removed staff disappear from <strong style="color:var(--accent3)">Attendance Pro</strong> immediately.</p>
     </div>
-
     <div class="steps remove-steps" id="remSteps">
       <div class="step active" id="rs1"><div class="step-c"><span>1</span></div><div class="step-l">Select</div></div>
       <div class="step-line"></div>
@@ -452,8 +394,6 @@ select.sel option{background:#141c28}
       <div class="step" id="rs3"><div class="step-c"><span>3</span></div><div class="step-l">Confirm</div></div>
     </div>
     <div class="prog-bar"><div class="prog-fill" id="remProg" style="width:33%;background:linear-gradient(90deg,var(--accent3),#cc3355)"></div></div>
-
-    <!-- REM STEP 1 -->
     <div id="remStep1">
       <div class="card">
         <div class="card-title"><div class="ctag red">🏪</div>Select Location</div>
@@ -488,8 +428,6 @@ select.sel option{background:#141c28}
         </div>
       </div>
     </div>
-
-    <!-- REM STEP 2 -->
     <div id="remStep2" style="display:none">
       <div class="card">
         <div class="section-back">
@@ -515,8 +453,6 @@ select.sel option{background:#141c28}
         </div>
       </div>
     </div>
-
-    <!-- REM STEP 3 -->
     <div id="remStep3" style="display:none">
       <div class="card" style="text-align:center;padding:40px 20px">
         <div style="font-size:48px;margin-bottom:16px">🗑</div>
@@ -534,8 +470,117 @@ select.sel option{background:#141c28}
     </div>
   </div>
 </div>
+<div class="page" id="page-transfer">
+  <div class="main-wrap">
+    <div class="hero">
+      <div class="hero-icon" style="background:linear-gradient(135deg,rgba(167,139,250,.15),rgba(0,212,255,.1));border:1px solid rgba(167,139,250,.3)">🔄</div>
+      <h2>Transfer Employee</h2>
+      <p>Move an associate from one site to another. The old site record is preserved as <strong style="color:var(--purple)">Transferred</strong>. The associate appears at the new site immediately in <strong style="color:var(--accent2)">Attendance Pro</strong>.</p>
+    </div>
 
-<!-- ═══ LOGS PAGE ═══ -->
+    <div class="steps" id="txSteps" style="--step-active:var(--purple)">
+      <div class="step" id="ts1" style=""><div class="step-c" style="background:var(--purple);border-color:var(--purple);color:#fff"><span>1</span></div><div class="step-l" style="color:var(--purple)">From Site</div></div>
+      <div class="step-line"></div>
+      <div class="step" id="ts2"><div class="step-c"><span>2</span></div><div class="step-l">Select Staff</div></div>
+      <div class="step-line"></div>
+      <div class="step" id="ts3"><div class="step-c"><span>3</span></div><div class="step-l">To Site</div></div>
+      <div class="step-line"></div>
+      <div class="step" id="ts4"><div class="step-c"><span>4</span></div><div class="step-l">Confirm</div></div>
+    </div>
+    <div class="prog-bar"><div class="prog-fill" id="txProg" style="width:25%;background:linear-gradient(90deg,var(--purple),var(--accent))"></div></div>
+
+    <!-- TX STEP 1: FROM SITE -->
+    <div id="txStep1">
+      <div class="card">
+        <div class="card-title"><div class="ctag" style="background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.2)">🏪</div>Current Site (Transfer From)</div>
+        <div class="field-row">
+          <div class="field">
+            <label class="lbl">From Site <span class="req">*</span></label>
+            <select class="sel" id="txFromSite" onchange="onTxFromSiteChange()">
+              <option value="">— Choose site —</option>
+              <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
+              <option>Khalifa City</option><option>Al Qusais</option>
+              <option>Business Bay</option><option>NIP</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="lbl">Department</label>
+            <select class="sel" id="txFromDept" onchange="filterTxEmpList()">
+              <option value="">— All Depts —</option>
+              <option>Warehouse</option><option>Housekeeping</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card" id="txEmpCard" style="display:none">
+        <div class="card-title"><div class="ctag" style="background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.2)">👤</div>Select Employee to Transfer</div>
+        <div class="search-bar">
+          <input type="text" id="txSearch" placeholder="Search name or agency…" oninput="filterTxEmpList()"/>
+        </div>
+        <div class="staff-select-list" id="txEmpList"></div>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div id="txSelInfo" style="font-size:12px;color:var(--text2)">No employee selected</div>
+          <button class="btn btn-outline" id="btnTxNext" onclick="goToTxDestination()" disabled style="padding:9px 18px;font-size:13px;border-color:rgba(167,139,250,.4);color:var(--purple)">Next →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TX STEP 2: TO SITE -->
+    <div id="txStep2" style="display:none">
+      <div class="card">
+        <div class="section-back">
+          <button class="btn-back-sm" onclick="backToTxSelect()">← Back</button>
+          <span style="font-size:13px;color:var(--text2)">Transferring: <strong id="txEmpNameLabel" style="color:var(--text)"></strong></span>
+        </div>
+        <div class="card-title"><div class="ctag" style="background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.2)">📍</div>Destination Site (Transfer To)</div>
+        <div class="field-row">
+          <div class="field" id="txToSiteField">
+            <label class="lbl">To Site <span class="req">*</span></label>
+            <select class="sel" id="txToSite" onchange="onTxToSiteChange()">
+              <option value="">— Choose destination —</option>
+              <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
+              <option>Khalifa City</option><option>Al Qusais</option>
+              <option>Business Bay</option><option>NIP</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="lbl">Transfer Date</label>
+            <input class="inp" type="date" id="txDate"/>
+          </div>
+        </div>
+        <div class="field">
+          <label class="lbl">Remarks (optional)</label>
+          <input class="inp" type="text" id="txRemarks" placeholder="e.g. Covering for staff shortage, permanent reallocation…"/>
+        </div>
+        <div id="txDestWarning" style="display:none" class="val-banner warn">⚠️ This employee already has an active record at the selected destination. Choose a different site.</div>
+        <div class="btn-row">
+          <button class="btn-outline" onclick="backToTxSelect()">← Back</button>
+          <button class="btn" id="btnTxConfirm" onclick="openTxConfirmModal()" disabled
+            style="background:linear-gradient(135deg,var(--purple),#7c5cdb);color:#fff;box-shadow:0 4px 20px rgba(167,139,250,.2)">
+            Review Transfer →
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TX STEP 3: SUCCESS -->
+    <div id="txStep3" style="display:none">
+      <div class="card" style="text-align:center;padding:40px 20px">
+        <div style="font-size:48px;margin-bottom:16px">🔄</div>
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:8px">Transfer Complete!</h3>
+        <p id="txSummary" style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.7"></p>
+        <div id="txSyncResult" style="margin-bottom:20px"></div>
+        <div style="background:rgba(167,139,250,.05);border:1px solid rgba(167,139,250,.25);border-radius:10px;padding:14px;margin-bottom:20px;font-size:13px;color:var(--purple)">
+          🔄 Roster updated · Employee now active at new site · History preserved at previous site
+        </div>
+        <div class="btn-row" style="justify-content:center">
+          <button class="btn-outline" onclick="resetTransferFlow()">Transfer Another</button>
+          <button class="btn-outline" onclick="showPage('logs')">View Transfer Log →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="page" id="page-logs">
   <div class="main-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
@@ -553,6 +598,7 @@ select.sel option{background:#141c28}
         <option value="">All Actions</option>
         <option value="ADD">Added</option>
         <option value="REMOVE">Removed</option>
+        <option value="TRANSFER">Transferred</option>
       </select>
       <select class="sel" id="logSiteFilter" onchange="renderLogs()" style="width:auto;padding:8px 32px 8px 12px;font-size:12px">
         <option value="">All Sites</option>
@@ -564,17 +610,12 @@ select.sel option{background:#141c28}
     <div id="logsContainer"></div>
   </div>
 </div>
-
-<!-- ═══ SETTINGS PAGE ═══ -->
 <div class="page" id="page-settings">
   <div class="main-wrap">
     <div style="margin-bottom:24px">
       <div style="font-size:18px;font-weight:700;margin-bottom:4px">⚙️ Settings</div>
       <div style="font-size:12px;color:var(--text2)">Shared storage keys &amp; Google Sheet sync</div>
     </div>
-
-    <!-- KEY INFO card removed: app is now Google Sheet only -->
-
     <div class="card">
       <div class="card-title"><div class="ctag" style="background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.2)">✓</div>Sync Status</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">
@@ -589,8 +630,6 @@ select.sel option{background:#141c28}
         <button class="btn btn-primary" id="seedMissingBtn" onclick="seedMissingToGS()">⬆ Seed Missing Employees to Google Sheet</button>
       </div>
     </div>
-
-    <!-- ROSTER VIEWER -->
     <div class="card">
       <div class="card-title"><div class="ctag warn">📊</div>Live Roster (shared with Attendance Pro)</div>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
@@ -605,22 +644,11 @@ select.sel option{background:#141c28}
       </div>
       <div id="rosterContainer"></div>
     </div>
-
-
   </div>
 </div>
-
-<!-- ═══ JS ═══ -->
 <script>
-/* ═══════════════════════════════════════════════════════
-   SHARED STORAGE KEYS
-   These MUST match what your Attendance Pro app uses.
-   The key "darkstore_staff_roster" is the bridge.
-   ═══════════════════════════════════════════════════════ */
-const DEFAULT_ROSTER_KEY = 'darkstore_staff_roster'; // ← must match Attendance Pro
-const DEFAULT_ATT_KEY    = 'darkstore_attendance';    // ← Attendance Pro session key
-
-// ─── BUILT-IN BASELINE STAFF (pre-loaded from original data) ───
+const DEFAULT_ROSTER_KEY = 'darkstore_staff_roster';
+const DEFAULT_ATT_KEY    = 'darkstore_attendance';
 const BASELINE_STAFF = {
   "Al Raha":[
     {name:"Aaron Ajuna",designation:"Warehouse Assistant",agency:"Flexitalent",dept:"Warehouse",status:"Active"},
@@ -745,57 +773,34 @@ const BASELINE_STAFF = {
     {name:"Sujan Rai",designation:"Warehouse Assistant",agency:"Align",dept:"Warehouse",status:"Active"},
   ]
 };
-
 const VALID_SITES = ['Al Raha','Yas Mall','MBZ','Khalifa City','Al Qusais','Business Bay','NIP'];
-
-// ─── STATE ───
 let parsedRows = [];
 let validRows  = [];
 let selectedRemEmp = null;
 let selectedReason = null;
 let addMethod = null;
-
-// ─── STORAGE KEY GETTERS ───
 function getRosterKey(){ return getSettings().rosterKey || DEFAULT_ROSTER_KEY; }
 function getAttKey(){    return getSettings().attKey    || DEFAULT_ATT_KEY; }
-
-// ─── HARDCODED APPS SCRIPT URL ───
-// Single source of truth — every device uses this same Web App.
 const HARDCODED_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzYh-POi6vYL4vY5-I_TRqv-guoRbz8vpHFaNt0JLudxFNZM4vg8CkmwVRdLUG4BQ/exec';
-
-// ─── STORAGE HELPERS ───
 function getSettings(){
   try{ return JSON.parse(localStorage.getItem('em_settings')||'{}'); }catch(e){ return {}; }
 }
 function saveSettingsData(s){ localStorage.setItem('em_settings', JSON.stringify(s)); }
 function getScriptUrl(){ return HARDCODED_SCRIPT_URL; }
-
 function getLogs(){
   try{ return JSON.parse(localStorage.getItem('em_logs')||'[]'); }catch(e){ return []; }
 }
 function saveLogs(l){ localStorage.setItem('em_logs', JSON.stringify(l)); }
-
-/* ──────────────────────────────────────────────────────
-   ROSTER: in-memory cache only — Google Sheet is the single source of truth.
-   No localStorage. Fresh fetch on load + every 60s (see fetchRosterFromGS).
-   ────────────────────────────────────────────────────── */
-let _rosterCache = null; // populated by fetchRosterFromGS / saveRoster
-
+let _rosterCache = null;
 function getRoster(){
   if(_rosterCache) return _rosterCache;
-  // Fall back to baseline shape until GS responds. Returns a deep copy so callers can't pollute the baseline.
   _rosterCache = JSON.parse(JSON.stringify(BASELINE_STAFF));
   return _rosterCache;
 }
-
 function saveRoster(r){
-  // In-memory only. Persistence happens through syncToSheet() which POSTs each change to Google Sheet.
   _rosterCache = r;
-  // Notify any other listeners in the same page (no cross-tab — GS poll handles that)
   try{ window.dispatchEvent(new CustomEvent('rosterChanged', {detail: r})); }catch(e){}
 }
-
-// ─── SYNC HEALTH CHECK ───
 function checkSyncHealth(){
   const el = document.getElementById('syncHealthBanner');
   const roster = getRoster();
@@ -809,11 +814,8 @@ function checkSyncHealth(){
       <span class="key-badge">SHEET</span>
     </div>`;
   }
-  // Show the "Seed Missing" prompt only if baseline has employees that GS doesn't
   checkMissingFromGS();
 }
-
-// ─── DETECT EMPLOYEES IN BASELINE BUT MISSING FROM GOOGLE SHEET ───
 function getMissingFromGS(){
   const roster = getRoster();
   const missing = [];
@@ -831,29 +833,21 @@ function getMissingFromGS(){
   });
   return missing;
 }
-
 function checkMissingFromGS(){
   const wrap = document.getElementById('seedMissingWrap');
   const msg  = document.getElementById('seedMissingMsg');
   if(!wrap || !msg) return;
   const missing = getMissingFromGS();
-  if(missing.length === 0){
-    wrap.style.display = 'none';
-    return;
-  }
+  if(missing.length === 0){ wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
   msg.innerHTML = `<strong style="color:var(--warn)">⚠ ${missing.length} employee${missing.length>1?'s':''}</strong> ${missing.length>1?'are':'is'} in the app baseline but missing from the central Google Sheet. Click below to push them to the sheet so every device sees them.`;
 }
-
-// ─── PUSH MISSING BASELINE EMPLOYEES TO GOOGLE SHEET ───
 async function seedMissingToGS(){
   const missing = getMissingFromGS();
   if(!missing.length){ showToast('Nothing to seed','warn'); return; }
   const btn = document.getElementById('seedMissingBtn');
   btn.disabled = true;
   btn.textContent = `⏳ Syncing ${missing.length}…`;
-
-  // Push one-by-one via JSONP (same as syncToSheet but inline so we get a clean count)
   let okCount = 0;
   for(let i=0; i<missing.length; i++){
     const emp = missing[i];
@@ -880,18 +874,13 @@ async function seedMissingToGS(){
     });
     if(ok) okCount++;
   }
-
   btn.disabled = false;
   btn.textContent = '⬆ Seed Missing Employees to Google Sheet';
   showToast(`✅ Seeded ${okCount} of ${missing.length} to Google Sheet`,'tok');
-
-  // Re-pull from GS so the UI reflects the new state
   await fetchRosterFromGS(true);
   renderRoster();
   checkSyncHealth();
 }
-
-// ─── TOAST ───
 function showToast(msg, type=''){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -899,21 +888,18 @@ function showToast(msg, type=''){
   clearTimeout(t._t);
   t._t = setTimeout(()=>t.className='', 3500);
 }
-
-// ─── PAGE NAV ───
 function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  const idx = {add:0,remove:1,logs:2,settings:3}[name];
+  const idx = {add:0,remove:1,transfer:2,logs:3,settings:4}[name];
   document.querySelectorAll('.nav-tab')[idx]?.classList.add('active');
   if(name==='logs')     renderLogs();
   if(name==='settings'){ loadSettings(); renderRoster(); checkSyncHealth(); }
   if(name==='remove')   resetRemFlow();
+  if(name==='transfer') resetTransferFlow();
   if(name==='add')      checkSyncHealth();
 }
-
-// ─── TEMPLATE ───
 function downloadTemplate(){
   const blob = new Blob([
     'Name,Site,Store,Department,Designation,Agency,Status\n' +
@@ -925,8 +911,6 @@ function downloadTemplate(){
   a.click();
   showToast('📥 Template downloaded!','tok');
 }
-
-// ─── ADD METHOD ───
 function chooseAddMethod(method){
   addMethod = method;
   document.getElementById('methodManual').style.border = method==='manual' ? '1.5px solid var(--accent2)' : '';
@@ -936,21 +920,16 @@ function chooseAddMethod(method){
   document.getElementById('addStep2Bulk').style.display     = method==='bulk'   ? 'block' : 'none';
   setAddStep(2);
 }
-
 function goToBulkUpload(){
   document.getElementById('addStep2Bulk').style.display  = 'block';
   document.getElementById('addStep3Bulk').style.display  = 'none';
   setAddStep(2);
 }
-
-// ─── MANUAL ADD ───
 function syncDept(){
   const desig = document.getElementById('m-desig').value;
   document.getElementById('m-dept').value = desig==='Housekeeping' ? 'Housekeeping' : 'Warehouse';
 }
-
 function clearFieldErr(id){ document.getElementById(id)?.classList.remove('has-error'); }
-
 function checkManualDup(){
   const name = document.getElementById('m-name').value.trim().toLowerCase();
   const site = document.getElementById('m-site').value;
@@ -959,7 +938,6 @@ function checkManualDup(){
   const dup = (roster[site]||[]).some(e=>e.name.toLowerCase()===name && e.status!=='Removed' && e._src==='gs');
   document.getElementById('manualDupWarning').style.display = dup ? 'block' : 'none';
 }
-
 function submitManualAdd(){
   const name   = document.getElementById('m-name').value.trim();
   const site   = document.getElementById('m-site').value;
@@ -968,30 +946,21 @@ function submitManualAdd(){
   const agency = document.getElementById('m-agency').value;
   const store  = document.getElementById('m-store').value.trim() || site;
   let hasErr = false;
-
   if(!name){  document.getElementById('f-name').classList.add('has-error');  hasErr=true; }
   if(!site){  document.getElementById('f-site').classList.add('has-error');  hasErr=true; }
   if(!desig){ document.getElementById('f-desig').classList.add('has-error'); hasErr=true; }
   if(!agency){document.getElementById('f-agency').classList.add('has-error');hasErr=true; }
   if(hasErr){ showToast('Please fill all required fields','err'); return; }
-
-  // Duplicate check
   const roster = getRoster();
   const dup = (roster[site]||[]).some(e=>e.name.toLowerCase()===name.toLowerCase() && e.status!=='Removed' && e._src==='gs');
   if(dup){ showToast('⚠️ Employee already exists at this site','warn'); return; }
-
-  // Add
   if(!roster[site]) roster[site] = [];
   const newEmp = { name, site, designation:desig, agency, dept, store, status:'Active', addedAt:new Date().toISOString(), _src:'local-pending' };
   roster[site].push(newEmp);
   saveRoster(roster);
-
-  // Log
   const logs = getLogs();
   logs.unshift({ action:'ADD', name, site, designation:desig, agency, dept, store, timestamp:new Date().toISOString(), by:'Manager' });
   saveLogs(logs);
-
-  // Show success
   document.getElementById('importSummary').innerHTML = `
     <strong>${name}</strong> added to <strong>${site}</strong> · ${desig} · ${agency}<br>
     <span style="color:var(--accent2)">✅ Now visible in Attendance Pro for marking present/absent</span>`;
@@ -1001,13 +970,10 @@ function submitManualAdd(){
   setAddStep(4);
   showToast('✅ Employee added!','tok');
 }
-
-// ─── DRAG / DROP ───
 function onDrag(e){ e.preventDefault(); document.getElementById('uploadZone').classList.add('drag'); }
 function offDrag(){ document.getElementById('uploadZone').classList.remove('drag'); }
 function onDrop(e){ e.preventDefault(); offDrag(); const f=e.dataTransfer.files[0]; if(f) processFile(f); }
 function handleFileUpload(e){ const f=e.target.files[0]; if(f) processFile(f); }
-
 function processFile(file){
   const ext = file.name.split('.').pop().toLowerCase();
   if(!['csv','xlsx','xls'].includes(ext)){ showToast('❌ Only CSV/Excel files allowed','err'); return; }
@@ -1018,7 +984,6 @@ function processFile(file){
   reader.onload = ev => parseCSVData(ev.target.result, file.name);
   reader.readAsText(file);
 }
-
 function parseCSVData(text, filename){
   const lines = text.trim().split(/\r?\n/).filter(l=>l.trim());
   if(lines.length < 2){
@@ -1027,13 +992,11 @@ function parseCSVData(text, filename){
   }
   const delim = lines[0].includes('\t') ? '\t' : ',';
   const headers = lines[0].split(delim).map(h=>h.trim().toLowerCase().replace(/[^a-z0-9]/g,''));
-
   const colMap = {};
   ['name','site','store','department','designation','agency','status'].forEach(req=>{
     const idx = headers.findIndex(h=>h.includes(req.replace(/[^a-z]/g,'')));
     if(idx>=0) colMap[req]=idx;
   });
-
   const rows = [];
   for(let i=1;i<lines.length;i++){
     const cells = lines[i].split(delim).map(c=>c.trim().replace(/^"|"$/g,''));
@@ -1052,13 +1015,11 @@ function parseCSVData(text, filename){
   parsedRows = rows;
   validateBulkRows();
 }
-
 function validateBulkRows(){
   const roster = getRoster();
   let okCount=0, dupCount=0, errCount=0;
   const warnings = [];
   validRows = [];
-
   parsedRows.forEach(row=>{
     const errs = [];
     if(!row.name)  errs.push('Missing Name');
@@ -1066,23 +1027,19 @@ function validateBulkRows(){
     else if(!VALID_SITES.includes(row.site)) errs.push(`Invalid Site: "${row.site}"`);
     if(!row.designation) errs.push('Missing Designation');
     if(!row.agency)      errs.push('Missing Agency');
-
     const isDup = row.site && (roster[row.site]||[]).some(e=>e.name.toLowerCase()===row.name.toLowerCase()&&e.status!=='Removed'&&e._src==='gs');
     row._errors = errs;
     row._isDup  = isDup;
-
     if(errs.length){ errCount++; }
     else if(isDup){ dupCount++; warnings.push(`Row ${row._line}: "${row.name}" already exists at ${row.site}`); }
     else{ okCount++; validRows.push(row); }
   });
-
   renderBulkValidation(okCount, dupCount, errCount, warnings);
   renderPreviewTable();
   document.getElementById('addStep2Bulk').style.display  = 'none';
   document.getElementById('addStep3Bulk').style.display  = 'block';
   setAddStep(3);
 }
-
 function renderBulkValidation(ok, dup, err, warnings){
   let html='';
   if(ok>0)  html+=`<div class="val-banner ok">✅ <strong>${ok}</strong> row${ok!==1?'s':''} ready to import</div>`;
@@ -1092,7 +1049,6 @@ function renderBulkValidation(ok, dup, err, warnings){
   document.getElementById('previewCount').textContent = parsedRows.length;
   document.getElementById('btnImport').disabled = validRows.length===0;
 }
-
 function renderPreviewTable(){
   const el = document.getElementById('previewTable');
   if(!parsedRows.length){ el.innerHTML='<div class="empty-state"><div>📋</div>No rows</div>'; return; }
@@ -1106,7 +1062,6 @@ function renderPreviewTable(){
       return `<tr class="${cls}"><td>${r._line}</td><td>${r.name||'—'}</td><td>${r.site||'—'}</td><td>${r.designation||'—'}</td><td>${r.agency||'—'}</td><td>${s}</td></tr>`;
     }).join('')}</tbody></table></div>`;
 }
-
 function confirmBulkImport(){
   if(!validRows.length){ showToast('No valid rows','err'); return; }
   const roster = getRoster();
@@ -1121,14 +1076,12 @@ function confirmBulkImport(){
     added++;
   });
   saveRoster(roster);
-
   const logs = getLogs();
   validRows.forEach(row=>{
     logs.unshift({ action:'ADD', name:row.name, site:row.site, designation:row.designation,
       agency:row.agency, dept:row.department||'Warehouse', timestamp:new Date().toISOString(), by:'Manager' });
   });
   saveLogs(logs);
-
   document.getElementById('importSummary').innerHTML=`
     <strong>${added}</strong> employee${added!==1?'s':''} added to the shared roster.<br>
     <span style="color:var(--accent2)">✅ Attendance Pro will show them immediately on next load</span>`;
@@ -1138,18 +1091,15 @@ function confirmBulkImport(){
   setAddStep(4);
   showToast(`✅ ${added} employee${added!==1?'s':''} imported!`,'tok');
 }
-
 function resetAddFlow(){
   parsedRows=[]; validRows=[]; addMethod=null;
   try{ document.getElementById('empFile').value=''; }catch(e){}
   document.getElementById('uploadStatus').style.display='none';
-  // Reset all manual fields
   ['m-name','m-store'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   ['m-site','m-desig','m-agency'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('m-dept').value='Warehouse';
   document.getElementById('manualDupWarning').style.display='none';
   ['f-name','f-site','f-desig','f-agency'].forEach(id=>document.getElementById(id)?.classList.remove('has-error'));
-  // Hide all steps, show step 1
   ['addStep2Manual','addStep2Bulk','addStep3Bulk','addStepDone'].forEach(id=>{
     document.getElementById(id).style.display='none';
   });
@@ -1159,7 +1109,6 @@ function resetAddFlow(){
   setAddStep(1);
   checkSyncHealth();
 }
-
 function setAddStep(n){
   [1,2,3,4].forEach(i=>{
     const el=document.getElementById('as'+i);
@@ -1167,8 +1116,6 @@ function setAddStep(n){
   });
   document.getElementById('addProg').style.width=({1:25,2:50,3:75,4:100}[n]||25)+'%';
 }
-
-// ─── REMOVE FLOW ───
 function onRemSiteChange(){
   const site = document.getElementById('remSite').value;
   selectedRemEmp=null;
@@ -1177,7 +1124,6 @@ function onRemSiteChange(){
   document.getElementById('btnNextReason').disabled=true;
   if(site) filterRemEmpList();
 }
-
 function filterRemEmpList(){
   const site   = document.getElementById('remSite').value;
   const dept   = document.getElementById('remDept').value;
@@ -1186,10 +1132,8 @@ function filterRemEmpList(){
   let list = (roster[site]||[]);
   if(dept) list = list.filter(e=>(e.dept||'').includes(dept)||(e.designation||'').includes(dept));
   if(search) list = list.filter(e=>e.name.toLowerCase().includes(search)||(e.agency||'').toLowerCase().includes(search));
-
   const el = document.getElementById('remEmpList');
   if(!list.length){ el.innerHTML='<div class="empty-state"><div>🔍</div>No employees found</div>'; return; }
-
   el.innerHTML = list.map(emp=>{
     const isRemoved = emp.status==='Removed';
     const initials  = emp.name.split(' ').slice(0,2).map(n=>n[0]||'').join('').toUpperCase();
@@ -1206,7 +1150,6 @@ function filterRemEmpList(){
     </div>`;
   }).join('');
 }
-
 function selectRemEmp(el){
   document.querySelectorAll('#remEmpList .s-item').forEach(i=>i.classList.remove('selected'));
   el.classList.add('selected');
@@ -1218,7 +1161,6 @@ function selectRemEmp(el){
   document.getElementById('remSelInfo').textContent=`Selected: ${name}`;
   document.getElementById('btnNextReason').disabled=false;
 }
-
 function goToReason(){
   if(!selectedRemEmp){ showToast('Select an employee first','err'); return; }
   document.getElementById('remStep1').style.display='none';
@@ -1230,20 +1172,17 @@ function goToReason(){
   document.getElementById('remRemarks').value='';
   setRemStep(2);
 }
-
 function selectReason(el, val){
   document.querySelectorAll('.reason-chip').forEach(c=>c.classList.remove('sel'));
   el.classList.add('sel');
   selectedReason=val;
   document.getElementById('btnConfirmRemove').disabled=false;
 }
-
 function backToRemSelect(){
   document.getElementById('remStep1').style.display='block';
   document.getElementById('remStep2').style.display='none';
   setRemStep(1);
 }
-
 function openConfirmModal(){
   if(!selectedReason){ showToast('Select a reason first','err'); return; }
   const emp = selectedRemEmp;
@@ -1260,20 +1199,16 @@ function openConfirmModal(){
   `;
   document.getElementById('confirmModal').classList.add('open');
 }
-
 function closeModal(){ document.getElementById('confirmModal').classList.remove('open'); }
-
 document.getElementById('modalConfirmBtn').onclick = function(){
   closeModal();
   executeRemoval();
 };
-
 function executeRemoval(){
   const site    = document.getElementById('remSite').value;
   const remarks = document.getElementById('remRemarks').value;
   const emp     = selectedRemEmp;
   const ts      = new Date().toISOString();
-
   const logEntry = {
     action:'REMOVE', name:emp.name, site, designation:emp.designation,
     agency:emp.agency, dept:emp.dept||'Warehouse',
@@ -1282,8 +1217,6 @@ function executeRemoval(){
   const logs = getLogs();
   logs.unshift(logEntry);
   saveLogs(logs);
-
-  // Soft-delete in shared roster
   const roster = getRoster();
   if(roster[site]){
     const idx = roster[site].findIndex(e=>e.name===emp.name);
@@ -1294,21 +1227,18 @@ function executeRemoval(){
       roster[site][idx].removeRemarks = remarks;
     }
   }
-  saveRoster(roster); // ← saves to shared key → Attendance Pro sees it
-
+  saveRoster(roster);
   const nice = new Date(ts).toLocaleString('en-AE');
   document.getElementById('remSummary').innerHTML=
     `<strong>${emp.name}</strong> removed from <strong>${site}</strong>.<br>
      Reason: <strong>${selectedReason}</strong>${remarks?` — ${remarks}`:''}<br>
      <span style="font-family:monospace;font-size:11px;color:var(--text3)">${nice}</span>`;
-
   syncToSheet('removeEmployee', [logEntry], 'remSyncResult');
   document.getElementById('remStep2').style.display='none';
   document.getElementById('remStep3').style.display='block';
   setRemStep(3);
   showToast('🗑 Employee removed from Attendance Pro roster','warn');
 }
-
 function resetRemFlow(){
   selectedRemEmp=null; selectedReason=null;
   document.getElementById('remSite').value='';
@@ -1320,15 +1250,12 @@ function resetRemFlow(){
   document.getElementById('remStep3').style.display='none';
   setRemStep(1);
 }
-
 function setRemStep(n){
   [1,2,3].forEach(i=>{
     document.getElementById('rs'+i).className='step'+(i<n?' done':i===n?' active':'');
   });
   document.getElementById('remProg').style.width=({1:33,2:66,3:100}[n]||33)+'%';
 }
-
-// ─── LOGS ───
 function renderLogs(){
   const logs = getLogs();
   const typeF = document.getElementById('logTypeFilter')?.value||'';
@@ -1338,47 +1265,40 @@ function renderLogs(){
   if(siteF) filtered=filtered.filter(l=>l.site===siteF);
   const el = document.getElementById('logsContainer');
   if(!filtered.length){
-    el.innerHTML='<div class="empty-state"><div>📋</div>No logs yet. Actions appear here after add/remove operations.</div>';
+    el.innerHTML='<div class="empty-state"><div>📋</div>No logs yet. Actions appear here after add/remove/transfer operations.</div>';
     return;
   }
   el.innerHTML=`<div class="logs-wrap"><table class="logs-table">
     <thead><tr><th>Employee</th><th>Action</th><th>Site</th><th>Detail</th><th>Date & Time</th></tr></thead>
     <tbody>${filtered.map(l=>{
       const nice=new Date(l.timestamp).toLocaleString('en-AE',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-      const badge=l.action==='ADD'?`<span class="pill active">➕ Added</span>`:`<span class="pill removed">🗑 Removed</span>`;
-      const detail = l.action==='REMOVE' ? `${l.reason||''}${l.remarks?' — '+l.remarks:''}` : (l.dept||'—');
+      let badge;
+      if(l.action==='ADD')      badge=`<span class="pill active">➕ Added</span>`;
+      else if(l.action==='TRANSFER') badge=`<span class="pill" style="background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.25)">🔄 Transferred</span>`;
+      else                      badge=`<span class="pill removed">🗑 Removed</span>`;
+      const detail = l.action==='REMOVE'
+        ? `${l.reason||''}${l.remarks?' — '+l.remarks:''}`
+        : l.action==='TRANSFER'
+          ? `${l.fromSite||'?'} → ${l.toSite||'?'}`
+          : (l.dept||'—');
       return `<tr><td>${l.name}</td><td>${badge}</td><td>${l.site}</td><td style="font-size:11px">${detail}</td><td style="font-family:monospace;font-size:11px">${nice}</td></tr>`;
     }).join('')}</tbody></table></div>`;
 }
-
 function exportLogs(){
   const logs = getLogs();
   if(!logs.length){ showToast('No logs to export','err'); return; }
-  const header='Action,Name,Site,Designation,Agency,Dept,Reason,Remarks,Timestamp\n';
-  const rows=logs.map(l=>[l.action,l.name,l.site,l.designation||'',l.agency||'',l.dept||'',l.reason||'',l.remarks||'',l.timestamp].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const header='Action,Name,Site,FromSite,ToSite,Designation,Agency,Dept,Reason,Remarks,Timestamp\n';
+  const rows=logs.map(l=>[l.action,l.name,l.site,l.fromSite||'',l.toSite||'',l.designation||'',l.agency||'',l.dept||'',l.reason||'',l.remarks||'',l.timestamp].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob=new Blob([header+rows],{type:'text/csv'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob); a.download='employee_activity_log.csv'; a.click();
   showToast('📥 Log exported!','tok');
 }
-
-// ─── SETTINGS ───
 function loadSettings(){
   const dot=document.getElementById('settingsDot');
   const txt=document.getElementById('settingsStatusText');
   if(dot && txt){ dot.className='sync-dot synced'; txt.textContent='Connected to Google Sheet'; }
 }
-
-function saveSettings(){
-  // No-op: nothing user-configurable anymore. Kept for compatibility.
-  showToast('✅ Already synced — no settings to save','tok');
-}
-
-function saveSettings_LEGACY(){
-  // settings save no longer needed
-}
-
-// ─── ROSTER ───
 function renderRoster(){
   const siteF = document.getElementById('rosterSiteFilter')?.value||'';
   const roster = getRoster();
@@ -1390,24 +1310,33 @@ function renderRoster(){
     (roster[site]||[]).forEach(emp=>rows.push({...emp,site}));
   });
   if(!rows.length){ el.innerHTML='<div class="empty-state"><div>👤</div>No employees found</div>'; return; }
-  const active   = rows.filter(r=>r.status!=='Removed').length;
-  const removed  = rows.filter(r=>r.status==='Removed').length;
+  const active      = rows.filter(r=>r.status!=='Removed'&&r.status!=='Transferred').length;
+  const removed     = rows.filter(r=>r.status==='Removed').length;
+  const transferred = rows.filter(r=>r.status==='Transferred').length;
   el.innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">
     <strong style="color:var(--accent2)">${active}</strong> active · 
-    <strong style="color:var(--accent3)">${removed}</strong> removed
+    <strong style="color:var(--accent3)">${removed}</strong> removed · 
+    <strong style="color:var(--purple)">${transferred}</strong> transferred
   </div>
   <div class="logs-wrap"><table class="logs-table">
     <thead><tr><th>Name</th><th>Site</th><th>Designation</th><th>Agency</th><th>Dept</th><th>Status</th></tr></thead>
-    <tbody>${rows.sort((a,b)=>(a.status==='Removed')-(b.status==='Removed')||a.name.localeCompare(b.name)).map(emp=>`
-    <tr style="${emp.status==='Removed'?'opacity:.45':''}">
-      <td>${emp.name}</td><td>${emp.site}</td>
-      <td style="font-size:11px">${emp.designation||'—'}</td>
-      <td style="font-size:11px">${emp.agency||'—'}</td>
-      <td style="font-size:11px">${emp.dept||'—'}</td>
-      <td><span class="pill ${emp.status==='Removed'?'removed':'active'}">${emp.status==='Removed'?'Removed':'Active'}</span></td>
-    </tr>`).join('')}</tbody></table></div>`;
+    <tbody>${rows.sort((a,b)=>{
+      const order = s => s==='Active'?0:s==='Transferred'?1:2;
+      return order(a.status)-order(b.status)||a.name.localeCompare(b.name);
+    }).map(emp=>{
+      const isGone = emp.status==='Removed'||emp.status==='Transferred';
+      const pillCls = emp.status==='Transferred'
+        ? 'style="background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.25)"'
+        : emp.status==='Removed' ? 'class="pill removed"' : 'class="pill active"';
+      return `<tr style="${isGone?'opacity:.45':''}">
+        <td>${emp.name}</td><td>${emp.site}</td>
+        <td style="font-size:11px">${emp.designation||'—'}</td>
+        <td style="font-size:11px">${emp.agency||'—'}</td>
+        <td style="font-size:11px">${emp.dept||'—'}</td>
+        <td><span class="pill" ${pillCls}>${emp.status||'Active'}</span></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
 }
-
 function exportRoster(){
   const roster=getRoster();
   const header='Name,Site,Store,Designation,Agency,Department,Status\n';
@@ -1422,22 +1351,15 @@ function exportRoster(){
   a.href=URL.createObjectURL(blob); a.download='employee_roster.csv'; a.click();
   showToast('📥 Roster exported!','tok');
 }
-
-// ─── GOOGLE SHEETS SYNC (JSONP) ───
 function syncToSheet(action, rows, resultElId){
   const url = getScriptUrl();
   const syncEl = document.getElementById(resultElId);
   if(!url){
-    if(syncEl) syncEl.innerHTML=`<div class="val-banner warn" style="justify-content:center">
-      ⚠️ No Apps Script URL. <a href="#" onclick="showPage('settings')" style="color:var(--warn)">Configure in Settings →</a>
-    </div>`;
+    if(syncEl) syncEl.innerHTML=`<div class="val-banner warn" style="justify-content:center">⚠️ No Apps Script URL configured.</div>`;
     return;
   }
-
   const ts = new Date().toISOString();
   if(syncEl) syncEl.innerHTML=`<div style="display:flex;justify-content:center"><div class="sync-status"><div class="sync-dot pending"></div>Syncing…</div></div>`;
-
-  // Send each row via JSONP (same technique as main Attendance Pro)
   rows.forEach((row, i) => {
     const cbName = '_empSync_' + Date.now() + '_' + i;
     const payload = {
@@ -1454,7 +1376,6 @@ function syncToSheet(action, rows, resultElId){
     };
     const params = Object.entries(payload).map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
     const src = `${url}?${params}&callback=${cbName}`;
-
     window[cbName] = function(resp){
       delete window[cbName];
       try{ document.head.removeChild(document.querySelector(`script[src="${src}"]`)); }catch(e){}
@@ -1462,27 +1383,153 @@ function syncToSheet(action, rows, resultElId){
         syncEl.innerHTML=`<div style="display:flex;justify-content:center">
           <div class="sync-status"><div class="sync-dot synced"></div>Synced to Google Sheets</div>
         </div>`;
-        // Pull back the authoritative roster from GS so this device matches the sheet.
-        // Wait longer (2.5s) because GS often takes a beat to commit the write before readRoster sees it.
-        // Then a second pass at 6s to catch any laggy commits.
         if(typeof fetchRosterFromGS === 'function'){
           setTimeout(()=>fetchRosterFromGS(true), 2500);
           setTimeout(()=>fetchRosterFromGS(true), 6000);
         }
       }
     };
-
     const s = document.createElement('script');
     s.src = src;
     s.onerror = ()=>{
       delete window[cbName];
       if(syncEl && i===rows.length-1)
         syncEl.innerHTML=`<div style="display:flex;justify-content:center">
-          <div class="sync-status"><div class="sync-dot pending"></div>Sheet sync pending (check script URL)</div>
+          <div class="sync-status"><div class="sync-dot pending"></div>Sheet sync pending</div>
         </div>`;
     };
     document.head.appendChild(s);
   });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SITE TRANSFER — BACKEND ONLY  (zero UI changes)
+// PUBLIC API: transferAssociate(empName, fromSite, toSite [, resultElId])
+// Returns: Promise<{ ok: boolean, message: string }>
+// Rules: one associate = ONE active site · old row soft-marked 'Transferred'
+//        new row cloned Active · TransferLog entry written · GS re-fetched
+// ═══════════════════════════════════════════════════════════════════════════════
+
+async function transferAssociate(empName, fromSite, toSite, resultElId) {
+  if (!empName || !fromSite || !toSite)
+    return { ok: false, message: 'empName, fromSite and toSite are all required.' };
+  if (fromSite === toSite)
+    return { ok: false, message: 'From-site and To-site must be different.' };
+  if (!VALID_SITES.includes(fromSite))
+    return { ok: false, message: `"${fromSite}" is not a recognised site.` };
+  if (!VALID_SITES.includes(toSite))
+    return { ok: false, message: `"${toSite}" is not a recognised site.` };
+
+  const roster  = getRoster();
+  const srcList = roster[fromSite] || [];
+  const srcIdx  = srcList.findIndex(
+    e => e.name.toLowerCase().trim() === empName.toLowerCase().trim() && e.status !== 'Removed'
+  );
+  if (srcIdx === -1)
+    return { ok: false, message: `"${empName}" not found as an active employee at ${fromSite}.` };
+
+  const srcEmp   = srcList[srcIdx];
+  const ts       = new Date().toISOString();
+  const destList = roster[toSite] || [];
+  const existsAtDest = destList.some(
+    e => e.name.toLowerCase().trim() === empName.toLowerCase().trim() && e.status !== 'Removed' && e.status !== 'Transferred'
+  );
+  if (existsAtDest)
+    return { ok: false, message: `"${empName}" already has an active record at ${toSite}. Remove it first.` };
+
+  // Soft-mark old entry
+  srcList[srcIdx] = { ...srcEmp, status: 'Transferred', transferredAt: ts, transferredTo: toSite };
+
+  // Clone to destination
+  if (!roster[toSite]) roster[toSite] = [];
+  roster[toSite].push({
+    ...srcEmp,
+    site: toSite, store: toSite, status: 'Active',
+    addedAt: ts, transferredFrom: fromSite, transferredAt: ts,
+    _src: 'local-pending'
+  });
+  saveRoster(roster);
+
+  // Log entry
+  const logEntry = {
+    action: 'TRANSFER', name: empName, site: toSite,
+    fromSite, toSite,
+    designation: srcEmp.designation || '', agency: srcEmp.agency || '',
+    dept: srcEmp.dept || 'Warehouse',
+    reason: `Transferred from ${fromSite} to ${toSite}`,
+    remarks: `Previous site: ${fromSite}`,
+    timestamp: ts, by: 'Manager'
+  };
+  const logs = getLogs();
+  logs.unshift(logEntry);
+  saveLogs(logs);
+
+  // JSONP to GS
+  const gsResult = await _gsTransferCall(empName, fromSite, toSite, srcEmp, ts, resultElId);
+
+  // Re-fetch authoritative roster (double-pass)
+  if (typeof fetchRosterFromGS === 'function') {
+    setTimeout(() => fetchRosterFromGS(true), 2500);
+    setTimeout(() => fetchRosterFromGS(true), 6000);
+  }
+
+  return gsResult;
+}
+
+function _gsTransferCall(empName, fromSite, toSite, srcEmp, ts, resultElId) {
+  const url    = getScriptUrl();
+  const syncEl = resultElId ? document.getElementById(resultElId) : null;
+  if (!url) {
+    const msg = '⚠️ No Apps Script URL. Transfer saved locally only.';
+    if (syncEl) syncEl.innerHTML = _syncBadge('pending', msg);
+    return Promise.resolve({ ok: false, message: msg });
+  }
+  if (syncEl) syncEl.innerHTML = _syncBadge('pending', 'Syncing transfer to Google Sheet…');
+  return new Promise(resolve => {
+    const cbName = '_empTransfer_' + Date.now();
+    const script = document.createElement('script');
+    let done = false;
+    const cleanup = () => { done = true; delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script); };
+    const payload = {
+      action: 'transferEmployee', name: empName,
+      fromSite, toSite, store: toSite,
+      designation: srcEmp.designation || '', agency: srcEmp.agency || '',
+      dept: srcEmp.dept || 'Warehouse', transferDate: ts,
+      remarks: `Transferred from ${fromSite} to ${toSite}`
+    };
+    const params = Object.entries(payload).map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+    window[cbName] = resp => {
+      cleanup();
+      const ok  = resp && resp.result === 'success';
+      const msg = ok
+        ? `✅ Synced — ${empName} moved ${fromSite} → ${toSite}`
+        : `⚠️ Sheet issue: ${(resp && resp.error) || 'unknown'}`;
+      if (syncEl) syncEl.innerHTML = _syncBadge(ok ? 'synced' : 'pending', msg);
+      resolve({ ok, message: msg });
+    };
+    script.onerror = () => {
+      cleanup();
+      const msg = '⚠️ Network error — transfer saved locally, sheet sync pending.';
+      if (syncEl) syncEl.innerHTML = _syncBadge('pending', msg);
+      resolve({ ok: false, message: msg });
+    };
+    setTimeout(() => {
+      if (!done) {
+        cleanup();
+        const msg = '⏱ Timeout — transfer saved locally, sheet sync pending.';
+        if (syncEl) syncEl.innerHTML = _syncBadge('pending', msg);
+        resolve({ ok: false, message: msg });
+      }
+    }, 12000);
+    script.src = `${url}?${params}&callback=${cbName}`;
+    document.head.appendChild(script);
+  });
+}
+
+function _syncBadge(state, text) {
+  return `<div style="display:flex;justify-content:center">
+    <div class="sync-status"><div class="sync-dot ${state}"></div><span style="font-size:11px">${text}</span></div>
+  </div>`;
 }
 
 // ─── PULL CENTRAL ROSTER FROM GOOGLE SHEET (single source of truth) ───
@@ -1498,8 +1545,6 @@ function fetchRosterFromGS(silent){
       cleanup();
       if(data && data.result==='success' && data.roster && typeof data.roster==='object'){
         try{
-          // 3-LAYER union merge (preserves pending local adds awaiting GS commit):
-          //   1. baseline   2. existing cache (manual adds)   3. GS (wins)
           const prevCache = _rosterCache || {};
           const merged = {};
           const allSites = new Set([
@@ -1509,17 +1554,14 @@ function fetchRosterFromGS(silent){
           ]);
           allSites.forEach(site => {
             const byName = new Map();
-            // 1. baseline
             (BASELINE_STAFF[site] || []).forEach(e => {
               byName.set((e.name||'').toLowerCase().trim(), {...e, _src:'baseline'});
             });
-            // 2. previously-cached non-baseline entries (pending local adds, etc.)
             (prevCache[site] || []).forEach(e => {
               if(e._src !== 'baseline'){
                 byName.set((e.name||'').toLowerCase().trim(), {...e});
               }
             });
-            // 3. GS wins
             (Array.isArray(data.roster[site]) ? data.roster[site] : []).forEach(e => {
               byName.set((e.name||'').toLowerCase().trim(), {...e, _src:'gs'});
             });
@@ -1532,7 +1574,7 @@ function fetchRosterFromGS(silent){
           resolve(merged);
         }catch(e){ console.warn('Roster merge failed', e); resolve(null); }
       } else {
-        if(!silent && data && data.error) showToast('⚠️ '+data.error,'terr');
+        if(!silent && data && data.error) showToast('⚠️ '+data.error,'err');
         resolve(null);
       }
     };
@@ -1543,17 +1585,209 @@ function fetchRosterFromGS(silent){
   });
 }
 
-// ─── INIT ───
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TRANSFER UI STATE
+// ═══════════════════════════════════════════════════════════════════════════
+let selectedTxEmp = null;
+
+function onTxFromSiteChange(){
+  selectedTxEmp = null;
+  const site = document.getElementById('txFromSite').value;
+  document.getElementById('txEmpCard').style.display = site ? 'block' : 'none';
+  document.getElementById('txSelInfo').textContent = 'No employee selected';
+  document.getElementById('btnTxNext').disabled = true;
+  if(site) filterTxEmpList();
+}
+
+function filterTxEmpList(){
+  const site   = document.getElementById('txFromSite').value;
+  const dept   = document.getElementById('txFromDept').value;
+  const search = document.getElementById('txSearch').value.toLowerCase();
+  const roster = getRoster();
+  let list = (roster[site]||[]).filter(e => e.status !== 'Removed' && e.status !== 'Transferred');
+  if(dept)   list = list.filter(e=>(e.dept||'').includes(dept)||(e.designation||'').includes(dept));
+  if(search) list = list.filter(e=>e.name.toLowerCase().includes(search)||(e.agency||'').toLowerCase().includes(search));
+  const el = document.getElementById('txEmpList');
+  if(!list.length){ el.innerHTML='<div class="empty-state"><div>🔍</div>No active employees found at this site</div>'; return; }
+  el.innerHTML = list.map(emp=>{
+    const initials  = emp.name.split(' ').slice(0,2).map(n=>n[0]||'').join('').toUpperCase();
+    const isSelected = selectedTxEmp && selectedTxEmp.name === emp.name;
+    return `<div class="s-item${isSelected?' selected':''}"
+      data-name="${emp.name.replace(/"/g,'&quot;')}"
+      onclick="selectTxEmp(this)" style="${isSelected?'border-color:var(--purple);background:rgba(167,139,250,.06)':''}">
+      <div class="s-avatar" style="background:linear-gradient(135deg,rgba(167,139,250,.15),rgba(0,212,255,.1))">${initials}</div>
+      <div style="flex:1;min-width:0">
+        <div class="s-name">${emp.name}</div>
+        <div class="s-meta">${emp.agency||''} · ${emp.designation||''}</div>
+      </div>
+      <span class="s-badge active">Active</span>
+    </div>`;
+  }).join('');
+}
+
+function selectTxEmp(el){
+  document.querySelectorAll('#txEmpList .s-item').forEach(i=>{
+    i.classList.remove('selected');
+    i.style.borderColor='';
+    i.style.background='';
+  });
+  el.classList.add('selected');
+  el.style.borderColor = 'var(--purple)';
+  el.style.background  = 'rgba(167,139,250,.06)';
+  const name = el.dataset.name;
+  const site = document.getElementById('txFromSite').value;
+  const roster = getRoster();
+  selectedTxEmp = (roster[site]||[]).find(e=>e.name===name);
+  if(!selectedTxEmp) return;
+  document.getElementById('txSelInfo').textContent = `Selected: ${name}`;
+  document.getElementById('btnTxNext').disabled = false;
+}
+
+function goToTxDestination(){
+  if(!selectedTxEmp){ showToast('Select an employee first','err'); return; }
+  document.getElementById('txStep1').style.display = 'none';
+  document.getElementById('txStep2').style.display = 'block';
+  document.getElementById('txEmpNameLabel').textContent = selectedTxEmp.name;
+  document.getElementById('txToSite').value = '';
+  document.getElementById('txRemarks').value = '';
+  // Set today's date as default
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('txDate').value = today;
+  document.getElementById('txDestWarning').style.display = 'none';
+  document.getElementById('btnTxConfirm').disabled = true;
+  setTxStep(2);
+}
+
+function onTxToSiteChange(){
+  const fromSite = document.getElementById('txFromSite').value;
+  const toSite   = document.getElementById('txToSite').value;
+  const warn     = document.getElementById('txDestWarning');
+  const btn      = document.getElementById('btnTxConfirm');
+  if(!toSite){ btn.disabled=true; warn.style.display='none'; return; }
+  if(toSite === fromSite){
+    warn.innerHTML = '⚠️ Destination must be different from the current site.';
+    warn.style.display = 'block';
+    btn.disabled = true;
+    return;
+  }
+  // Check if already active at destination
+  const roster   = getRoster();
+  const destList = roster[toSite] || [];
+  const clash    = destList.some(e =>
+    e.name.toLowerCase().trim() === selectedTxEmp.name.toLowerCase().trim() &&
+    e.status !== 'Removed' && e.status !== 'Transferred'
+  );
+  if(clash){
+    warn.innerHTML = `⚠️ <strong>${selectedTxEmp.name}</strong> already has an active record at <strong>${toSite}</strong>. Choose a different site or remove that record first.`;
+    warn.style.display = 'block';
+    btn.disabled = true;
+  } else {
+    warn.style.display = 'none';
+    btn.disabled = false;
+  }
+}
+
+function backToTxSelect(){
+  document.getElementById('txStep1').style.display = 'block';
+  document.getElementById('txStep2').style.display = 'none';
+  setTxStep(1);
+  filterTxEmpList();
+}
+
+function openTxConfirmModal(){
+  const fromSite = document.getElementById('txFromSite').value;
+  const toSite   = document.getElementById('txToSite').value;
+  const txDate   = document.getElementById('txDate').value;
+  const remarks  = document.getElementById('txRemarks').value;
+  const emp      = selectedTxEmp;
+  document.getElementById('txModalDetail').innerHTML=`
+    <div><strong>Employee:</strong> ${emp.name}</div>
+    <div><strong>From Site:</strong> ${fromSite}</div>
+    <div><strong>To Site:</strong> <span style="color:var(--purple);font-weight:700">${toSite}</span></div>
+    <div><strong>Designation:</strong> ${emp.designation||'—'}</div>
+    <div><strong>Agency:</strong> ${emp.agency||'—'}</div>
+    <div><strong>Transfer Date:</strong> ${txDate||new Date().toLocaleDateString('en-AE')}</div>
+    ${remarks?`<div><strong>Remarks:</strong> ${remarks}</div>`:''}
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--purple)">🔄 Old site record will be marked Transferred · New site record set Active</div>
+  `;
+  document.getElementById('txConfirmModal').classList.add('open');
+}
+
+function closeTxModal(){ document.getElementById('txConfirmModal').classList.remove('open'); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('txModalConfirmBtn').onclick = function(){
+    closeTxModal();
+    executeTxTransfer();
+  };
+});
+
+async function executeTxTransfer(){
+  const fromSite = document.getElementById('txFromSite').value;
+  const toSite   = document.getElementById('txToSite').value;
+  const remarks  = document.getElementById('txRemarks').value;
+  const emp      = selectedTxEmp;
+
+  const result = await transferAssociate(emp.name, fromSite, toSite, 'txSyncResult');
+
+  const nice = new Date().toLocaleString('en-AE');
+  document.getElementById('txSummary').innerHTML =
+    `<strong>${emp.name}</strong> transferred from <strong>${fromSite}</strong> → <strong style="color:var(--purple)">${toSite}</strong>.<br>
+     ${remarks?`Remarks: ${remarks}<br>`:''}
+     <span style="font-family:monospace;font-size:11px;color:var(--text3)">${nice}</span>`;
+
+  if(!result.ok){
+    showToast('⚠️ ' + result.message, 'warn');
+  } else {
+    showToast('🔄 Transfer complete!','tok');
+  }
+
+  document.getElementById('txStep2').style.display = 'none';
+  document.getElementById('txStep3').style.display = 'block';
+  setTxStep(4);
+}
+
+function resetTransferFlow(){
+  selectedTxEmp = null;
+  document.getElementById('txFromSite').value = '';
+  document.getElementById('txFromDept').value = '';
+  document.getElementById('txSearch').value   = '';
+  document.getElementById('txToSite').value   = '';
+  document.getElementById('txRemarks').value  = '';
+  document.getElementById('txEmpCard').style.display  = 'none';
+  document.getElementById('txStep1').style.display    = 'block';
+  document.getElementById('txStep2').style.display    = 'none';
+  document.getElementById('txStep3').style.display    = 'none';
+  document.getElementById('txDestWarning').style.display = 'none';
+  setTxStep(1);
+}
+
+function setTxStep(n){
+  [1,2,3,4].forEach(i=>{
+    const el = document.getElementById('ts'+i);
+    if(!el) return;
+    if(i < n){
+      el.className = 'step done';
+      el.querySelector('.step-c').style.cssText = 'border-color:var(--purple);color:var(--purple);background:transparent';
+      el.querySelector('.step-l').style.color = 'var(--text2)';
+    } else if(i === n){
+      el.className = 'step active';
+      el.querySelector('.step-c').style.cssText = 'background:var(--purple);border-color:var(--purple);color:#fff';
+      el.querySelector('.step-l').style.color = 'var(--purple)';
+    } else {
+      el.className = 'step';
+      el.querySelector('.step-c').style.cssText = '';
+      el.querySelector('.step-l').style.color = '';
+    }
+  });
+  document.getElementById('txProg').style.width = ({1:25,2:50,3:75,4:100}[n]||25)+'%';
+}
+
 window.onload = ()=>{
   loadSettings();
-  // Pull centralized roster from Google Sheet on load (populates _rosterCache)
-  fetchRosterFromGS(true).then(() => {
-    checkSyncHealth();
-  });
-  // Re-sync every 60s so adds/removes from any device show up
+  fetchRosterFromGS(true).then(() => { checkSyncHealth(); });
   setInterval(() => fetchRosterFromGS(true), 60000);
-
-  // Listen for m-name changes to check dup live
   document.getElementById('m-name').addEventListener('input', checkManualDup);
   document.getElementById('m-site').addEventListener('change', checkManualDup);
 };
@@ -1561,7 +1795,7 @@ window.onload = ()=>{
 
 <div style="text-align:center;padding:30px 20px;border-top:1px solid var(--border);margin-top:40px;position:relative;z-index:1">
   <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">DARKSTORE Employee Manager</div>
-  <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Companion to Darkstore Attendance Pro · Shared Roster via localStorage</div>
+  <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Companion to Darkstore Attendance Pro · Google Sheet Sync</div>
   <div style="font-size:11px;color:var(--text3)">Copyright © 2026 <span style="color:var(--accent);font-weight:600">HP WORLD</span> · Hrushikesh Padhi · <span style="color:var(--warn)">ENWPP9081D/2019</span></div>
   <div style="margin-top:10px"><a href="darkstore-attendance-pro.html" style="color:var(--accent);text-decoration:none;font-size:12px">← Back to Attendance Pro</a></div>
 </div>
