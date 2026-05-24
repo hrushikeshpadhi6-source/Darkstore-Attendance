@@ -1273,7 +1273,7 @@ function buildDashboard(){
     const statusLabel=pct>=100?'submitted':pct>0?'partial':'pending';
     const div=document.createElement('div');
     div.className='site-card';
-    div.onclick=()=>{ document.getElementById('histSiteFilter').value=site; showPage('history'); };
+    div.onclick=()=>{ openSiteDayDetail(site); };
     // Per-shift breakdown
     const shiftBreakdown=['A','B','C'].map(sh=>{
       const shRec=siteRecs.find(r=>r.shift===sh);
@@ -1366,7 +1366,7 @@ async function fetchDashboardFromSheet(filterDate) {
 
       const div = document.createElement('div');
       div.className = 'site-card';
-      div.onclick = () => { document.getElementById('histSiteFilter').value=site; showPage('history'); };
+      div.onclick = () => { openSiteDayDetail(site); };
       div.innerHTML = `
         <div class="site-card-top">
           <div class="site-name">${site}</div>
@@ -2038,10 +2038,234 @@ function checkAdminPwd(pwd){
   </div>
   <div style="margin-top:10px;font-size:11px;color:var(--text3)">
     📞 Contact Us &nbsp;·&nbsp;
-    <a href="/cdn-cgi/l/email-protection#68001a1d1b0001030d1b0018090c00015e2804011e0d460b0705" style="color:var(--accent);text-decoration:none"><span class="__cf_email__" data-cfemail="660e1413150e0f0d03150e1607020e0f50260a0f10034805090b">[email&#160;protected]</span></a>
+    <a href="/cdn-cgi/l/email-protection#d1b9a3a4a2b9b8bab4a2b9a1b0b5b9b8e791bdb8a7b4ffb2bebc" style="color:var(--accent);text-decoration:none"><span class="__cf_email__" data-cfemail="3d554f484e555456584e554d5c5955540b7d51544b58135e5250">[email&#160;protected]</span></a>
     
   </div>
 </div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SITE DAY DETAIL MODAL — shown when a site card is clicked on dashboard
+     ═══════════════════════════════════════════════════════════════════════ -->
+<style>
+  .sdd-backdrop{position:fixed;inset:0;background:rgba(2,4,8,.65);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:1100}
+  .sdd-backdrop.open{opacity:1;pointer-events:auto}
+  .sdd-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-46%) scale(.96);opacity:0;width:min(680px,94vw);max-height:88vh;background:var(--bg);border:1px solid var(--border);border-radius:16px;z-index:1101;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,.6);pointer-events:none;transition:opacity .22s ease, transform .22s cubic-bezier(.2,.7,.2,1)}
+  .sdd-modal.open{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+  .sdd-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(180deg,rgba(0,212,255,.05),transparent)}
+  .sdd-head-left{flex:1;min-width:0}
+  .sdd-title{font-size:16px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
+  .sdd-title::before{content:'';width:6px;height:18px;border-radius:3px;background:var(--accent)}
+  .sdd-sub{font-size:11px;color:var(--text2);margin-top:4px;font-family:'JetBrains Mono',monospace;letter-spacing:.3px}
+  .sdd-close{background:var(--card2);border:1px solid var(--border2);color:var(--text2);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+  .sdd-close:hover{color:var(--text);border-color:var(--accent3)}
+  .sdd-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:18px 22px 22px;scrollbar-width:thin;scrollbar-color:var(--accent) var(--card2)}
+  .sdd-body::-webkit-scrollbar{width:8px}
+  .sdd-body::-webkit-scrollbar-track{background:var(--card2);border-radius:4px}
+  .sdd-body::-webkit-scrollbar-thumb{background:var(--accent);border-radius:4px;border:2px solid var(--card2)}
+  .sdd-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+  .sdd-k{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center}
+  .sdd-k-num{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;line-height:1}
+  .sdd-k-lbl{font-size:9px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-top:5px}
+  .sdd-k.p .sdd-k-num{color:var(--accent2)}
+  .sdd-k.a .sdd-k-num{color:var(--accent3)}
+  .sdd-k.w .sdd-k-num{color:var(--purple)}
+  .sdd-k.l .sdd-k-num{color:var(--warn)}
+  .sdd-shift-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .sdd-shift-chip{font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;background:var(--card2);border:1px solid var(--border);color:var(--text2);font-family:'JetBrains Mono',monospace}
+  .sdd-shift-chip strong{color:var(--accent2);font-weight:700}
+  .sdd-shift-chip .x{color:var(--accent3);font-weight:700}
+  .sdd-shift-chip .by{color:var(--text3);font-weight:500}
+  .sdd-section{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin:6px 0 8px;display:flex;align-items:center;justify-content:space-between}
+  .sdd-section .ct{background:var(--card2);border:1px solid var(--border2);color:var(--text3);padding:2px 8px;border-radius:5px;font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:none}
+  .sdd-table{width:100%;border-collapse:separate;border-spacing:0;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:12px}
+  .sdd-table thead th{background:var(--card2);font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;text-align:left;padding:9px 12px;border-bottom:1px solid var(--border)}
+  .sdd-table tbody td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+  .sdd-table tbody tr:last-child td{border-bottom:none}
+  .sdd-table tbody tr:hover td{background:var(--card2)}
+  .sdd-staff-name{font-weight:600;color:var(--text)}
+  .sdd-staff-sub{font-size:10px;color:var(--text3);margin-top:1px}
+  .sdd-status{font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;white-space:nowrap;letter-spacing:.3px;display:inline-block}
+  .sdd-status.present{background:rgba(0,255,136,.1);color:var(--accent2)}
+  .sdd-status.absent{background:rgba(255,77,109,.1);color:var(--accent3)}
+  .sdd-status.weekoff{background:rgba(167,139,250,.1);color:var(--purple)}
+  .sdd-status.sick,.sdd-status.annual,.sdd-status.authorize{background:rgba(255,179,71,.1);color:var(--warn)}
+  .sdd-empty{padding:36px 16px;text-align:center;color:var(--text3);font-size:13px}
+  .sdd-empty .icon{font-size:32px;margin-bottom:8px;opacity:.5}
+  .sdd-loader{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--text2);font-size:13px;gap:10px}
+  .sdd-loader::before{content:'';width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:sddspin .8s linear infinite}
+  @keyframes sddspin{to{transform:rotate(360deg)}}
+  @media (max-width:520px){
+    .sdd-kpi{grid-template-columns:repeat(2,1fr)}
+    .sdd-table thead th,.sdd-table tbody td{padding:8px 10px}
+    .sdd-table thead th.col-rem,.sdd-table tbody td.col-rem{display:none}
+  }
+</style>
+
+<div class="sdd-backdrop" id="sddBackdrop" onclick="closeSiteDayDetail()"></div>
+<div class="sdd-modal" id="sddModal" role="dialog" aria-label="Site day detail">
+  <div class="sdd-head">
+    <div class="sdd-head-left">
+      <div class="sdd-title" id="sddTitle">Site Detail</div>
+      <div class="sdd-sub" id="sddSub">—</div>
+    </div>
+    <button class="sdd-close" onclick="closeSiteDayDetail()" aria-label="Close">✕</button>
+  </div>
+  <div class="sdd-body" id="sddBody"></div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+function closeSiteDayDetail(){
+  document.getElementById('sddBackdrop').classList.remove('open');
+  document.getElementById('sddModal').classList.remove('open');
+}
+
+async function openSiteDayDetail(site){
+  // Determine the date currently shown on the dashboard
+  const di = document.getElementById('dashDateFilter');
+  let d;
+  if(di && di.value){
+    d = new Date(di.value + 'T00:00:00');
+  } else {
+    d = new Date();
+  }
+  const day  = d.getDate();
+  const monthName = MONTHS[d.getMonth()+1];
+  const year = d.getFullYear();
+  const dateLabel = d.toLocaleDateString('en-AE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  // Open modal with loader
+  const modal = document.getElementById('sddModal');
+  const back  = document.getElementById('sddBackdrop');
+  const body  = document.getElementById('sddBody');
+  document.getElementById('sddTitle').textContent = site;
+  document.getElementById('sddSub').textContent = dateLabel;
+  body.innerHTML = '<div class="sdd-loader">Loading records from Google Sheet…</div>';
+  back.classList.add('open');
+  modal.classList.add('open');
+
+  // Fetch from sheet (covers cross-device data); fall back to local history if not available
+  let recs = [];
+  try {
+    if(typeof readLogCSV === 'function'){
+      const all = await readLogCSV();
+      recs = all.filter(r =>
+        r.site === site &&
+        String(r.day) === String(day) &&
+        String(r.month).trim().toLowerCase() === monthName.toLowerCase() &&
+        String(r.year) === String(year)
+      );
+    }
+  } catch(e){ console.warn('SDD readLogCSV failed', e); }
+
+  // Fallback to localStorage submissions if sheet returned nothing
+  if(!recs.length && typeof getHistory === 'function'){
+    try {
+      const hist = getHistory();
+      const localBatches = hist.filter(b =>
+        b.site === site &&
+        String(b.day) === String(day) &&
+        String(b.month) === monthName &&
+        String(b.year) === String(year)
+      );
+      localBatches.forEach(b => {
+        (b.rows||[]).forEach(row => {
+          recs.push({
+            site: b.site, shift: b.shift, day: b.day, month: b.month, year: b.year,
+            staffName: row.staffName, agency: row.agency || '',
+            designation: row.designation || '', status: row.status,
+            remarks: row.remarks || '', submittedBy: b.submittedBy || ''
+          });
+        });
+      });
+    } catch(e){}
+  }
+
+  if(!recs.length){
+    body.innerHTML = `<div class="sdd-empty"><div class="icon">📭</div>No attendance records for <strong>${site}</strong><br>on <strong>${dateLabel}</strong></div>`;
+    return;
+  }
+
+  // Dedupe per staff (in case both sources had it)
+  const seen = new Set();
+  recs = recs.filter(r => {
+    const k = (r.staffName||'') + '|' + (r.shift||'');
+    if(seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+
+  // Totals
+  const counts = {Present:0, Absent:0, 'Week Off':0, 'Sick Leave':0, 'Annual Leave':0, 'Authorize Leave':0};
+  recs.forEach(r => { if(counts[r.status] !== undefined) counts[r.status]++; });
+  const total = recs.length;
+  const present = counts['Present']||0;
+  const absent  = counts['Absent']||0;
+  const weekoff = counts['Week Off']||0;
+  const leave   = (counts['Sick Leave']||0)+(counts['Annual Leave']||0)+(counts['Authorize Leave']||0);
+
+  // Per-shift breakdown
+  const shiftHtml = ['A','B','C'].map(sh => {
+    const sr = recs.filter(r => r.shift === sh);
+    if(!sr.length) return `<span class="sdd-shift-chip" style="opacity:.5">Shift ${sh}: —</span>`;
+    const p = sr.filter(r=>r.status==='Present').length;
+    const a = sr.filter(r=>r.status==='Absent').length;
+    const by = sr.find(r=>r.submittedBy)?.submittedBy;
+    return `<span class="sdd-shift-chip">Shift ${sh}: <strong>✅${p}</strong> <span class="x">❌${a}</span>${by?` <span class="by">· ${escapeHTML(by)}</span>`:''}</span>`;
+  }).join('');
+
+  // Sort: Absent first, then by name
+  const order = {'Absent':0,'Sick Leave':1,'Annual Leave':1,'Authorize Leave':1,'Week Off':2,'Present':3};
+  recs.sort((a,b) => {
+    const oa = order[a.status] ?? 9, ob = order[b.status] ?? 9;
+    if(oa !== ob) return oa - ob;
+    const sa = (a.shift||'').localeCompare(b.shift||''); if(sa) return sa;
+    return (a.staffName||'').localeCompare(b.staffName||'');
+  });
+
+  const statusCls = {
+    'Present':'present','Absent':'absent','Week Off':'weekoff',
+    'Sick Leave':'sick','Annual Leave':'annual','Authorize Leave':'authorize'
+  };
+
+  body.innerHTML = `
+    <div class="sdd-kpi">
+      <div class="sdd-k p"><div class="sdd-k-num">${present}</div><div class="sdd-k-lbl">Present</div></div>
+      <div class="sdd-k a"><div class="sdd-k-num">${absent}</div><div class="sdd-k-lbl">Absent</div></div>
+      <div class="sdd-k w"><div class="sdd-k-num">${weekoff}</div><div class="sdd-k-lbl">Week Off</div></div>
+      <div class="sdd-k l"><div class="sdd-k-num">${leave}</div><div class="sdd-k-lbl">Leave</div></div>
+    </div>
+    <div class="sdd-shift-row">${shiftHtml}</div>
+    <div class="sdd-section">Staff Attendance <span class="ct">${total} entries</span></div>
+    <table class="sdd-table">
+      <thead><tr>
+        <th style="width:30px">#</th>
+        <th>Staff</th>
+        <th style="width:50px">Shift</th>
+        <th style="width:110px">Status</th>
+        <th class="col-rem">Remarks</th>
+      </tr></thead>
+      <tbody>
+        ${recs.map((r,i) => `<tr>
+          <td style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:11px">${i+1}</td>
+          <td>
+            <div class="sdd-staff-name">${escapeHTML(r.staffName||'—')}</div>
+            <div class="sdd-staff-sub">${escapeHTML(r.agency||'')}${r.designation?' · '+escapeHTML(r.designation):''}</div>
+          </td>
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--text2)">${escapeHTML(r.shift||'—')}</td>
+          <td><span class="sdd-status ${statusCls[r.status]||''}">${escapeHTML(r.status||'—')}</span></td>
+          <td class="col-rem" style="color:var(--text3);font-size:11px">${escapeHTML(r.remarks||'—')}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape'){
+    const m = document.getElementById('sddModal');
+    if(m && m.classList.contains('open')) closeSiteDayDetail();
+  }
+});
+</script>
 
 <!-- ═══════════════════════════════════════════════════════════════════════
      SIDEBAR TOOLS — Export Monthly Excel · Staff Status Dashboard · Date Filter
@@ -2280,7 +2504,7 @@ function checkAdminPwd(pwd){
   </div>
 </aside>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 /* ═══════════ SIDEBAR TOOLS — uses existing readLogCSV() endpoint ═══════════ */
 function openToolsDrawer(){
   document.getElementById('toolsDrawer').classList.add('open');
