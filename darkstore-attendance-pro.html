@@ -669,8 +669,10 @@ select:disabled{opacity:.3;cursor:not-allowed}
 <!-- ═══════════ HISTORY PAGE ═══════════ -->
 <div class="page" id="page-history">
   <div class="history-wrap">
-    <div style="font-size:20px;font-weight:700;margin-bottom:16px">Submission History</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:6px">Submission History</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">📡 Live from Google Sheet · cross-device synced</div>
     <div class="history-filters">
+      <input type="date" class="history-select" id="histDateFilter" onchange="renderHistory()" style="font-family:'JetBrains Mono',monospace"/>
       <select class="history-select" id="histSiteFilter" onchange="renderHistory()">
         <option value="">All Sites</option>
         <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
@@ -683,7 +685,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
         <option value="B">Shift B — Evening</option>
         <option value="C">Shift C — Night</option>
       </select>
-      <button class="btn-sm danger" onclick="adminClearHistory()">🗑 Clear All</button>
+      <button class="btn-sm" onclick="renderHistory()" style="background:var(--accent);color:#070b12;border:none;font-weight:700;padding:8px 14px;border-radius:7px;cursor:pointer;font-size:12px">↻ Refresh</button>
     </div>
     <div class="history-list" id="historyList"></div>
   </div>
@@ -1911,72 +1913,160 @@ function renderIncidentsList(){
   }).join('');;
 }
 
-// ─── HISTORY ───
-function renderHistory(){
-  const hist=getHistory();
-  const siteF=document.getElementById('histSiteFilter').value;
-  const shiftF=document.getElementById('histShiftFilter').value;
-  const filtered=hist.filter(r=>(!siteF||r.site===siteF)&&(!shiftF||r.shift===shiftF));
-  const el=document.getElementById('historyList');
-  if(!filtered.length){ el.innerHTML='<div class="no-history"><div>📭</div>No submissions found</div>'; return; }
-  el.innerHTML=filtered.map((r,i)=>{
-    const counts={};
-    STATUS_OPTS.forEach(s=>counts[s]=0);
-    r.rows.forEach(row=>{if(counts[row.status]!==undefined)counts[row.status]++;});
-    const d=new Date(r.timestamp);
-    const timeStr=d.toLocaleString('en-AE',{hour:'2-digit',minute:'2-digit',hour12:true});
-    return `<div class="history-item" onclick="viewHistoryDetail(${i})">
-      <div class="history-item-top">
-        <div>
-          <div class="hi-title">${r.site} — Shift ${r.shift} (${SHIFTS[r.shift]?.name})</div>
-          <div class="hi-meta">${r.day} ${r.month} ${r.year} &nbsp;·&nbsp; Submitted at ${timeStr}</div>
+// ─── HISTORY (CENTRALIZED — Google Sheet) ───
+let _histCache = null; // {timestamp, batches}
+
+function _formatTimeFromTimestamp(ts){
+  if(!ts) return '';
+  try {
+    const d = new Date(ts);
+    if(isNaN(d.getTime())) return '';
+    return d.toLocaleString('en-AE',{hour:'2-digit',minute:'2-digit',hour12:true});
+  } catch(e){ return ''; }
+}
+
+async function renderHistory(){
+  const el = document.getElementById('historyList');
+  el.innerHTML = '<div class="no-history"><div>⏳</div>Loading from Google Sheet…</div>';
+
+  // Pull centralized log
+  let allRows = [];
+  try {
+    allRows = await readLogCSV();
+  } catch(e){
+    el.innerHTML = '<div class="no-history"><div>⚠️</div>Could not reach Google Sheet. Check connection.</div>';
+    return;
+  }
+
+  // Apply filters
+  const dateF  = document.getElementById('histDateFilter').value;   // YYYY-MM-DD
+  const siteF  = document.getElementById('histSiteFilter').value;
+  const shiftF = document.getElementById('histShiftFilter').value;
+
+  let filterDay = null, filterMonth = null, filterYear = null;
+  if(dateF){
+    const d = new Date(dateF + 'T00:00:00');
+    filterDay = d.getDate();
+    filterMonth = MONTHS[d.getMonth()+1];
+    filterYear = d.getFullYear();
+  }
+
+  const filtered = allRows.filter(r =>
+    (!siteF  || r.site === siteF) &&
+    (!shiftF || r.shift === shiftF) &&
+    (!dateF  || (String(r.day) === String(filterDay) &&
+                 String(r.month).trim().toLowerCase() === filterMonth.toLowerCase() &&
+                 String(r.year) === String(filterYear)))
+  );
+
+  if(!filtered.length){
+    el.innerHTML = '<div class="no-history"><div>📭</div>No submissions match these filters</div>';
+    return;
+  }
+
+  // Group by site|shift|day|month|year
+  const groupMap = new Map();
+  filtered.forEach(r => {
+    const key = [r.site,r.shift,r.day,r.month,r.year].join('|');
+    if(!groupMap.has(key)){
+      groupMap.set(key, {
+        key,
+        site: r.site,
+        shift: r.shift,
+        day: parseInt(r.day),
+        month: r.month,
+        year: parseInt(r.year),
+        submittedBy: r.submittedBy || '',
+        timestamp: r.timestamp || '',
+        rows: []
+      });
+    }
+    const g = groupMap.get(key);
+    g.rows.push({
+      staffName: r.staffName, agency: r.agency, designation: r.designation,
+      status: r.status, remarks: r.remarks||''
+    });
+    // Track latest timestamp + submittedBy
+    if(r.timestamp && (!g.timestamp || r.timestamp > g.timestamp)){
+      g.timestamp = r.timestamp;
+    }
+    if(r.submittedBy && !g.submittedBy) g.submittedBy = r.submittedBy;
+  });
+
+  // Sort: most recent first (by date, then shift order)
+  const SHIFT_ORDER = {A:0,B:1,C:2};
+  const groups = [...groupMap.values()].sort((a,b) => {
+    if(a.year !== b.year) return b.year - a.year;
+    const ma = MONTHS.indexOf(a.month), mb = MONTHS.indexOf(b.month);
+    if(ma !== mb) return mb - ma;
+    if(a.day !== b.day) return b.day - a.day;
+    return (SHIFT_ORDER[b.shift]||0) - (SHIFT_ORDER[a.shift]||0);
+  });
+
+  _histCache = { timestamp: Date.now(), groups };
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">
+      <span style="color:var(--accent2)">●</span>
+      ${groups.length} batches · ${filtered.length} attendance entries · pulled ${new Date().toLocaleTimeString('en-AE',{hour:'2-digit',minute:'2-digit'})}
+    </div>
+    ${groups.map((r, i) => {
+      const counts = {};
+      STATUS_OPTS.forEach(s => counts[s] = 0);
+      r.rows.forEach(row => { if(counts[row.status] !== undefined) counts[row.status]++; });
+      const timeStr = _formatTimeFromTimestamp(r.timestamp);
+      return `<div class="history-item" onclick="viewHistoryDetail(${i})">
+        <div class="history-item-top">
+          <div>
+            <div class="hi-title">${escapeHTML(r.site)} — Shift ${r.shift} (${SHIFTS[r.shift]?.name||'—'})</div>
+            <div class="hi-meta">${r.day} ${r.month} ${r.year}${timeStr?' &nbsp;·&nbsp; '+timeStr:''}${r.submittedBy?' &nbsp;·&nbsp; by '+escapeHTML(r.submittedBy):''}</div>
+          </div>
+          <div class="hi-badges"></div>
         </div>
-        <div class="hi-badges">${r.isDuplicate?'<span class="hi-badge dup">⚠️ DUPLICATE</span>':''}</div>
-      </div>
-      <div class="hi-stats">
-        ${STATUS_OPTS.filter(s=>counts[s]>0).map(s=>`<div class="hi-stat">${STATUS_EMOJI[s]} <span>${counts[s]}</span> ${s}</div>`).join('')}
-      </div>
-    </div>`;
-  }).join('');
+        <div class="hi-stats">
+          ${STATUS_OPTS.filter(s => counts[s] > 0).map(s => `<div class="hi-stat">${STATUS_EMOJI[s]} <span>${counts[s]}</span> ${s}</div>`).join('')}
+        </div>
+      </div>`;
+    }).join('')}`;
 }
 
 function viewHistoryDetail(idx){
-  const hist=getHistory();
-  const siteF=document.getElementById('histSiteFilter').value;
-  const shiftF=document.getElementById('histShiftFilter').value;
-  const filtered=hist.filter(r=>(!siteF||r.site===siteF)&&(!shiftF||r.shift===shiftF));
-  const r=filtered[idx];
-  if(!r)return;
-  lastSubmittedRows=r.rows;
-  document.getElementById('sucSite').textContent=r.site+' · '+r.day+' '+r.month+' '+r.year;
-  document.getElementById('sucShift').textContent='Shift '+r.shift+' — '+SHIFTS[r.shift]?.name;
-  const dupFlag=document.getElementById('sucDupFlag');
-  r.isDuplicate?dupFlag.style.display='inline-flex':dupFlag.style.display='none';
-  const counts={};
-  STATUS_OPTS.forEach(s=>counts[s]=0);
-  r.rows.forEach(row=>{if(counts[row.status]!==undefined)counts[row.status]++;});
-  const sg=document.getElementById('statsGrid');
-  sg.innerHTML='';
-  STATUS_OPTS.forEach(s=>{
-    if(counts[s]>0){
-      const div=document.createElement('div');
-      div.className='stat-card '+STAT_CLS[s];
-      div.innerHTML=`<div class="stat-num">${counts[s]}</div><div class="stat-label">${STATUS_EMOJI[s]} ${s}</div>`;
+  if(!_histCache || !_histCache.groups) return;
+  const r = _histCache.groups[idx];
+  if(!r) return;
+  lastSubmittedRows = r.rows;
+  document.getElementById('sucSite').textContent  = r.site+' · '+r.day+' '+r.month+' '+r.year;
+  document.getElementById('sucShift').textContent = 'Shift '+r.shift+' — '+(SHIFTS[r.shift]?.name||'');
+  document.getElementById('sucDupFlag').style.display = 'none';
+  const counts = {};
+  STATUS_OPTS.forEach(s => counts[s] = 0);
+  r.rows.forEach(row => { if(counts[row.status] !== undefined) counts[row.status]++; });
+  const sg = document.getElementById('statsGrid');
+  sg.innerHTML = '';
+  STATUS_OPTS.forEach(s => {
+    if(counts[s] > 0){
+      const div = document.createElement('div');
+      div.className = 'stat-card '+STAT_CLS[s];
+      div.innerHTML = `<div class="stat-num">${counts[s]}</div><div class="stat-label">${STATUS_EMOJI[s]} ${s}</div>`;
       sg.appendChild(div);
     }
   });
-  document.getElementById('sucTotal').textContent=r.rows.length+' staff';
-  const stb=document.getElementById('sucTableBody');
-  stb.innerHTML=r.rows.map((row,i)=>`
+  document.getElementById('sucTotal').textContent = r.rows.length+' staff';
+  const stb = document.getElementById('sucTableBody');
+  stb.innerHTML = r.rows.map((row,i) => `
     <tr><td style="color:var(--text3);font-size:12px;font-family:'JetBrains Mono',monospace">${i+1}</td>
-    <td style="font-weight:600">${row.staffName}</td>
-    <td style="color:var(--text2);font-size:11px">${row.agency}</td>
-    <td><span class="status-badge ${STATUS_BADGE[row.status]}">${STATUS_EMOJI[row.status]} ${row.status}</span></td>
-    <td style="color:var(--text2);font-size:11px">${row.remarks||'—'}</td></tr>`).join('');
-  document.getElementById('formMain').style.display='none';
-  document.getElementById('successView').style.display='block';
+    <td style="font-weight:600">${escapeHTML(row.staffName||'')}</td>
+    <td style="color:var(--text2);font-size:11px">${escapeHTML(row.agency||'')}</td>
+    <td><span class="status-badge ${STATUS_BADGE[row.status]||''}">${STATUS_EMOJI[row.status]||''} ${escapeHTML(row.status||'')}</span></td>
+    <td style="color:var(--text2);font-size:11px">${escapeHTML(row.remarks||'—')}</td></tr>`).join('');
+  document.getElementById('formMain').style.display = 'none';
+  document.getElementById('successView').style.display = 'block';
   showPage('form');
 }
+
+function adminClearHistory(){ /* deprecated — history is centralized */ }
+function confirmAdminClear(){ /* deprecated */ }
+function checkAdminPwd(){ return false; }
 
 function adminClearHistory(){
   // Show password prompt
@@ -2038,7 +2128,7 @@ function checkAdminPwd(pwd){
   </div>
   <div style="margin-top:10px;font-size:11px;color:var(--text3)">
     📞 Contact Us &nbsp;·&nbsp;
-    <a href="/cdn-cgi/l/email-protection#d1b9a3a4a2b9b8bab4a2b9a1b0b5b9b8e791bdb8a7b4ffb2bebc" style="color:var(--accent);text-decoration:none"><span class="__cf_email__" data-cfemail="3d554f484e555456584e554d5c5955540b7d51544b58135e5250">[email&#160;protected]</span></a>
+    <a href="/cdn-cgi/l/email-protection#91f9e3e4e2f9f8faf4e2f9e1f0f5f9f8a7d1fdf8e7f4bff2fefc" style="color:var(--accent);text-decoration:none"><span class="__cf_email__" data-cfemail="5c342e292f343537392f342c3d3834356a1c30352a39723f3331">[email&#160;protected]</span></a>
     
   </div>
 </div>
