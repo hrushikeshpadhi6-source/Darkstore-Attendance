@@ -561,7 +561,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
         </div>
         <div class="suc-table-wrap">
           <table class="suc-table">
-            <thead><tr><th>#</th><th>Name</th><th>Agency</th><th>Status</th><th>Remarks</th></tr></thead>
+            <thead><tr><th>#</th><th>Name</th><th>Agency</th><th>Status</th><th>Remarks</th><th style="width:60px;text-align:center">Edit</th></tr></thead>
             <tbody id="sucTableBody"></tbody>
           </table>
         </div>
@@ -1712,14 +1712,17 @@ async function submitForm(){
     }
   });
   document.getElementById('sucTotal').textContent=rows.length+' staff';
+  // Capture context for edit feature — staff rows can be corrected from here too
+  _activeEditGroup = { site, shift: selectedShift, day: parseInt(day), month: monthName, year, rows };
   const stb=document.getElementById('sucTableBody');
   stb.innerHTML=rows.map((r,i)=>`
-    <tr ${r.isDuplicate?'class="dup-row"':''}>
+    <tr ${r.isDuplicate?'class="dup-row"':''} data-edit-idx="${i}">
       <td style="color:var(--text3);font-size:12px;font-family:'JetBrains Mono',monospace">${i+1}</td>
       <td style="font-weight:600">${r.staffName}</td>
       <td style="color:var(--text2);font-size:11px">${r.agency}</td>
       <td><span class="status-badge ${STATUS_BADGE[r.status]}">${STATUS_EMOJI[r.status]} ${r.status}</span></td>
       <td style="color:var(--text2);font-size:11px">${r.remarks||'—'}</td>
+      <td style="text-align:center"><button class="edit-row-btn" onclick="openEditRecord(${i})" title="Correct this entry">✏️</button></td>
     </tr>`).join('');
 
   setStep(4);
@@ -1984,7 +1987,11 @@ async function renderHistory(){
     const g = groupMap.get(key);
     g.rows.push({
       staffName: r.staffName, agency: r.agency, designation: r.designation,
-      status: r.status, remarks: r.remarks||''
+      status: r.status, remarks: r.remarks||'',
+      // Edit audit (your Apps Script uses CorrectedBy/CorrectedAt/CorrectionHistory)
+      editedBy:    r.correctedBy || r.CorrectedBy || r.editedBy || r['Edited By'] || '',
+      editedAt:    r.correctedAt || r.CorrectedAt || r.editedAt || r['Edited At'] || '',
+      editHistory: r.correctionHistory || r.CorrectionHistory || r.editHistory || r['Edit History'] || ''
     });
     // Track latest timestamp + submittedBy
     if(r.timestamp && (!g.timestamp || r.timestamp > g.timestamp)){
@@ -2014,6 +2021,7 @@ async function renderHistory(){
       const counts = {};
       STATUS_OPTS.forEach(s => counts[s] = 0);
       r.rows.forEach(row => { if(counts[row.status] !== undefined) counts[row.status]++; });
+      const editCount = r.rows.filter(row => row.editedBy).length;
       const timeStr = _formatTimeFromTimestamp(r.timestamp);
       return `<div class="history-item" onclick="viewHistoryDetail(${i})">
         <div class="history-item-top">
@@ -2021,7 +2029,7 @@ async function renderHistory(){
             <div class="hi-title">${escapeHTML(r.site)} — Shift ${r.shift} (${SHIFTS[r.shift]?.name||'—'})</div>
             <div class="hi-meta">${r.day} ${r.month} ${r.year}${timeStr?' &nbsp;·&nbsp; '+timeStr:''}${r.submittedBy?' &nbsp;·&nbsp; by '+escapeHTML(r.submittedBy):''}</div>
           </div>
-          <div class="hi-badges"></div>
+          <div class="hi-badges">${editCount?`<span class="hi-badge edited">✏️ ${editCount} edited</span>`:''}</div>
         </div>
         <div class="hi-stats">
           ${STATUS_OPTS.filter(s => counts[s] > 0).map(s => `<div class="hi-stat">${STATUS_EMOJI[s]} <span>${counts[s]}</span> ${s}</div>`).join('')}
@@ -2052,13 +2060,18 @@ function viewHistoryDetail(idx){
     }
   });
   document.getElementById('sucTotal').textContent = r.rows.length+' staff';
+  // Capture context for edit feature
+  _activeEditGroup = { site: r.site, shift: r.shift, day: r.day, month: r.month, year: r.year, rows: r.rows };
   const stb = document.getElementById('sucTableBody');
-  stb.innerHTML = r.rows.map((row,i) => `
-    <tr><td style="color:var(--text3);font-size:12px;font-family:'JetBrains Mono',monospace">${i+1}</td>
-    <td style="font-weight:600">${escapeHTML(row.staffName||'')}</td>
+  stb.innerHTML = r.rows.map((row,i) => {
+    const editBadge = row.editedBy ? `<div style="font-size:9px;color:var(--purple);margin-top:3px;font-family:'JetBrains Mono',monospace">✏️ edited by ${escapeHTML(row.editedBy)}</div>` : '';
+    return `<tr data-edit-idx="${i}"><td style="color:var(--text3);font-size:12px;font-family:'JetBrains Mono',monospace">${i+1}</td>
+    <td style="font-weight:600">${escapeHTML(row.staffName||'')}${editBadge}</td>
     <td style="color:var(--text2);font-size:11px">${escapeHTML(row.agency||'')}</td>
     <td><span class="status-badge ${STATUS_BADGE[row.status]||''}">${STATUS_EMOJI[row.status]||''} ${escapeHTML(row.status||'')}</span></td>
-    <td style="color:var(--text2);font-size:11px">${escapeHTML(row.remarks||'—')}</td></tr>`).join('');
+    <td style="color:var(--text2);font-size:11px">${escapeHTML(row.remarks||'—')}</td>
+    <td style="text-align:center"><button class="edit-row-btn" onclick="openEditRecord(${i})" title="Correct this entry">✏️</button></td></tr>`;
+  }).join('');
   document.getElementById('formMain').style.display = 'none';
   document.getElementById('successView').style.display = 'block';
   showPage('form');
@@ -2128,9 +2141,29 @@ function checkAdminPwd(pwd){
   </div>
   <div style="margin-top:10px;font-size:11px;color:var(--text3)">
     📞 Contact Us &nbsp;·&nbsp;
-    <a href="/cdn-cgi/l/email-protection#91f9e3e4e2f9f8faf4e2f9e1f0f5f9f8a7d1fdf8e7f4bff2fefc" style="color:var(--accent);text-decoration:none"><span class="__cf_email__" data-cfemail="5c342e292f343537392f342c3d3834356a1c30352a39723f3331">[email&#160;protected]</span></a>
-    
+    <a id="contactEmail" href="#" style="color:var(--accent);text-decoration:none">contact</a>
   </div>
+  <script>
+  // Build email at runtime so static scanners (Cloudflare email obfuscation,
+  // browser scrapers) don't detect a plain mailto: and inject /cdn-cgi/...
+  // email-decode.min.js — which 404s under Live Server and triggers
+  // "Unexpected end of input" when the 404 HTML page is parsed as JS.
+  (function(){
+    var u = ['hrushikeshpadhi6','live','com'];
+    var addr = u[0] + String.fromCharCode(64) + u[1] + '.' + u[2];
+    var el = document.getElementById('contactEmail');
+    if (el) { el.href = 'mailto:' + addr; el.textContent = addr; }
+    // One-time cleanup: unregister any stale Cloudflare service worker
+    // that may have been cached on this origin from a previous deploy.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(rs){
+        rs.forEach(function(r){
+          if (r.active && /cdn-cgi|cloudflare/i.test(r.active.scriptURL||'')) r.unregister();
+        });
+      }).catch(function(){});
+    }
+  })();
+  </script>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════
@@ -2203,7 +2236,7 @@ function checkAdminPwd(pwd){
   <div class="sdd-body" id="sddBody"></div>
 </div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 function closeSiteDayDetail(){
   document.getElementById('sddBackdrop').classList.remove('open');
   document.getElementById('sddModal').classList.remove('open');
@@ -3071,6 +3104,278 @@ async function toolLoadStatus(){
 }
 
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeToolsDrawer(); });
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     EDIT ATTENDANCE FEATURE — correct a wrong status/shift/remarks on any
+     past record. Updates the row in-place via Apps Script action=update,
+     and the server appends an Edit History audit entry.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<style>
+  .edit-row-btn{background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:13px;padding:5px 9px;border-radius:6px;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif}
+  .edit-row-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.05)}
+  .hi-badge.edited{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
+
+  .edit-backdrop{position:fixed;inset:0;background:rgba(2,4,8,.7);backdrop-filter:blur(6px);z-index:1200;display:none;align-items:center;justify-content:center;padding:16px}
+  .edit-backdrop.open{display:flex}
+  .edit-modal{background:var(--card);border:1px solid var(--border2);border-radius:16px;padding:24px 22px;width:100%;max-width:440px;animation:fadeup .25s ease both;max-height:90vh;overflow-y:auto}
+  .edit-modal h3{font-size:16px;font-weight:700;margin-bottom:4px}
+  .edit-modal .em-sub{font-size:11px;color:var(--text2);margin-bottom:18px;font-family:'JetBrains Mono',monospace}
+  .edit-modal .em-row{margin-bottom:14px}
+  .edit-modal label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;letter-spacing:.3px;text-transform:uppercase}
+  .edit-modal select,.edit-modal input[type=text]{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border-color .15s;appearance:none}
+  .edit-modal select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%233a4f6a'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;cursor:pointer;padding-right:36px}
+  .edit-modal select:focus,.edit-modal input[type=text]:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
+  .edit-modal select option{background:#141c28}
+  .edit-modal .em-old{font-size:11px;color:var(--text3);margin-top:5px;font-family:'JetBrains Mono',monospace}
+  .edit-modal .em-history{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;white-space:pre-wrap;max-height:120px;overflow-y:auto;line-height:1.5}
+  .edit-modal .em-actions{display:flex;gap:8px;margin-top:18px}
+  .edit-modal .em-cancel{flex:1;background:var(--card2);border:1px solid var(--border2);color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;padding:11px;border-radius:9px;cursor:pointer;transition:all .15s}
+  .edit-modal .em-cancel:hover{border-color:var(--text2);color:var(--text)}
+  .edit-modal .em-save{flex:1.4;background:linear-gradient(135deg,var(--accent),#0099cc);border:none;color:#070b12;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;padding:11px;border-radius:9px;cursor:pointer;transition:opacity .15s,transform .1s}
+  .edit-modal .em-save:hover{opacity:.9}
+  .edit-modal .em-save:disabled{opacity:.4;cursor:not-allowed}
+</style>
+
+<div class="edit-backdrop" id="editBackdrop" onclick="if(event.target===this)closeEditRecord()">
+  <div class="edit-modal">
+    <h3 id="emTitle">Correct Attendance</h3>
+    <div class="em-sub" id="emSub"></div>
+
+    <div class="em-row">
+      <label>Status</label>
+      <select id="emStatus"></select>
+      <div class="em-old" id="emStatusOld"></div>
+    </div>
+
+    <div class="em-row">
+      <label>Shift</label>
+      <select id="emShift">
+        <option value="A">A — Morning (06:00–14:00)</option>
+        <option value="B">B — Evening (14:00–22:00)</option>
+        <option value="C">C — Night (22:00–06:00)</option>
+      </select>
+      <div class="em-old" id="emShiftOld"></div>
+    </div>
+
+    <div class="em-row">
+      <label>Remarks</label>
+      <input type="text" id="emRemarks" placeholder="Optional note…" maxlength="200"/>
+    </div>
+
+    <div class="em-row" id="emHistoryWrap" style="display:none">
+      <label>Edit History</label>
+      <div class="em-history" id="emHistory"></div>
+    </div>
+
+    <div class="em-actions">
+      <button class="em-cancel" onclick="closeEditRecord()">Cancel</button>
+      <button class="em-save" id="emSaveBtn" onclick="saveEditRecord()">Save Correction</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ EDIT ATTENDANCE — client logic ═══════════
+   _activeEditGroup is set by viewHistoryDetail() and submitForm() to:
+     { site, shift, day, month, year, rows: [...] }
+   _editingIdx is the index into rows[] currently being edited.
+   ─────────────────────────────────────────────────────── */
+let _activeEditGroup = null;
+let _editingIdx = -1;
+
+function openEditRecord(idx){
+  if(!_activeEditGroup || !_activeEditGroup.rows[idx]){
+    showToast('Cannot edit this record — context missing','terr'); return;
+  }
+  _editingIdx = idx;
+  const row = _activeEditGroup.rows[idx];
+  const g = _activeEditGroup;
+
+  // Populate status dropdown
+  const statusSel = document.getElementById('emStatus');
+  statusSel.innerHTML = STATUS_OPTS.map(s =>
+    `<option value="${s}" ${s===row.status?'selected':''}>${STATUS_EMOJI[s]} ${s}</option>`
+  ).join('');
+
+  // Populate shift, remarks
+  document.getElementById('emShift').value = g.shift || 'A';
+  document.getElementById('emRemarks').value = row.remarks || '';
+
+  // Header + sub
+  document.getElementById('emTitle').textContent = 'Correct: ' + (row.staffName || '—');
+  document.getElementById('emSub').textContent =
+    `${g.site} · ${g.day} ${g.month} ${g.year} · Shift ${g.shift}`;
+
+  // Show original values for clarity
+  document.getElementById('emStatusOld').textContent = `was: ${STATUS_EMOJI[row.status]||''} ${row.status||'—'}`;
+  document.getElementById('emShiftOld').textContent  = `was: Shift ${g.shift} — ${SHIFTS[g.shift]?.name||''}`;
+
+  // Edit history (if any)
+  if (row.editHistory) {
+    document.getElementById('emHistoryWrap').style.display = '';
+    document.getElementById('emHistory').textContent = row.editHistory;
+  } else {
+    document.getElementById('emHistoryWrap').style.display = 'none';
+  }
+
+  // Reset save button
+  const btn = document.getElementById('emSaveBtn');
+  btn.disabled = false;
+  btn.textContent = 'Save Correction';
+
+  document.getElementById('editBackdrop').classList.add('open');
+}
+
+function closeEditRecord(){
+  document.getElementById('editBackdrop').classList.remove('open');
+  _editingIdx = -1;
+}
+
+async function saveEditRecord(){
+  if(_editingIdx < 0 || !_activeEditGroup) return;
+  const idx = _editingIdx;
+  const g = _activeEditGroup;
+  const row = g.rows[idx];
+
+  const newStatus  = document.getElementById('emStatus').value;
+  const newShift   = document.getElementById('emShift').value;
+  const newRemarks = document.getElementById('emRemarks').value.trim();
+  const oldStatus  = row.status || '';
+  const oldShift   = g.shift || '';
+  const oldRemarks = row.remarks || '';
+
+  // No-op check
+  if (newStatus === oldStatus && newShift === oldShift && newRemarks === oldRemarks) {
+    showToast('Nothing changed','warn');
+    return;
+  }
+
+  // Who is editing?
+  const editedBy = (document.getElementById('submittedBy')?.value.trim())
+                || (typeof loggedInSite==='string' && loggedInSite ? loggedInSite+' user' : 'unknown');
+
+  const scriptUrl = document.getElementById('scriptUrl').value.trim();
+  if(!scriptUrl){
+    showToast('Apps Script URL missing','terr'); return;
+  }
+
+  const btn = document.getElementById('emSaveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Saving…';
+
+  // JSONP update — we WAIT for server confirmation so we know the row was
+  // actually overwritten in place (no duplicate), then re-fetch from the
+  // sheet so what's displayed is server-authoritative, never local.
+  const result = await new Promise((resolve) => {
+    const cbName = 'gsUpdate_' + Date.now();
+    const script = document.createElement('script');
+    let done = false;
+    const cleanup = () => { done = true; delete window[cbName]; if (script.parentNode) script.remove(); };
+    window[cbName] = (data) => { cleanup(); resolve(data || {result:'error'}); };
+    script.onerror = () => { cleanup(); resolve({result:'error', message:'network'}); };
+    setTimeout(() => { if (!done) { cleanup(); resolve({result:'timeout'}); } }, 15000);
+
+    const params = new URLSearchParams({
+      action: 'correctAttendance',
+      site: g.site,
+      staffName: row.staffName || '',
+      day: String(g.day),
+      month: g.month,
+      year: String(g.year),
+      originalShift: oldShift,
+      originalStatus: oldStatus,
+      originalRemarks: oldRemarks,
+      newStatus, newShift, newRemarks,
+      correctedBy: editedBy,
+      editedBy,
+      editedAt: new Date().toISOString(),
+      callback: cbName
+    });
+    script.src = scriptUrl + '?' + params.toString();
+    document.head.appendChild(script);
+  });
+
+  if (result.result !== 'ok') {
+    btn.disabled = false;
+    btn.textContent = 'Save Correction';
+    const msg = result.message || (result.result === 'timeout' ? 'Timed out' : 'Save failed');
+    showToast('⚠️ ' + msg + ' — try again','terr');
+    return;
+  }
+
+  // ── Server confirmed: re-fetch from the sheet so the view shows
+  // exactly what's stored (no local optimism, no duplicates). ──
+  closeEditRecord();
+  showToast('✓ Correction saved · refreshing…','tok');
+
+  try {
+    const allRows = await readLogCSV();
+    // Rebuild THIS group from the fresh server data
+    const matches = allRows.filter(r =>
+      String(r.site||'').trim() === String(g.site).trim() &&
+      String(r.day||'').trim() === String(g.day).trim() &&
+      String(r.month||'').trim().toLowerCase() === String(g.month).trim().toLowerCase() &&
+      String(r.year||'').trim() === String(g.year).trim() &&
+      String(r.shift||'').trim() === String(newShift).trim()
+    );
+    if (matches.length) {
+      _activeEditGroup.shift = newShift;
+      _activeEditGroup.rows = matches.map(r => ({
+        staffName: r.staffName, agency: r.agency, designation: r.designation,
+        status: r.status, remarks: r.remarks || '',
+        editedBy:    r.correctedBy || r.CorrectedBy || r.editedBy || r['Edited By'] || '',
+        editedAt:    r.correctedAt || r.CorrectedAt || r.editedAt || r['Edited At'] || '',
+        editHistory: r.correctionHistory || r.CorrectionHistory || r.editHistory || r['Edit History'] || ''
+      }));
+      _rerenderActiveDetailTable();
+    }
+  } catch(e) {
+    console.warn('Post-edit refresh failed:', e);
+  }
+
+  // Invalidate history cache so the History list also re-pulls next time
+  _histCache = null;
+}
+
+// Re-render the currently visible success-view table after an edit.
+function _rerenderActiveDetailTable(){
+  if(!_activeEditGroup) return;
+  const r = _activeEditGroup;
+  const stb = document.getElementById('sucTableBody');
+  if (!stb) return;
+  // Refresh stats too
+  const counts = {};
+  STATUS_OPTS.forEach(s => counts[s] = 0);
+  r.rows.forEach(row => { if(counts[row.status] !== undefined) counts[row.status]++; });
+  const sg = document.getElementById('statsGrid');
+  if (sg) {
+    sg.innerHTML = '';
+    STATUS_OPTS.forEach(s => {
+      if (counts[s] > 0) {
+        const div = document.createElement('div');
+        div.className = 'stat-card ' + STAT_CLS[s];
+        div.innerHTML = `<div class="stat-num">${counts[s]}</div><div class="stat-label">${STATUS_EMOJI[s]} ${s}</div>`;
+        sg.appendChild(div);
+      }
+    });
+  }
+  // Refresh shift line if shift changed
+  const sucShift = document.getElementById('sucShift');
+  if (sucShift) sucShift.textContent = 'Shift ' + r.shift + ' — ' + (SHIFTS[r.shift]?.name || '');
+
+  stb.innerHTML = r.rows.map((row, i) => {
+    const editBadge = row.editedBy ? `<div style="font-size:9px;color:var(--purple);margin-top:3px;font-family:'JetBrains Mono',monospace">✏️ edited by ${escapeHTML(row.editedBy)}</div>` : '';
+    return `<tr data-edit-idx="${i}"><td style="color:var(--text3);font-size:12px;font-family:'JetBrains Mono',monospace">${i+1}</td>
+    <td style="font-weight:600">${escapeHTML(row.staffName||'')}${editBadge}</td>
+    <td style="color:var(--text2);font-size:11px">${escapeHTML(row.agency||'')}</td>
+    <td><span class="status-badge ${STATUS_BADGE[row.status]||''}">${STATUS_EMOJI[row.status]||''} ${escapeHTML(row.status||'')}</span></td>
+    <td style="color:var(--text2);font-size:11px">${escapeHTML(row.remarks||'—')}</td>
+    <td style="text-align:center"><button class="edit-row-btn" onclick="openEditRecord(${i})" title="Correct this entry">✏️</button></td></tr>`;
+  }).join('');
+}
+
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeEditRecord(); });
 </script>
 
 </body>
