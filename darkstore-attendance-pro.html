@@ -3296,7 +3296,11 @@ async function saveEditRecord(){
     document.head.appendChild(script);
   });
 
-  if (result.result !== 'ok') {
+  // The Apps Script reports success as either 'ok' or 'success' (the read/
+  // roster endpoints use 'success'), so accept both. Anything else is a
+  // genuine failure / timeout / network error.
+  const ok = result.result === 'ok' || result.result === 'success';
+  if (!ok) {
     btn.disabled = false;
     btn.textContent = 'Save Correction';
     const msg = result.message || (result.result === 'timeout' ? 'Timed out' : 'Save failed');
