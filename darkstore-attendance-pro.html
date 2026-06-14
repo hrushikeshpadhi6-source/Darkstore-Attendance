@@ -1335,7 +1335,21 @@ async function fetchDashboardFromSheet(filterDate) {
       r.month === month &&
       String(r.year) === String(year)
     );
-    if (!dayRecs.length) return;
+    if (!dayRecs.length) {
+      // Sheet is the source of truth: it came back with data (rows.length>0)
+      // but NONE for this date — e.g. an entry was corrected/moved to another
+      // day. Clear any stale local render so the old day no longer shows it.
+      document.getElementById('kpiTotal').textContent      = '0';
+      document.getElementById('kpiPresent').textContent    = '0';
+      document.getElementById('kpiAbsent').textContent     = '0';
+      document.getElementById('kpiWeekOff').textContent    = '0';
+      document.getElementById('kpiLeave').textContent      = '0';
+      document.getElementById('kpiPresentPct').textContent = '—';
+      document.getElementById('kpiAbsentPct').textContent  = '—';
+      document.getElementById('dashSites').innerHTML =
+        '<div class="dash-empty"><div>📊</div>No submissions for this date</div>';
+      return;
+    }
 
     // KPI counts
     let totStaff=0, totPresent=0, totAbsent=0, totWeekOff=0, totLeave=0;
