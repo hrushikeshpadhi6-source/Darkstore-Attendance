@@ -3123,9 +3123,10 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeToolsDrawe
   .edit-modal .em-sub{font-size:11px;color:var(--text2);margin-bottom:18px;font-family:'JetBrains Mono',monospace}
   .edit-modal .em-row{margin-bottom:14px}
   .edit-modal label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;letter-spacing:.3px;text-transform:uppercase}
-  .edit-modal select,.edit-modal input[type=text]{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border-color .15s;appearance:none}
+  .edit-modal select,.edit-modal input[type=text],.edit-modal input[type=date]{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border-color .15s;appearance:none}
+  .edit-modal input[type=date]{color-scheme:dark;cursor:pointer}
   .edit-modal select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%233a4f6a'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;cursor:pointer;padding-right:36px}
-  .edit-modal select:focus,.edit-modal input[type=text]:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
+  .edit-modal select:focus,.edit-modal input[type=text]:focus,.edit-modal input[type=date]:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
   .edit-modal select option{background:#141c28}
   .edit-modal .em-old{font-size:11px;color:var(--text3);margin-top:5px;font-family:'JetBrains Mono',monospace}
   .edit-modal .em-history{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;white-space:pre-wrap;max-height:120px;overflow-y:auto;line-height:1.5}
@@ -3156,6 +3157,13 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeToolsDrawe
         <option value="C">C — Night (22:00–06:00)</option>
       </select>
       <div class="em-old" id="emShiftOld"></div>
+    </div>
+
+    <div class="em-row">
+      <label>Date</label>
+      <input type="date" id="emDate"/>
+      <div class="em-old" id="emDateOld"></div>
+      <div class="em-old" style="color:var(--warn);margin-top:6px">Wrong date? Change it here — the old day is erased and re-filed under the new date. No duplicate.</div>
     </div>
 
     <div class="em-row">
@@ -3202,6 +3210,15 @@ function openEditRecord(idx){
   document.getElementById('emShift').value = g.shift || 'A';
   document.getElementById('emRemarks').value = row.remarks || '';
 
+  // Populate date (yyyy-mm-dd) from the group's day/month/year
+  const _mIdx = MONTHS.indexOf(g.month);
+  if (_mIdx > 0) {
+    document.getElementById('emDate').value =
+      `${g.year}-${String(_mIdx).padStart(2,'0')}-${String(parseInt(g.day)).padStart(2,'0')}`;
+  } else {
+    document.getElementById('emDate').value = '';
+  }
+
   // Header + sub
   document.getElementById('emTitle').textContent = 'Correct: ' + (row.staffName || '—');
   document.getElementById('emSub').textContent =
@@ -3210,6 +3227,7 @@ function openEditRecord(idx){
   // Show original values for clarity
   document.getElementById('emStatusOld').textContent = `was: ${STATUS_EMOJI[row.status]||''} ${row.status||'—'}`;
   document.getElementById('emShiftOld').textContent  = `was: Shift ${g.shift} — ${SHIFTS[g.shift]?.name||''}`;
+  document.getElementById('emDateOld').textContent    = `was: ${g.day} ${g.month} ${g.year}`;
 
   // Edit history (if any)
   if (row.editHistory) {
@@ -3245,8 +3263,19 @@ async function saveEditRecord(){
   const oldShift   = g.shift || '';
   const oldRemarks = row.remarks || '';
 
+  // ── Date change (move the record to a different day, no duplicate) ──
+  let newDay = String(g.day), newMonth = g.month, newYear = String(g.year), dateChanged = false;
+  const _dv = document.getElementById('emDate').value;   // yyyy-mm-dd
+  if (_dv) {
+    const _p = _dv.split('-').map(Number);
+    newYear  = String(_p[0]);
+    newMonth = MONTHS[_p[1]] || g.month;
+    newDay   = String(_p[2]);
+    dateChanged = (newDay !== String(g.day) || newMonth !== g.month || newYear !== String(g.year));
+  }
+
   // No-op check
-  if (newStatus === oldStatus && newShift === oldShift && newRemarks === oldRemarks) {
+  if (newStatus === oldStatus && newShift === oldShift && newRemarks === oldRemarks && !dateChanged) {
     showToast('Nothing changed','warn');
     return;
   }
@@ -3287,6 +3316,7 @@ async function saveEditRecord(){
       originalStatus: oldStatus,
       originalRemarks: oldRemarks,
       newStatus, newShift, newRemarks,
+      newDay, newMonth, newYear,
       correctedBy: editedBy,
       editedBy,
       editedAt: new Date().toISOString(),
@@ -3311,7 +3341,9 @@ async function saveEditRecord(){
   // ── Server confirmed: re-fetch from the sheet so the view shows
   // exactly what's stored (no local optimism, no duplicates). ──
   closeEditRecord();
-  showToast('✓ Correction saved · refreshing…','tok');
+  showToast(dateChanged
+    ? `✓ Moved to ${newDay} ${newMonth} ${newYear} · old date erased`
+    : '✓ Correction saved · refreshing…','tok');
 
   try {
     const allRows = await readLogCSV();
