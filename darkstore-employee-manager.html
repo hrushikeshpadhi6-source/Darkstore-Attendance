@@ -351,16 +351,27 @@ select.sel option{background:#141c28}
         <div class="field-row">
           <div class="field" id="f-agency">
             <label class="lbl">Agency <span class="req">*</span></label>
-            <select class="sel" id="m-agency" onchange="clearFieldErr('f-agency')">
+            <select class="sel" id="m-agency" onchange="clearFieldErr('f-agency');toggleAgencyOther()">
               <option value="">— Select —</option>
               <option>Flexitalent</option><option>Al Maahir</option><option>Align</option>
-              <option>EzyBuzz</option><option>Direct Hire</option><option>Other</option>
+              <option>EzyBuzz</option><option>Direct Hire</option><option value="Other">+ New agency…</option>
             </select>
+            <input class="inp" id="m-agency-other" placeholder="Type new agency name" style="display:none;margin-top:8px" oninput="clearFieldErr('f-agency')"/>
             <span class="err-msg">Agency is required</span>
           </div>
           <div class="field">
             <label class="lbl">Store / Location</label>
             <input class="inp" id="m-store" placeholder="e.g. Al Raha Darkstore"/>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label class="lbl">Joining Date <span style="color:var(--text3);font-weight:500;letter-spacing:0">· optional</span></label>
+            <input class="inp" type="date" id="m-joindate" style="color-scheme:dark"/>
+          </div>
+          <div class="field">
+            <label class="lbl">Emirates ID / Passport <span style="color:var(--text3);font-weight:500;letter-spacing:0">· optional</span></label>
+            <input class="inp" id="m-eid" placeholder="784-XXXX-XXXXXXX-X or passport no."/>
           </div>
         </div>
         <div id="manualDupWarning" style="display:none" class="val-banner warn">⚠️ This employee already exists at the selected site. Check before adding.</div>
@@ -958,6 +969,14 @@ function syncDept(){
   document.getElementById('m-dept').value = desig==='Housekeeping' ? 'Housekeeping' : 'Warehouse';
 }
 
+// Show a free-text box when the manager picks "+ New agency…" (hiring from a new agency)
+function toggleAgencyOther(){
+  const sel = document.getElementById('m-agency');
+  const other = document.getElementById('m-agency-other');
+  if(sel.value==='Other'){ other.style.display='block'; other.focus(); }
+  else { other.style.display='none'; other.value=''; }
+}
+
 function clearFieldErr(id){ document.getElementById(id)?.classList.remove('has-error'); }
 
 function checkManualDup(){
@@ -974,8 +993,11 @@ function submitManualAdd(){
   const site   = document.getElementById('m-site').value;
   const desig  = document.getElementById('m-desig').value;
   const dept   = document.getElementById('m-dept').value;
-  const agency = document.getElementById('m-agency').value;
+  let   agency = document.getElementById('m-agency').value;
+  if(agency==='Other') agency = document.getElementById('m-agency-other').value.trim();
   const store  = document.getElementById('m-store').value.trim() || site;
+  const joinDate = document.getElementById('m-joindate').value;          // yyyy-mm-dd, optional
+  const eid      = document.getElementById('m-eid').value.trim();        // Emirates ID / passport, optional
   let hasErr = false;
 
   if(!name){  document.getElementById('f-name').classList.add('has-error');  hasErr=true; }
@@ -991,18 +1013,20 @@ function submitManualAdd(){
 
   // Add
   if(!roster[site]) roster[site] = [];
-  const newEmp = { name, site, designation:desig, agency, dept, store, status:'Active', addedAt:new Date().toISOString(), _src:'local-pending' };
+  const newEmp = { name, site, designation:desig, agency, dept, store, joinDate, eid, status:'Active', addedAt:new Date().toISOString(), _src:'local-pending' };
   roster[site].push(newEmp);
   saveRoster(roster);
 
   // Log
   const logs = getLogs();
-  logs.unshift({ action:'ADD', name, site, designation:desig, agency, dept, store, timestamp:new Date().toISOString(), by:'Manager' });
+  logs.unshift({ action:'ADD', name, site, designation:desig, agency, dept, store, joinDate, eid, timestamp:new Date().toISOString(), by:'Manager' });
   saveLogs(logs);
 
   // Show success
+  const extraBits = [joinDate ? 'Joined '+joinDate : '', eid ? 'ID '+eid : ''].filter(Boolean).join(' · ');
   document.getElementById('importSummary').innerHTML = `
-    <strong>${name}</strong> added to <strong>${site}</strong> · ${desig} · ${agency}<br>
+    <strong>${name}</strong> added to <strong>${site}</strong> · ${desig} · ${agency}` +
+    (extraBits ? `<br><span style="color:var(--text2);font-size:12px">${extraBits}</span>` : '') + `<br>
     <span style="color:var(--accent2)">✅ Now visible in Attendance Pro for marking present/absent</span>`;
   syncToSheet('addEmployee', [newEmp], 'syncResult');
   document.getElementById('addStep2Manual').style.display = 'none';
@@ -1155,6 +1179,8 @@ function resetAddFlow(){
   // Reset all manual fields
   ['m-name','m-store'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   ['m-site','m-desig','m-agency'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['m-joindate','m-eid','m-agency-other'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const _ao=document.getElementById('m-agency-other'); if(_ao) _ao.style.display='none';
   document.getElementById('m-dept').value='Warehouse';
   document.getElementById('manualDupWarning').style.display='none';
   ['f-name','f-site','f-desig','f-agency'].forEach(id=>document.getElementById(id)?.classList.remove('has-error'));
@@ -1870,6 +1896,8 @@ function syncToSheet(action, rows, resultElId){
       designation: row.designation || '',
       agency:      row.agency      || '',
       dept:        row.dept || row.department || '',
+      joiningDate: row.joinDate || row.joiningDate || '',
+      eid:         row.eid || row.emiratesId || '',
       reason:      row.reason      || '',
       remarks:     row.remarks     || '',
       timestamp:   ts
