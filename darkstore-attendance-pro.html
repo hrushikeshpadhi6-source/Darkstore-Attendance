@@ -875,6 +875,23 @@ function hydrateStaffFromRoster(){
     console.warn('Roster hydrate failed, using baseline:', e);
     STAFF = JSON.parse(JSON.stringify(BASELINE_STAFF));
   }
+  syncSiteOptions();
+}
+
+// Keep the Site dropdown in sync with the roster: append any NEW site that
+// was opened in the Employee Manager so it becomes selectable here too.
+function syncSiteOptions(){
+  const sel = document.getElementById('siteSelect');
+  if(!sel) return;
+  const existing = new Set([...sel.options].map(o=>o.value).filter(Boolean));
+  Object.keys(STAFF||{}).forEach(site=>{
+    if(site && !existing.has(site)){
+      const o = document.createElement('option');
+      o.value = site; o.textContent = site;
+      sel.appendChild(o);
+      existing.add(site);
+    }
+  });
 }
 
 // Re-hydrate + refresh whenever the Employee Manager saves changes (cross-tab + same-tab dispatch)
