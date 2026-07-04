@@ -871,14 +871,42 @@ function hydrateStaffFromRoster(){
     const allSites = new Set([...Object.keys(BASELINE_STAFF), ...Object.keys(parsed||{})]);
     allSites.forEach(site => {
       const list = (parsed && Array.isArray(parsed[site])) ? parsed[site] : (BASELINE_STAFF[site] || []);
-      // Drop staff flagged as Removed by the Employee Manager
+      // Drop Removed AND Transferred staff
       merged[site] = list
-        .filter(e => e && e.name && (e.status || 'Active') !== 'Removed')
+        .filter(e => e && e.name &&
+          (e.status || 'Active') !== 'Removed' &&
+          (e.status || 'Active') !== 'Transferred')
         .map(e => ({
           name: e.name,
           designation: e.designation || '—',
-          agency: e.agency || '—'
+          agency: e.agency || '—',
+          currentSite: e.currentSite || e.transferredTo || site
         }));
+    });
+    // Cross-site dedup: if same name appears in multiple sites,
+    // keep only at their currentSite (or last assignment wins)
+    const nameCanonicalSite = {};
+    allSites.forEach(site => {
+      const raw2 = (parsed && Array.isArray(parsed[site])) ? parsed[site] : (BASELINE_STAFF[site] || []);
+      raw2.forEach(e => {
+        if(!e || !e.name) return;
+        const st = e.status || 'Active';
+        if(st === 'Removed') return;
+        const canonical = e.currentSite || e.transferredTo || site;
+        // If marked Transferred, their canonical site is where they went
+        if(st === 'Transferred' && (e.currentSite || e.transferredTo)){
+          nameCanonicalSite[e.name] = e.currentSite || e.transferredTo;
+        } else if(!nameCanonicalSite[e.name]){
+          nameCanonicalSite[e.name] = canonical;
+        }
+      });
+    });
+    // Remove staff from any site that is NOT their canonical site
+    allSites.forEach(site => {
+      merged[site] = (merged[site] || []).filter(e => {
+        const canon = nameCanonicalSite[e.name];
+        return !canon || canon === site;
+      }).map(({currentSite, ...rest}) => rest); // strip internal field
     });
     STAFF = merged;
   }catch(e){
@@ -1048,6 +1076,31 @@ async function fetchRosterFromGS() {
           allSites.forEach(site => {
             const gsList = Array.isArray(data.roster[site]) ? data.roster[site] : null;
             merged[site] = gsList ? gsList : (BASELINE_STAFF[site] || []).map(e => ({...e, status:'Active'}));
+          });
+          // Cross-site dedup from GS data: honour Transferred status
+          const gsNameSite = {};
+          allSites.forEach(site => {
+            const list2 = Array.isArray(data.roster[site]) ? data.roster[site] : [];
+            list2.forEach(e => {
+              if(!e || !e.name) return;
+              const st = e.status || 'Active';
+              if(st === 'Removed') return;
+              if(st === 'Transferred' && (e.currentSite || e.transferredTo)){
+                gsNameSite[e.name] = e.currentSite || e.transferredTo;
+              } else if(!gsNameSite[e.name]){
+                gsNameSite[e.name] = site;
+              }
+            });
+          });
+          allSites.forEach(site => {
+            merged[site] = (merged[site] || [])
+              .filter(e => {
+                if(!e || !e.name) return false;
+                const st = e.status || 'Active';
+                if(st === 'Removed' || st === 'Transferred') return false;
+                const canon = gsNameSite[e.name];
+                return !canon || canon === site;
+              });
           });
           localStorage.setItem(key, JSON.stringify(merged));
           // Rebuild in-memory STAFF + refresh UI
