@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Darkstore Attendance Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -400,6 +402,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
         <input type="date" id="dashDateFilter" onchange="buildDashboard()" style="background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:12px;padding:7px 12px;outline:none;cursor:pointer"/>
         <button class="btn-refresh" onclick="clearDashFilter()">Today</button>
         <button class="btn-refresh" id="btnSyncSheet" onclick="syncFromSheet()">↻ Sync</button>
+        <button class="btn-refresh" id="btnFbMigrate" onclick="fbMigrateFromSheet()" style="display:none;background:rgba(255,160,0,.1);border-color:rgba(255,160,0,.35);color:#ffb020">⇪ Move data to Firebase</button>
         <button class="btn-refresh" onclick="sendWhatsAppReminder()" style="background:rgba(37,211,102,.1);border-color:rgba(37,211,102,.3);color:#25d366">📲 Remind</button>
         <a href="darkstore-employee-manager.html" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.3);color:#a78bfa;font-size:12px;font-weight:600;text-decoration:none;font-family:'Outfit',sans-serif;transition:all .2s" onmouseover="this.style.background='rgba(167,139,250,.2)'" onmouseout="this.style.background='rgba(167,139,250,.1)'">👥 Employee Manager</a>
       </div>
@@ -751,27 +754,37 @@ const BASELINE_STAFF = {
     {name:"Stephen Oimbo Ogana",designation:"Housekeeping",agency:"Al Maahir"},
   ],
   "MBZ":[
-    {name:"Andrew Otaflire",designation:"Warehouse Assistant",agency:"Flexitalent"},
-    {name:"Aryan Thapa",designation:"Warehouse Assistant",agency:"AL Maahir"},
     {name:"Baffour Arthur",designation:"Warehouse Assistant",agency:"Flexitalent"},
-    {name:"Bryan Ongayo Muntayi",designation:"Warehouse Assistant",agency:"AL Maahir"},
-    {name:"Edwin Innda Mwanzari",designation:"Warehouse Assistant",agency:"Flexitalent"},
-    {name:"Elia Niwemuhwezil",designation:"Warehouse Assistant",agency:"Flexitalent"},
-    {name:"Elijah Abaho",designation:"Warehouse Assistant",agency:"Flexitalent"},
-    {name:"Emmanuel Bogere",designation:"Warehouse Assistant",agency:"Flexitalent"},
-    {name:"Hassan Mogambi",designation:"Warehouse Assistant",agency:"AL Maahir"},
-    {name:"Hemed Said Hemed",designation:"Warehouse Assistant",agency:"AL Maahir"},
-    {name:"Jackson Nyaboga",designation:"Housekeeping",agency:"AL Maahir"},
-    {name:"Manish Kumar",designation:"Warehouse Assistant",agency:"AL Maahir"},
-    {name:"Michael Othieno",designation:"Warehouse Assistant",agency:"Flexitalent"},
-    {name:"Raju Chaudry",designation:"Housekeeping",agency:"AL Maahir"},
     {name:"Randy Oxei",designation:"Warehouse Assistant",agency:"Flexitalent"},
-    {name:"Raphael Mikoya",designation:"Warehouse Assistant",agency:"AL Maahir"},
-    {name:"Said Khalid Abdul wahid",designation:"Warehouse Assistant",agency:"AL Maahir"},
-    {name:"Seif Zani Mwakuchengwa",designation:"Housekeeping",agency:"AL Maahir"},
-    {name:"T B sajan Kamaruden",designation:"Warehouse Assistant",agency:"Flexitalent"},
-    {name:"Vijay",designation:"Warehouse Assistant",agency:"AL Maahir"},
-    {name:"Vinod",designation:"Warehouse Assistant",agency:"AL Maahir"},
+    {name:"T B Sajan",designation:"Warehouse Assistant",agency:"Flexitalent"},
+    {name:"Lakshay Amrik Pal",designation:"Warehouse Assistant",agency:"Flexitalent"},
+    {name:"Susil",designation:"Housekeeping",agency:"AL Maahir"},
+    {name:"Said Khalid",designation:"Warehouse Assistant",agency:"AL Maahir"},
+    {name:"Brayan Ongayo (new)",designation:"Warehouse Assistant",agency:"AL Maahir"},
+    {name:"Brayan muntabry",designation:"Warehouse Assistant",agency:"AL Maahir"},
+    {name:"Raphaei Mokaya",designation:"Warehouse Assistant",agency:"AL Maahir"},
+    {name:"Samir Chaudry",designation:"Warehouse Assistant",agency:"AL Maahir"},
+    {name:"Hammed",designation:"Warehouse Assistant",agency:"AL Maahir"},
+    {name:"Bijey",designation:"Warehouse Assistant",agency:"AL Maahir"},
+    {name:"Manish",designation:"Warehouse Assistant",agency:"AL Maahir"},
+    {name:"Binoth",designation:"Warehouse Assistant",agency:"AL Maahir"},
+    {name:"Mohammed Safwan",designation:"Warehouse Assistant",agency:"AL Maahir"},
+    {name:"Mohammed Danish",designation:"Warehouse Assistant",agency:"AL Maahir"},
+    {name:"Sujan Tamanj",designation:"Warehouse Assistant",agency:"AL Maahir"},
+    {name:"Raju Chaudry",designation:"Housekeeping",agency:"AL Maahir"},
+    {name:"Adjei Dankwah",designation:"Warehouse Assistant",agency:"Flexitalent"},
+    {name:"Rogers Kawooya",designation:"Warehouse Assistant",agency:"Flexitalent"},
+    {name:"Julius Mukisa",designation:"Warehouse Assistant",agency:"Flexitalent"},
+    {name:"Edwin",designation:"Warehouse Assistant",agency:"Flexitalent"},
+    {name:"Kabeer hossain",designation:"Warehouse Assistant",agency:"Ezzybuzz"},
+    {name:"Manjeet",designation:"Warehouse Assistant",agency:"Ezzybuzz"},
+    {name:"Mohammad Shadab",designation:"Warehouse Assistant",agency:"Ezzybuzz"},
+    {name:"Sijur Mohammed faizal",designation:"Warehouse Assistant",agency:"Ezzybuzz"},
+    {name:"Abhi singh",designation:"Warehouse Assistant",agency:"Ezzybuzz"},
+    {name:"Manpreet",designation:"Warehouse Assistant",agency:"Flexitalent"},
+    {name:"Prakash Tamang",designation:"Warehouse Assistant",agency:"Flexitalent"},
+    {name:"Buddha Bahadur Damai",designation:"Warehouse Assistant",agency:"Flexitalent"},
+    {name:"Abednago Nyamol",designation:"Warehouse Assistant",agency:"Flexitalent"},
   ],
   "Khalifa City":[
     {name:"Ahamed Razmi Mohamed Zameer",designation:"Warehouse Assistant",agency:"Flexitalent"},
@@ -1022,7 +1035,7 @@ async function readLogCSV() {
 }
 
 // readLogCSV with built-in retry (up to 2 extra attempts, 1.5s apart)
-async function readLogCSVWithRetry() {
+async function sheetReadAllWithRetry() {
   const scriptUrl = document.getElementById('scriptUrl').value.trim();
   for(let attempt = 0; attempt < 3; attempt++) {
     const result = await new Promise(resolve => {
@@ -1040,6 +1053,103 @@ async function readLogCSVWithRetry() {
     if(attempt < 2) await new Promise(r => setTimeout(r, 1500));
   }
   return [];
+}
+
+// ═══ FIREBASE (primary store) — Google Sheet kept as background backup ═══
+const FB_CONFIG={apiKey:"AIzaSyDcxK2x1xeFftXX6Xg1tXoGs1WVpV5YY9k",authDomain:"darkstore-attendance.firebaseapp.com",projectId:"darkstore-attendance",storageBucket:"darkstore-attendance.firebasestorage.app",messagingSenderId:"675191225861",appId:"1:675191225861:web:67b88319db36e96e89e66c"};
+const FB_LIVE_DAYS=45; // live cache window for dashboard/history
+let fbDb=null, FB_ROWS=null, fbReadyP=null, fbMigrated=false;
+function fbMonthIdx(n){n=String(n||'').trim().toLowerCase();for(let i=1;i<MONTHS.length;i++)if(String(MONTHS[i]).toLowerCase()===n)return i;return 0;}
+function fbDateKey(r){return (parseInt(r.year)||0)*10000+fbMonthIdx(r.month)*100+(parseInt(r.day)||0);}
+function fbDocId(r){return [r.site,r.year,fbMonthIdx(r.month),parseInt(r.day),r.shift,r.staffName].map(x=>String(x??'').trim().replace(/[\/#\[\]\.]/g,'-')).join('|');}
+function fbClean(o){const x={};Object.keys(o||{}).forEach(k=>{const v=o[k];if(k&&v!==undefined&&typeof v!=='function')x[k]=v;});return x;}
+function fbCommit(batch){return Promise.race([batch.commit(),new Promise(r=>setTimeout(r,8000))]);} // offline: queued, resolves later
+function fbTimeout(p,ms){return Promise.race([p,new Promise(r=>setTimeout(()=>r(null),ms))]);}
+function fbInit(){
+  if(fbReadyP) return fbTimeout(fbReadyP,6000);
+  fbReadyP=(async()=>{
+    try{
+      if(!window.firebase||!firebase.firestore) return false;
+      firebase.initializeApp(FB_CONFIG);
+      fbDb=firebase.firestore();
+      try{await fbTimeout(fbDb.enablePersistence({synchronizeTabs:true}),3000);}catch(e){}
+      const meta=await fbTimeout(fbDb.collection('meta').doc('migration').get(),5000);
+      if(!meta){console.warn('Firebase meta timeout — using sheet');fbDb=null;return false;}
+      fbMigrated=!!(meta.exists&&meta.data().done);
+      fbUpdateUI();
+      if(!fbMigrated) return true;
+      const from=new Date();from.setDate(from.getDate()-FB_LIVE_DAYS);
+      const fromKey=from.getFullYear()*10000+(from.getMonth()+1)*100+from.getDate();
+      await new Promise(res=>{let first=true;
+        fbDb.collection('attendance').where('dateKey','>=',fromKey).onSnapshot(
+          snap=>{FB_ROWS=snap.docs.map(d=>d.data());if(first){first=false;res();}},
+          err=>{console.warn('Firebase listen error',err);if(first){first=false;res();}});
+        setTimeout(()=>{if(first){first=false;res();}},10000);
+      });
+      console.log('✓ Firebase ready ('+(FB_ROWS?FB_ROWS.length:0)+' recent records)');
+      return true;
+    }catch(e){console.warn('Firebase init failed',e);fbDb=null;return false;}
+  })();
+  return fbTimeout(fbReadyP,6000);
+}
+function fbUpdateUI(){const b=document.getElementById('btnFbMigrate');if(b)b.style.display=(fbDb&&!fbMigrated)?'':'none';}
+async function readLogCSVWithRetry(){
+  await fbInit();
+  if(fbDb&&fbMigrated&&FB_ROWS) return FB_ROWS.slice();
+  return sheetReadAllWithRetry();
+}
+async function fbReadAll(){
+  await fbInit();
+  if(fbDb&&fbMigrated){try{const s=await fbTimeout(fbDb.collection('attendance').get(),15000);if(s)return s.docs.map(d=>d.data());}catch(e){console.warn(e);}}
+  return sheetReadAllWithRetry();
+}
+async function fbWriteRows(recs){
+  await fbInit();
+  if(!fbDb) return false;
+  try{
+    const b=fbDb.batch();
+    recs.forEach(r=>{const d=fbClean(r);d.dateKey=fbDateKey(d);b.set(fbDb.collection('attendance').doc(fbDocId(d)),d);});
+    await fbCommit(b);return true;
+  }catch(e){console.warn('Firebase write failed',e);return false;}
+}
+async function fbCorrect(g,row,c){
+  try{
+    const col=fbDb.collection('attendance');
+    const oldKey=fbDateKey(g);
+    const q=await fbTimeout(col.where('staffName','==',row.staffName).where('dateKey','==',oldKey).get(),8000);
+    if(!q) return {result:'timeout'};
+    const olds=q.docs.filter(d=>String(d.data().site).trim()===String(g.site).trim()&&String(d.data().shift).trim()===String(c.oldShift).trim());
+    const base=olds.length?olds[0].data():{site:g.site,staffName:row.staffName,designation:row.designation,agency:row.agency,submittedBy:row.submittedBy};
+    const upd=Object.assign({},base,{status:c.newStatus,shift:c.newShift,shiftName:(SHIFTS[c.newShift]||{}).name||base.shiftName||'',remarks:c.newRemarks,day:parseInt(c.newDay),month:c.newMonth,year:parseInt(c.newYear),date:c.newDay+' '+c.newMonth+' '+c.newYear,editedBy:c.editedBy,editedAt:new Date().toISOString()});
+    upd.dateKey=fbDateKey(upd);
+    const b=fbDb.batch();
+    olds.forEach(d=>b.delete(d.ref));
+    b.set(col.doc(fbDocId(upd)),fbClean(upd));
+    await fbCommit(b);
+    return {result:'ok'};
+  }catch(e){return {result:'error',message:e.message};}
+}
+async function fbMigrateFromSheet(){
+  const btn=document.getElementById('btnFbMigrate');
+  await fbInit();
+  if(!fbDb){showToast('❌ Firebase not reachable','terr');return;}
+  if(!confirm('Copy all attendance records from Google Sheet into Firebase? (one-time)'))return;
+  const reset=()=>{btn.disabled=false;btn.textContent='⇪ Move data to Firebase';};
+  btn.disabled=true;btn.textContent='⏳ Reading sheet…';
+  try{
+    const rows=await sheetReadAllWithRetry();
+    if(!rows.length){showToast('⚠️ Sheet returned no data — try again','twarn');reset();return;}
+    const col=fbDb.collection('attendance');
+    for(let i=0;i<rows.length;i+=400){
+      const b=fbDb.batch();
+      rows.slice(i,i+400).forEach(r=>{const d=fbClean(r);d.dateKey=fbDateKey(d);b.set(col.doc(fbDocId(d)),d);});
+      btn.textContent='⏳ Copying '+Math.min(i+400,rows.length)+' / '+rows.length+'…';
+      await b.commit();
+    }
+    await fbDb.collection('meta').doc('migration').set({done:true,at:new Date().toISOString(),count:rows.length});
+    showToast('✅ '+rows.length+' records moved to Firebase — reloading','tok');
+    setTimeout(()=>location.reload(),1500);
+  }catch(e){showToast('❌ Migration failed: '+e.message,'terr');reset();}
 }
 
 // ── Fetch the centralized employee roster from Google Sheet (_EMPLOYEES tab) ──
@@ -1300,8 +1410,9 @@ async function syncFromSheet(){
   if(btn){ btn.textContent='⏳ Syncing…'; btn.disabled=true; }
   try {
     // Clear JSONP cache by busting timestamp, retry up to 3 times
-    let rows = [];
-    for(let i=0;i<3;i++){
+    await fbInit();
+    let rows = (fbDb && fbMigrated && FB_ROWS) ? FB_ROWS : [];
+    for(let i=0;i<3 && !rows.length;i++){
       const cbName = 'gs_sync_' + Date.now() + '_' + i;
       const scriptUrl = document.getElementById('scriptUrl').value.trim();
       rows = await new Promise(resolve => {
@@ -1325,7 +1436,20 @@ async function syncFromSheet(){
   } catch(e){
     showToast('❌ Sync failed: '+e.message,'terr');
   }
+  try {
+    hydrateStaffFromRoster();
+    await fetchRosterFromGS();
+    const site  = document.getElementById('siteSelect').value;
+    const day   = document.getElementById('daySelect').value;
+    const month = MONTHS[parseInt(document.getElementById('monthSelect').value)];
+    const year  = new Date().getFullYear();
+    if(site && day && month && currentSiteStaff.length){
+      const marked = await fetchMarkedStaff(site,day,month,year);
+      renderStaffListWithMarked(currentSiteStaff, marked);
+    }
+  } catch(e){ console.log('Sync roster error:', e); }
   buildDashboard();
+  renderHistory();
   if(btn){ btn.textContent='↻ Sync'; btn.disabled=false; }
 }
 
@@ -1566,6 +1690,7 @@ async function fetchDashboardFromSheet(filterDate) {
 
 // ─── INIT FORM ───
 window.onload=()=>{
+  fbInit();
   // Pull the latest shared roster from localStorage before first paint
   hydrateStaffFromRoster();
   // Then pull the authoritative roster from the Google Sheet (async)
@@ -1576,23 +1701,7 @@ window.onload=()=>{
   document.getElementById('daySelect').value=now.getDate();
   buildDashboard();
   renderHistory();
-  // Auto-refresh every 30 seconds — keeps staff locks in sync across all devices
-  setInterval(()=>{
-    // Re-pick up roster edits made in the Employee Manager
-    hydrateStaffFromRoster();
-    // Pull centralized roster from Google Sheet so add/remove from any device propagates
-    fetchRosterFromGS();
-    const site  = document.getElementById('siteSelect').value;
-    const day   = document.getElementById('daySelect').value;
-    const month = MONTHS[parseInt(document.getElementById('monthSelect').value)];
-    const year  = new Date().getFullYear();
-    if(site && day && month && currentSiteStaff.length){
-      fetchMarkedStaff(site,day,month,year).then(marked=>{
-        renderStaffListWithMarked(currentSiteStaff, marked);
-      });
-    }
-    buildDashboard();
-  }, 30000);
+  // No auto-refresh — data reloads only when the user taps ↻ Sync
 };
 
 // ─── STEPS ───
@@ -1835,20 +1944,24 @@ async function submitForm(){
   btn.disabled=true;
   btn.innerHTML='<span class="spin"></span>Saving '+rows.length+' records…';
 
-  // Send via image ping (bypasses CORS)
-  for(let i=0;i<rows.length;i++){
-    const r=rows[i];
-    btn.innerHTML='<span class="spin"></span>Saving '+(i+1)+' of '+rows.length+'…';
-    const params=new URLSearchParams({
-      timestamp:ts, site, date:`${day} ${monthName} ${year}`,
-      month:monthName, year, day:parseInt(day),
-      shift:selectedShift, shiftName:SHIFTS[selectedShift].name,
-      staffName:r.staffName, designation:r.designation,
-      agency:r.agency, status:r.status, remarks:r.remarks,
-      submittedBy:r.submittedBy||submittedBy
-    });
-    await pingWrite(scriptUrl + '?' + params.toString());
-  }
+  const recs=rows.map(r=>({
+    timestamp:ts, site, date:`${day} ${monthName} ${year}`,
+    month:monthName, year, day:parseInt(day),
+    shift:selectedShift, shiftName:SHIFTS[selectedShift].name,
+    staffName:r.staffName, designation:r.designation,
+    agency:r.agency, status:r.status, remarks:r.remarks,
+    submittedBy:r.submittedBy||submittedBy
+  }));
+  // Firebase first (instant); Google Sheet backup runs in background once migrated
+  const fbOk = await fbWriteRows(recs);
+  const sheetBackup = async (showProgress)=>{
+    for(let i=0;i<recs.length;i++){
+      if(showProgress) btn.innerHTML='<span class="spin"></span>Saving '+(i+1)+' of '+recs.length+'…';
+      await pingWrite(scriptUrl + '?' + new URLSearchParams(recs[i]).toString());
+    }
+  };
+  if(fbOk && fbMigrated) sheetBackup(false);
+  else await sheetBackup(true);
 
   // Save to local history
   const histEntry={key,site,shift:selectedShift,day:parseInt(day),month:monthName,year,timestamp:ts,isDuplicate:false,submittedBy,rows};
@@ -3078,8 +3191,7 @@ async function toolExportAbsenteeism(){
 }
 
 async function toolFetchAll(){
-  if(typeof readLogCSVWithRetry === 'function'){ return await readLogCSVWithRetry(); }
-  return [];
+  return await fbReadAll();
 }
 
 async function toolExportMonthly(){
@@ -3468,7 +3580,7 @@ async function saveEditRecord(){
   // JSONP update — we WAIT for server confirmation so we know the row was
   // actually overwritten in place (no duplicate), then re-fetch from the
   // sheet so what's displayed is server-authoritative, never local.
-  const result = await new Promise((resolve) => {
+  const sheetCorrect = () => new Promise((resolve) => {
     const cbName = 'gsUpdate_' + Date.now();
     const script = document.createElement('script');
     let done = false;
@@ -3497,6 +3609,14 @@ async function saveEditRecord(){
     script.src = scriptUrl + '?' + params.toString();
     document.head.appendChild(script);
   });
+  await fbInit();
+  let result;
+  if (fbDb && fbMigrated) {
+    result = await fbCorrect(g, row, {oldShift, newStatus, newShift, newRemarks, newDay, newMonth, newYear, editedBy});
+    if (result.result === 'ok') sheetCorrect(); // background backup
+  } else {
+    result = await sheetCorrect();
+  }
 
   // The Apps Script reports success as either 'ok' or 'success' (the read/
   // roster endpoints use 'success'), so accept both. Anything else is a
