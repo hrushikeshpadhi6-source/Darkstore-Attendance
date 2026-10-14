@@ -4,9 +4,10 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Darkstore Employee Manager</title>
+<script>try{if(localStorage.getItem('ds_theme')!=='dark')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -18,7 +19,7 @@
   --r:12px;--r-sm:8px;
 }
 html{scroll-behavior:smooth}
-body{font-family:'Outfit',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);overflow-x:hidden}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);overflow-x:hidden}
 body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,.012) 2px,rgba(0,212,255,.012) 4px);pointer-events:none;z-index:9999}
 .orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
 .orb1{width:400px;height:400px;background:rgba(0,212,255,.06);top:-100px;right:-100px}
@@ -28,13 +29,13 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .nav{background:rgba(7,11,18,.95);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
 .nav-logo{display:flex;align-items:center;gap:10px}
 .nav-logo-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--purple),var(--accent));display:flex;align-items:center;justify-content:center;font-size:16px}
-.nav-logo-text{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--text);letter-spacing:.5px}
+.nav-logo-text{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--text);letter-spacing:.5px}
 .nav-logo-text span{color:var(--purple)}
 .nav-tabs{display:flex;gap:4px;background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:3px}
-.nav-tab{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2);border:none;background:transparent;font-family:'Outfit',sans-serif}
+.nav-tab{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2);border:none;background:transparent;font-family:'IBM Plex Sans',sans-serif}
 .nav-tab.active{background:var(--purple);color:#fff}
 .nav-right{display:flex;align-items:center;gap:8px}
-.back-link{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--accent);background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:8px;padding:6px 12px;cursor:pointer;text-decoration:none;transition:all .2s;font-family:'JetBrains Mono',monospace}
+.back-link{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--accent);background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:8px;padding:6px 12px;cursor:pointer;text-decoration:none;transition:all .2s;font-family:'IBM Plex Mono',monospace}
 .back-link:hover{background:rgba(0,212,255,.12);border-color:var(--accent)}
 
 /* SYNC BANNER */
@@ -68,7 +69,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
 .lbl{font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.3px}
 .req{color:var(--accent3)}
-.inp,select.sel{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border-color .2s,box-shadow .2s}
+.inp,select.sel{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border-color .2s,box-shadow .2s}
 .inp:focus,.sel:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
 select.sel{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%233a4f6a'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;appearance:none;cursor:pointer}
 select.sel option{background:#141c28}
@@ -107,14 +108,14 @@ select.sel option{background:#141c28}
 .val-banner.err{background:rgba(255,77,109,.06);border:1px solid rgba(255,77,109,.2);color:var(--accent3)}
 
 /* BUTTONS */
-.btn{border:none;border-radius:10px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;padding:13px 22px;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:7px}
-.btn-primary{background:linear-gradient(135deg,var(--accent2),#00cc6a);color:#070b12;box-shadow:0 4px 20px rgba(0,255,136,.15)}
+.btn{border:none;border-radius:10px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:700;padding:13px 22px;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.btn-primary{background:linear-gradient(135deg,var(--accent2),#00cc6a);color:var(--on-accent);box-shadow:0 4px 20px rgba(0,255,136,.15)}
 .btn-primary:hover{opacity:.9;box-shadow:0 6px 28px rgba(0,255,136,.25)}
 .btn-danger{background:linear-gradient(135deg,var(--accent3),#cc1f3d);color:#fff;box-shadow:0 4px 20px rgba(255,77,109,.15)}
 .btn-danger:hover{opacity:.9}
-.btn-outline{background:var(--card2);border:1px solid var(--border2);color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;cursor:pointer;transition:all .2s}
+.btn-outline{background:var(--card2);border:1px solid var(--border2);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;cursor:pointer;transition:all .2s}
 .btn-outline:hover{border-color:var(--accent);color:var(--accent)}
-.btn-dl{background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);color:var(--purple);font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;padding:10px 16px;border-radius:10px;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-dl{background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);color:var(--purple);font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;padding:10px 16px;border-radius:10px;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
 .btn-dl:hover{background:rgba(167,139,250,.18);border-color:var(--purple)}
 .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
 .btn:disabled,.btn[disabled]{opacity:.4;cursor:not-allowed}
@@ -127,7 +128,7 @@ select.sel option{background:#141c28}
 .s-item:hover{border-color:var(--border2)}
 .s-item.selected{border-color:var(--accent3);background:rgba(255,77,109,.06)}
 .s-item.is-removed{opacity:.4;cursor:not-allowed!important}
-.s-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--card3),var(--border2));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text2);flex-shrink:0;font-family:'JetBrains Mono',monospace}
+.s-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--card3),var(--border2));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text2);flex-shrink:0;font-family:'IBM Plex Mono',monospace}
 .s-name{font-size:13px;font-weight:600;flex:1}
 .s-meta{font-size:11px;color:var(--text2)}
 .s-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600}
@@ -153,7 +154,7 @@ select.sel option{background:#141c28}
 .logs-table td:first-child{color:var(--text);font-weight:600}
 
 /* SYNC STATUS */
-.sync-status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-family:'JetBrains Mono',monospace;padding:5px 10px;border-radius:6px;background:var(--card2);border:1px solid var(--border)}
+.sync-status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-family:'IBM Plex Mono',monospace;padding:5px 10px;border-radius:6px;background:var(--card2);border:1px solid var(--border)}
 .sync-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .sync-dot.synced{background:var(--accent2);box-shadow:0 0 6px var(--accent2)}
 .sync-dot.pending{background:var(--warn);animation:blink 1.5s infinite}
@@ -163,10 +164,10 @@ select.sel option{background:#141c28}
 /* STEP BAR */
 .steps{display:flex;align-items:center;gap:0;margin-bottom:20px;padding:0 4px}
 .step{display:flex;align-items:center;flex:1}
-.step-c{width:26px;height:26px;border-radius:50%;background:var(--card2);border:1.5px solid var(--border2);color:var(--text3);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;flex-shrink:0;transition:all .2s}
+.step-c{width:26px;height:26px;border-radius:50%;background:var(--card2);border:1.5px solid var(--border2);color:var(--text3);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;flex-shrink:0;transition:all .2s}
 .step-l{font-size:10px;font-weight:600;color:var(--text3);margin-left:6px;white-space:nowrap;transition:color .2s}
 .step-line{flex:1;height:1px;background:var(--border);margin:0 6px}
-.step.active .step-c{background:var(--accent2);border-color:var(--accent2);color:#070b12}
+.step.active .step-c{background:var(--accent2);border-color:var(--accent2);color:var(--on-accent)}
 .step.active .step-l{color:var(--accent2)}
 .step.done .step-c{background:transparent;border-color:var(--accent2);color:var(--accent2)}
 .step.done .step-c::after{content:'✓'}
@@ -194,12 +195,12 @@ select.sel option{background:#141c28}
 /* CONFIG */
 .config-field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
 .config-field label{font-size:12px;font-weight:600;color:var(--text2)}
-.config-input{background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:10px 14px;outline:none;width:100%;transition:border-color .2s}
+.config-input{background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;padding:10px 14px;outline:none;width:100%;transition:border-color .2s}
 .config-input:focus{border-color:var(--purple)}
 
 /* SEARCH BAR */
 .search-bar{position:relative;margin-bottom:12px}
-.search-bar input{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;padding:10px 14px 10px 36px;outline:none;transition:border-color .2s}
+.search-bar input{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:13px;padding:10px 14px 10px 36px;outline:none;transition:border-color .2s}
 .search-bar input:focus{border-color:var(--accent)}
 .search-bar::before{content:'🔍';position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px}
 
@@ -216,11 +217,11 @@ select.sel option{background:#141c28}
 
 /* SECTION BACK */
 .section-back{display:flex;align-items:center;gap:10px;margin-bottom:20px}
-.btn-back-sm{background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-size:12px;font-weight:600;padding:7px 12px;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .2s;display:flex;align-items:center;gap:5px}
+.btn-back-sm{background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-size:12px;font-weight:600;padding:7px 12px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;transition:all .2s;display:flex;align-items:center;gap:5px}
 .btn-back-sm:hover{border-color:var(--accent);color:var(--accent)}
 
 /* KEY BADGE */
-.key-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-family:'JetBrains Mono',monospace;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:6px;padding:4px 10px;color:var(--accent)}
+.key-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-family:'IBM Plex Mono',monospace;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:6px;padding:4px 10px;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -248,13 +249,14 @@ select.sel option{background:#141c28}
     <div class="nav-logo-text">DARK<span>STORE</span> <span style="color:var(--text2);font-weight:400">EMP</span></div>
   </div>
   <div class="nav-tabs">
-    <button class="nav-tab active" onclick="showPage('add')">➕ Add Employee</button>
-    <button class="nav-tab" onclick="showPage('remove')">🗑 Remove</button>
-    <button class="nav-tab" onclick="showPage('logs')">📋 Logs</button>
-    <button class="nav-tab" onclick="showPage('settings')">⚙️ Settings</button>
+    <button class="nav-tab active" onclick="showPage('add')">Add employee</button>
+    <button class="nav-tab" onclick="showPage('remove')">Remove</button>
+    <button class="nav-tab" onclick="showPage('logs')">Logs</button>
+    <button class="nav-tab" onclick="showPage('settings')">Settings</button>
   </div>
   <div class="nav-right">
     <a class="back-link" href="darkstore-attendance-pro.html">← Attendance Pro</a>
+    <button class="theme-btn" onclick="toggleTheme()" title="Switch light / dark">◐</button>
   </div>
 </nav>
 
@@ -394,7 +396,7 @@ select.sel option{background:#141c28}
           <span style="font-size:13px;color:var(--text2)">Bulk CSV import</span>
         </div>
         <div class="card-title"><div class="ctag green">📥</div>Download Template First</div>
-        <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text2);overflow-x:auto;white-space:nowrap">
+        <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--text2);overflow-x:auto;white-space:nowrap">
           Name | Site | Store | Department | Designation | Agency | Status
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
@@ -565,7 +567,7 @@ select.sel option{background:#141c28}
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
-      <input type="date" class="sel" id="logDateFilter" onchange="renderLogs()" style="width:auto;padding:8px 12px;font-size:12px;font-family:'JetBrains Mono',monospace"/>
+      <input type="date" class="sel" id="logDateFilter" onchange="renderLogs()" style="width:auto;padding:8px 12px;font-size:12px;font-family:'IBM Plex Mono',monospace"/>
       <select class="sel" id="logRangeFilter" onchange="renderLogs()" style="width:auto;padding:8px 32px 8px 12px;font-size:12px">
         <option value="exact">Selected day only</option>
         <option value="month">Whole month</option>
@@ -585,7 +587,7 @@ select.sel option{background:#141c28}
         <option>Business Bay</option><option>NIP</option><option>Sharjah Central</option>
       </select>
     </div>
-    <div id="logsLoadInfo" style="font-size:11px;color:var(--text3);margin-bottom:8px;font-family:'JetBrains Mono',monospace"></div>
+    <div id="logsLoadInfo" style="font-size:11px;color:var(--text3);margin-bottom:8px;font-family:'IBM Plex Mono',monospace"></div>
     <div id="logsContainer"></div>
   </div>
 </div>
@@ -1675,7 +1677,7 @@ function openRenameModal(oldName, site, designation, dept){
 
         <label style="display:block;font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin:14px 0 6px">Full Name</label>
         <input type="text" id="rnNewName" placeholder="Enter corrected full name…" autocomplete="off" oninput="updateEditSummary()"
-          style="width:100%;background:var(--card2);border:1.5px solid var(--border2);border-radius:9px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border-color .15s"
+          style="width:100%;background:var(--card2);border:1.5px solid var(--border2);border-radius:9px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border-color .15s"
           onfocus="this.style.borderColor='var(--warn)'" onblur="this.style.borderColor='var(--border2)'"/>
 
         <div style="display:flex;gap:10px;margin-top:14px">
@@ -1706,8 +1708,8 @@ function openRenameModal(oldName, site, designation, dept){
 
         <div id="rnError" style="font-size:11px;color:var(--accent3);margin-top:8px;display:none"></div>
         <div style="display:flex;gap:8px;margin-top:18px">
-          <button onclick="closeRenameModal()" style="flex:1;background:var(--card2);border:1px solid var(--border2);color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;padding:11px;border-radius:9px;cursor:pointer">Cancel</button>
-          <button id="rnSaveBtn" onclick="submitRename()" style="flex:1.4;background:var(--warn);border:none;color:#070b12;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;padding:11px;border-radius:9px;cursor:pointer">Save Changes</button>
+          <button onclick="closeRenameModal()" style="flex:1;background:var(--card2);border:1px solid var(--border2);color:var(--text2);font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;padding:11px;border-radius:9px;cursor:pointer">Cancel</button>
+          <button id="rnSaveBtn" onclick="submitRename()" style="flex:1.4;background:var(--warn);border:none;color:var(--on-accent);font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:700;padding:11px;border-radius:9px;cursor:pointer">Save Changes</button>
         </div>
       </div>`;
     document.body.appendChild(mw);
@@ -2126,5 +2128,33 @@ window.onload = ()=>{
   <div style="font-size:11px;color:var(--text3)">Copyright © 2026 <span style="color:var(--accent);font-weight:600">HP WORLD</span> · Hrushikesh Padhi · <span style="color:var(--warn)">ENWPP9081D/2019</span></div>
   <div style="margin-top:10px"><a href="darkstore-attendance-pro.html" style="color:var(--accent);text-decoration:none;font-size:12px">← Back to Attendance Pro</a></div>
 </div>
+<style id="pro-skin">
+:root{--bg:#0f141b;--bg2:#121820;--card:#161c24;--card2:#1c232d;--card3:#232b36;--border:#29323e;--border2:#36404d;--accent:#7fa9d6;--accent2:#4cb782;--accent3:#ef6b63;--warn:#e0a040;--purple:#a59cf0;--text:#e7eaee;--text2:#a7b0bb;--text3:#8a94a0;--on-accent:#0f141b;color-scheme:dark}
+html[data-theme=light]{--bg:#f4f5f7;--bg2:#eceef1;--card:#fff;--card2:#f8f9fa;--card3:#eef0f3;--border:#e2e5e9;--border2:#d0d5dc;--accent:#1f4e79;--accent2:#1d7a4c;--accent3:#b42318;--warn:#a15c07;--purple:#5b4bb5;--text:#111827;--text2:#4b5563;--text3:#6b7280;--on-accent:#fff;color-scheme:light}
+select option{background:var(--card);color:var(--text)}
+body{font-family:'IBM Plex Sans',sans-serif;-webkit-font-smoothing:antialiased}
+body::before,.orb{display:none!important}
+a{color:var(--accent)}a:hover{color:var(--text)}
+.nav{background:var(--card)!important;backdrop-filter:none;padding:10px 24px}
+.nav-logo-icon{background:var(--accent)!important}
+.nav-logo-text{font-family:'IBM Plex Sans',sans-serif;letter-spacing:.02em}.nav-logo-text span{color:var(--accent)}
+.nav-tabs{background:transparent!important;border:none!important;padding:0!important;gap:2px}
+.nav-tab{font-size:13px;font-weight:500;border-radius:6px;color:var(--text2)}
+.nav-tab:hover{background:var(--card2);color:var(--text)}
+.nav-tab.active{background:var(--card3)!important;color:var(--text)!important;font-weight:600}
+.nav-right{display:flex;align-items:center;gap:10px}
+.theme-btn{width:32px;height:32px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-size:15px}
+.theme-btn:hover{color:var(--text);border-color:var(--text3)}
+.hero-icon{background:var(--card2)!important;border:1px solid var(--border)!important;border-radius:10px}
+.btn{border-radius:6px!important;box-shadow:none!important}
+.btn-primary{background:var(--accent)!important;color:var(--on-accent)!important}
+.btn-danger{background:var(--accent3)!important;color:#fff!important}
+.btn-outline{border-radius:6px}
+.s-avatar{background:var(--card3)!important}
+.prog-fill{background:var(--accent)!important}
+.step.active .step-c{background:var(--accent);border-color:var(--accent)}.step.active .step-l{color:var(--accent)}
+.step.done .step-c{border-color:var(--accent);color:var(--accent)}
+</style>
+<script>function toggleTheme(){const r=document.documentElement,l=r.getAttribute('data-theme')!=='light';if(l)r.setAttribute('data-theme','light');else r.removeAttribute('data-theme');try{localStorage.setItem('ds_theme',l?'light':'dark')}catch(e){}}</script>
 </body>
 </html>
