@@ -398,7 +398,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
       <button class="btn-login" onclick="doLogin()">Unlock &amp; Submit →</button>
       <div style="margin-top:16px;font-size:11px;color:var(--text3);line-height:1.8">
         Default PINs: Al Raha <b style="color:var(--text2)">1001</b> · Yas Mall <b style="color:var(--text2)">1002</b> · MBZ <b style="color:var(--text2)">1003</b><br>
-        Khalifa City <b style="color:var(--text2)">1004</b> · Al Qusais <b style="color:var(--text2)">1005</b> · Business Bay <b style="color:var(--text2)">1006</b> · NIP <b style="color:var(--text2)">1007</b>
+        Khalifa City <b style="color:var(--text2)">1004</b> · Al Qusais <b style="color:var(--text2)">1005</b> · Business Bay <b style="color:var(--text2)">1006</b> · NIP <b style="color:var(--text2)">1007</b><br>Sharjah Central <b style="color:var(--text2)">1008</b>
       </div>
     </div>
   </div>
@@ -1132,6 +1132,15 @@ function fbInit(){
   })();
   return fbTimeout(fbReadyP,6000);
 }
+async function fbGetRoster(){
+  await fbInit();
+  if(!fbDb) return null;
+  try{
+    const d=await fbTimeout(fbDb.collection('roster').doc('current').get(),6000);
+    if(d&&d.exists&&d.data().sites) return d.data().sites;
+  }catch(e){console.warn('Firebase roster read failed',e);}
+  return null;
+}
 function fbUpdateUI(){const b=document.getElementById('btnFbMigrate');if(b)b.style.display=(fbDb&&!fbMigrated)?'':'none';}
 async function readLogCSVWithRetry(){
   await fbInit();
@@ -1197,7 +1206,6 @@ async function fbMigrateFromSheet(){
 async function fetchRosterFromGS() {
   const scriptUrlEl = document.getElementById('scriptUrl');
   const scriptUrl = scriptUrlEl ? scriptUrlEl.value.trim() : '';
-  if (!scriptUrl) return null;
 
   return new Promise((resolve) => {
     const cbName = 'gsRoster_' + Date.now();
@@ -1280,8 +1288,12 @@ async function fetchRosterFromGS() {
     script.onerror = () => { cleanup(); resolve(null); };
     setTimeout(() => { if (!done) { cleanup(); resolve(null); } }, 10000);
 
-    script.src = scriptUrl + '?action=readRoster&callback=' + cbName;
-    document.head.appendChild(script);
+    fbGetRoster().then(fb => {
+      if (fb) { console.log('✓ Roster loaded from Firebase'); window[cbName]({result:'success', roster:fb}); return; }
+      if (!scriptUrl) { cleanup(); resolve(null); return; }
+      script.src = scriptUrl + '?action=readRoster&callback=' + cbName;
+      document.head.appendChild(script);
+    });
   });
 }
 

@@ -4,6 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Darkstore Employee Manager</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -624,6 +626,7 @@ select.sel option{background:#141c28}
           <option>Business Bay</option><option>NIP</option><option>Sharjah Central</option>
         </select>
         <button class="btn-outline" onclick="renderRoster()" style="padding:8px 14px;font-size:12px">↻ Refresh</button>
+        <button class="btn-outline" onclick="emReimportFromSheet()" style="padding:8px 14px;font-size:12px" title="Use after fixing rows directly in the Google Sheet">⇩ Re-import from Sheet</button>
         <button class="btn-dl" onclick="exportRoster()">⬇ Export CSV</button>
       </div>
       <div id="rosterContainer"></div>
@@ -822,8 +825,9 @@ function getRoster(){
 }
 
 function saveRoster(r){
-  // In-memory only. Persistence happens through syncToSheet() which POSTs each change to Google Sheet.
+  // Saved to Firebase (primary); syncToSheet() still POSTs each change to Google Sheet as backup.
   _rosterCache = r;
+  emFbSaveSoon();
   // Notify any other listeners in the same page (no cross-tab — GS poll handles that)
   try{ window.dispatchEvent(new CustomEvent('rosterChanged', {detail: r})); }catch(e){}
 }
@@ -1973,10 +1977,62 @@ function syncToSheet(action, rows, resultElId){
   });
 }
 
-// ─── PULL CENTRAL ROSTER FROM GOOGLE SHEET (single source of truth) ───
-function fetchRosterFromGS(silent){
+// ─── FIREBASE ROSTER (primary) ───
+const FB_CONFIG={apiKey:"AIzaSyDcxK2x1xeFftXX6Xg1tXoGs1WVpV5YY9k",authDomain:"darkstore-attendance.firebaseapp.com",projectId:"darkstore-attendance",storageBucket:"darkstore-attendance.firebasestorage.app",messagingSenderId:"675191225861",appId:"1:675191225861:web:67b88319db36e96e89e66c"};
+let emDb=null, emFbP=null, emFbHasRoster=false, emFbTimer=null;
+function emTimeout(p,ms){return Promise.race([p,new Promise(r=>setTimeout(()=>r(null),ms))]);}
+function emFbInit(){
+  if(emFbP) return emFbP;
+  emFbP=(async()=>{
+    try{
+      if(!window.firebase||!firebase.firestore) return false;
+      if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+      emDb=firebase.firestore();
+      try{await emTimeout(emDb.enablePersistence({synchronizeTabs:true}),3000);}catch(e){}
+      return true;
+    }catch(e){console.warn('Firebase init failed',e);emDb=null;return false;}
+  })();
+  return emFbP;
+}
+async function emFbGetRoster(){
+  await emFbInit();
+  if(!emDb) return null;
+  try{
+    const d=await emTimeout(emDb.collection('roster').doc('current').get(),6000);
+    if(d&&d.exists&&d.data().sites){emFbHasRoster=true;return d.data().sites;}
+  }catch(e){console.warn('Firebase roster read failed',e);}
+  return null;
+}
+function emCleanRoster(r){
+  const out={};
+  Object.keys(r||{}).forEach(site=>{
+    out[site]=(r[site]||[]).filter(e=>e&&e.name).map(e=>{
+      const o={};Object.keys(e).forEach(k=>{if(k[0]!=='_'&&e[k]!==undefined&&e[k]!==null)o[k]=e[k];});return o;
+    });
+  });
+  return out;
+}
+async function emFbSaveRoster(r){
+  await emFbInit();
+  if(!emDb) return false;
+  try{
+    await emTimeout(emDb.collection('roster').doc('current').set({sites:emCleanRoster(r),updatedAt:new Date().toISOString()}),8000);
+    emFbHasRoster=true;return true;
+  }catch(e){console.warn('Firebase roster save failed',e);showToast('⚠️ Firebase save failed — saved to Sheet only','terr');return false;}
+}
+function emFbSaveSoon(){clearTimeout(emFbTimer);emFbTimer=setTimeout(()=>{if(_rosterCache)emFbSaveRoster(_rosterCache);},300);}
+// Overwrite the Firebase roster with the current Google Sheet roster (after fixing rows in the Sheet).
+async function emReimportFromSheet(){
+  if(!confirm('Replace the Firebase staff list with the Google Sheet staff list?')) return;
+  const merged=await fetchRosterFromGS(false,true);
+  if(!merged){showToast('❌ Could not read Google Sheet','terr');return;}
+  const ok=await emFbSaveRoster(merged);
+  showToast(ok?'✅ Staff list copied from Sheet to Firebase':'❌ Firebase save failed',ok?'tok':'terr');
+}
+
+// ─── PULL CENTRAL ROSTER (Firebase first, Google Sheet fallback) ───
+function fetchRosterFromGS(silent, sheetOnly){
   const url = getScriptUrl();
-  if(!url) return Promise.resolve(null);
   return new Promise(resolve => {
     const cbName = 'emRoster_' + Date.now();
     const script = document.createElement('script');
@@ -2014,7 +2070,8 @@ function fetchRosterFromGS(silent){
             merged[site] = [...byName.values()];
           });
           _rosterCache = merged;
-          if(!silent) showToast('🔄 Roster synced from Google Sheet','tok');
+          if(!silent) showToast(data._fb?'🔄 Roster synced from Firebase':'🔄 Roster synced from Google Sheet','tok');
+          if(!data._fb && !sheetOnly && emDb && !emFbHasRoster) emFbSaveRoster(merged).then(ok=>{ if(ok) showToast('✅ Staff list moved to Firebase','tok'); });
           if(typeof renderRoster === 'function') renderRoster();
           if(typeof checkSyncHealth === 'function') checkSyncHealth();
           resolve(merged);
@@ -2026,8 +2083,12 @@ function fetchRosterFromGS(silent){
     };
     script.onerror = () => { cleanup(); resolve(null); };
     setTimeout(() => { if(!done){ cleanup(); resolve(null); } }, 10000);
-    script.src = url + '?action=readRoster&callback=' + cbName;
-    document.head.appendChild(script);
+    (sheetOnly ? Promise.resolve(null) : emFbGetRoster()).then(fb => {
+      if(fb){ window[cbName]({result:'success', roster:fb, _fb:true}); return; }
+      if(!url){ cleanup(); resolve(null); return; }
+      script.src = url + '?action=readRoster&callback=' + cbName;
+      document.head.appendChild(script);
+    });
   });
 }
 
@@ -2061,7 +2122,7 @@ window.onload = ()=>{
 
 <div style="text-align:center;padding:30px 20px;border-top:1px solid var(--border);margin-top:40px;position:relative;z-index:1">
   <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">DARKSTORE Employee Manager</div>
-  <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Companion to Darkstore Attendance Pro · Shared Roster via localStorage</div>
+  <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Companion to Darkstore Attendance Pro · Staff list on Firebase · Google Sheet backup</div>
   <div style="font-size:11px;color:var(--text3)">Copyright © 2026 <span style="color:var(--accent);font-weight:600">HP WORLD</span> · Hrushikesh Padhi · <span style="color:var(--warn)">ENWPP9081D/2019</span></div>
   <div style="margin-top:10px"><a href="darkstore-attendance-pro.html" style="color:var(--accent);text-decoration:none;font-size:12px">← Back to Attendance Pro</a></div>
 </div>
