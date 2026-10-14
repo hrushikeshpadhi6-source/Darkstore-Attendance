@@ -396,10 +396,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
       </div>
       <div class="login-err" id="loginErr">❌ Incorrect PIN. Please try again.</div>
       <button class="btn-login" onclick="doLogin()">Unlock &amp; Submit →</button>
-      <div style="margin-top:16px;font-size:11px;color:var(--text3);line-height:1.8">
-        Default PINs: Al Raha <b style="color:var(--text2)">1001</b> · Yas Mall <b style="color:var(--text2)">1002</b> · MBZ <b style="color:var(--text2)">1003</b><br>
-        Khalifa City <b style="color:var(--text2)">1004</b> · Al Qusais <b style="color:var(--text2)">1005</b> · Business Bay <b style="color:var(--text2)">1006</b> · NIP <b style="color:var(--text2)">1007</b><br>Sharjah Central <b style="color:var(--text2)">1008</b>
-      </div>
+      <div id="pinHint" style="margin-top:16px;font-size:11px;color:var(--text3);line-height:1.8"></div>
     </div>
   </div>
 </div>
@@ -892,7 +889,7 @@ function hydrateStaffFromRoster(){
     const parsed = normalizeRosterSites(JSON.parse(raw));
     const merged = {};
     // Preserve baseline site keys + accept any new sites from manager
-    const allSites = new Set([...Object.keys(BASELINE_STAFF), ...Object.keys(parsed||{})]);
+    const allSites = new Set([...Object.keys(BASELINE_STAFF), ...Object.keys(parsed||{})].filter(s=>!isDeletedSite(s)));
     allSites.forEach(site => {
       const list = (parsed && Array.isArray(parsed[site])) ? parsed[site] : (BASELINE_STAFF[site] || []);
       // Drop Removed AND Transferred staff
@@ -945,8 +942,10 @@ function hydrateStaffFromRoster(){
 // was opened in the Employee Manager so it becomes selectable here too.
 // Map spelling/case variants from the Sheet onto the official site names.
 // Keys that aren't a site with a PIN (e.g. a designation in the Site column) are dropped and logged.
+let AP_DELETED=[];try{AP_DELETED=JSON.parse(localStorage.getItem('ap_deleted_sites')||'[]');}catch(e){}
+function isDeletedSite(s){const l=String(s||'').trim().toLowerCase();return AP_DELETED.some(d=>d.toLowerCase()===l);}
 function canonicalSite(s){
-  const t=String(s||'').trim();if(!t) return null;
+  const t=String(s||'').trim();if(!t||isDeletedSite(t)) return null;
   const low=t.toLowerCase().replace(/\s+/g,' ');
   const exact=Object.keys(SITE_PINS).find(k=>k.toLowerCase()===low);if(exact) return exact;
   if(/^sharjah\s*cent/.test(low)) return 'Sharjah Central';
@@ -956,7 +955,9 @@ function canonicalSite(s){
   if(/^al\s*raha/.test(low)) return 'Al Raha';
   if(/^khalifa/.test(low)) return 'Khalifa City';
   if(/^business\s*bay/.test(low)) return 'Business Bay';
-  return null;
+  if(/assistant|associate|picker|packer|supervisor|housekeep|cleaner|helper|driver|warehouse/.test(low)) return null;
+  if(/^[a-z]{2,4}\d{1,3}$/.test(low)) return null; // store code (e.g. QHA5) in Site column
+  return t.replace(/\s+/g,' ');
 }
 function normalizeRosterSites(obj){
   const out={};const bad=[];
@@ -969,13 +970,70 @@ function normalizeRosterSites(obj){
   window.__badRosterSites=bad;
   return out;
 }
+// New sites get the next PIN (1009, 1010, …), stored centrally in Firebase meta/sitePins so every device agrees.
+const PIN_CACHE_KEY='ds_site_pins';
+const BASE_PINS=Object.assign({},SITE_PINS);
+try{Object.assign(SITE_PINS,JSON.parse(localStorage.getItem(PIN_CACHE_KEY)||'{}'));}catch(e){}
+function pinFor(p,s){const k=Object.keys(p).find(k=>k.toLowerCase()===String(s).trim().toLowerCase());return k?p[k]:null;}
+function assignMissingPins(p){
+  let changed=false;
+  Object.keys(STAFF||{}).forEach(s=>{
+    if(!s||!(STAFF[s]||[]).length||pinFor(p,s)) return;
+    const max=Math.max(1008,...Object.values(p).map(Number).filter(n=>!isNaN(n)));
+    p[s]=String(max+1);changed=true;
+  });
+  return changed;
+}
+function applyPins(p){
+  Object.keys(SITE_PINS).forEach(k=>delete SITE_PINS[k]);Object.assign(SITE_PINS,p);
+  try{localStorage.setItem(PIN_CACHE_KEY,JSON.stringify(p));}catch(e){}
+  renderPinHint();
+}
+function renderPinHint(){
+  Object.keys(SITE_PINS).forEach(k=>{if(isDeletedSite(k))delete SITE_PINS[k];});
+  const el=document.getElementById('pinHint');if(!el) return;
+  const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  el.innerHTML='Site PINs: '+Object.keys(SITE_PINS).map(k=>esc(k)+' <b style="color:var(--text2)">'+esc(SITE_PINS[k])+'</b>').join(' · ');
+}
+let _pinSync=null;
+function ensureSitePins(){
+  if(!window.__pageLoaded) return;
+  if(_pinSync) return _pinSync;
+  _pinSync=(async()=>{
+    try{
+      await fbInit();
+      if(fbDb){
+        const ref=fbDb.collection('meta').doc('sitePins');
+        const p=await fbTimeout(fbDb.runTransaction(async tx=>{
+          const d=await tx.get(ref);
+          let p=Object.assign({},BASE_PINS,(d.exists&&d.data().pins)||{});
+          let fix=false;
+          if(!(d.exists&&d.data().v2)){
+            // one-time cleanup: drop store-code "sites" and renumber new sites from 1009
+            const extra=Object.keys(p).filter(k=>!BASE_PINS[k]&&canonicalSite(k)).sort((a,b)=>Number(p[a])-Number(p[b]));
+            p=Object.assign({},BASE_PINS);extra.forEach((k,i)=>p[k]=String(1009+i));fix=true;
+          }
+          Object.keys(p).forEach(k=>{if(/^[a-z]{2,4}\d{1,3}$/i.test(k)||isDeletedSite(k)){delete p[k];fix=true;}});
+          if(assignMissingPins(p)||fix||!d.exists) tx.set(ref,{pins:p,v2:true,updatedAt:new Date().toISOString()});
+          return p;
+        }),8000);
+        if(p){applyPins(p);return;}
+      }
+      const p=Object.assign({},SITE_PINS);assignMissingPins(p);applyPins(p);
+    }catch(e){console.warn('Site PIN sync failed',e);const p=Object.assign({},SITE_PINS);assignMissingPins(p);applyPins(p);}
+    finally{_pinSync=null;}
+  })();
+  return _pinSync;
+}
 function syncSiteOptions(){
+  renderPinHint();ensureSitePins();
+  document.querySelectorAll('select option').forEach(o=>{const v=(o.value||o.textContent).trim();if(v&&isDeletedSite(v)&&o.parentNode&&/site/i.test(o.parentNode.id))o.remove();});
   ['loginSite','siteSelect','incSite','histSiteFilter','exportSite','statusSite','absSite','dashSiteFilter','editSite'].forEach(id=>{
     const sel=document.getElementById(id);
     if(!sel) return;
     const existing=new Set([...sel.options].map(o=>(o.value||o.textContent).trim().toLowerCase()).filter(Boolean));
     Object.keys(STAFF||{}).forEach(site=>{
-      if(!site||!(STAFF[site]||[]).length||!SITE_PINS[site]) return;
+      if(!site||!(STAFF[site]||[]).length) return;
       if(existing.has(site.trim().toLowerCase())) return;
       const o=document.createElement('option');o.value=site;o.textContent=site;sel.appendChild(o);existing.add(site.trim().toLowerCase());
     });
@@ -1133,6 +1191,7 @@ async function fbGetRoster(){
   await fbInit();
   if(!fbDb) return null;
   try{
+    try{const x=await fbTimeout(fbDb.collection('meta').doc('deletedSites').get(),5000);if(x&&x.exists){AP_DELETED=x.data().list||[];localStorage.setItem('ap_deleted_sites',JSON.stringify(AP_DELETED));}}catch(e){}
     const d=await fbTimeout(fbDb.collection('roster').doc('current').get(),6000);
     if(d&&d.exists&&d.data().sites) return d.data().sites;
   }catch(e){console.warn('Firebase roster read failed',e);}
@@ -1228,7 +1287,7 @@ async function fetchRosterFromGS() {
           const allSites = new Set([
             ...Object.keys(BASELINE_STAFF),
             ...Object.keys(data.roster)
-          ]);
+          ].filter(s=>!isDeletedSite(s)));
           allSites.forEach(site => {
             const gsList = Array.isArray(data.roster[site]) ? data.roster[site] : null;
             merged[site] = gsList ? gsList : (BASELINE_STAFF[site] || []).map(e => ({...e, status:'Active'}));
@@ -1663,10 +1722,25 @@ function toggleTheme(){
 // ─── INIT FORM ───
 window.onload=()=>{
   fbInit();
+  window.__pageLoaded=true;
   // Pull the latest shared roster from localStorage before first paint
   hydrateStaffFromRoster();
   // Then pull the authoritative roster from the Google Sheet (async)
   fetchRosterFromGS();
+  ensureSitePins();
+  // Live: when Employee Manager adds a site/staff, refresh here instantly
+  fbInit().then(()=>{
+    if(!fbDb) return;
+    let first=true;
+    fbDb.collection('roster').doc('current').onSnapshot(()=>{
+      if(first){first=false;return;}
+      fetchRosterFromGS().then(()=>{
+        ensureSitePins();
+        try{buildDashboard();}catch(e){}
+        try{renderHistory();}catch(e){}
+      });
+    },err=>console.warn('Roster listen error',err));
+  });
   const now=new Date();
   document.getElementById('monthSelect').value=now.getMonth()+1;
   updateDays();
