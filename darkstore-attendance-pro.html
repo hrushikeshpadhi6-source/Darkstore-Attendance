@@ -382,7 +382,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
           <option value="">— Select your site —</option>
           <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
           <option>Khalifa City</option><option>Al Qusais</option>
-          <option>Business Bay</option><option>NIP</option>
+          <option>Business Bay</option><option>NIP</option><option>Sharjah Central</option>
         </select>
       </div>
       <div class="login-field">
@@ -464,7 +464,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
               <option value="">— Choose site —</option>
               <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
               <option>Khalifa City</option><option>Al Qusais</option>
-              <option>Business Bay</option><option>NIP</option>
+              <option>Business Bay</option><option>NIP</option><option>Sharjah Central</option>
             </select>
             <span class="err">Please select a site</span>
           </div>
@@ -616,7 +616,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
           <option value="">— Select site —</option>
           <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
           <option>Khalifa City</option><option>Al Qusais</option>
-          <option>Business Bay</option><option>NIP</option>
+          <option>Business Bay</option><option>NIP</option><option>Sharjah Central</option>
         </select>
         <span class="err">Required</span>
       </div>
@@ -705,7 +705,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
         <option value="">All Sites</option>
         <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
         <option>Khalifa City</option><option>Al Qusais</option>
-        <option>Business Bay</option><option>NIP</option>
+        <option>Business Bay</option><option>NIP</option><option>Sharjah Central</option>
       </select>
       <select class="history-select" id="histShiftFilter" onchange="renderHistory()">
         <option value="">All Shifts</option>
@@ -725,7 +725,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
 // ─────────── CONFIG ───────────
 const SITE_PINS = {
   "Al Raha":"1001","Yas Mall":"1002","MBZ":"1003",
-  "Khalifa City":"1004","Al Qusais":"1005","Business Bay":"1006","NIP":"1007"
+  "Khalifa City":"1004","Al Qusais":"1005","Business Bay":"1006","NIP":"1007","Sharjah Central":"1008"
 };
 
 const SHIFT_START = { A:6, B:14, C:22 }; // hour in 24h
@@ -893,7 +893,7 @@ function hydrateStaffFromRoster(){
       STAFF = JSON.parse(JSON.stringify(BASELINE_STAFF));
       return;
     }
-    const parsed = JSON.parse(raw);
+    const parsed = normalizeRosterSites(JSON.parse(raw));
     const merged = {};
     // Preserve baseline site keys + accept any new sites from manager
     const allSites = new Set([...Object.keys(BASELINE_STAFF), ...Object.keys(parsed||{})]);
@@ -946,17 +946,42 @@ function hydrateStaffFromRoster(){
 
 // Keep the Site dropdown in sync with the roster: append any NEW site that
 // was opened in the Employee Manager so it becomes selectable here too.
+// Map spelling/case variants from the Sheet onto the official site names.
+// Keys that aren't a site with a PIN (e.g. a designation in the Site column) are dropped and logged.
+function canonicalSite(s){
+  const t=String(s||'').trim();if(!t) return null;
+  const low=t.toLowerCase().replace(/\s+/g,' ');
+  const exact=Object.keys(SITE_PINS).find(k=>k.toLowerCase()===low);if(exact) return exact;
+  if(/^sharjah\s*cent/.test(low)) return 'Sharjah Central';
+  if(/^al\s*qus/.test(low)) return 'Al Qusais';
+  if(/^mbz/.test(low)) return 'MBZ';
+  if(/^yas/.test(low)) return 'Yas Mall';
+  if(/^al\s*raha/.test(low)) return 'Al Raha';
+  if(/^khalifa/.test(low)) return 'Khalifa City';
+  if(/^business\s*bay/.test(low)) return 'Business Bay';
+  return null;
+}
+function normalizeRosterSites(obj){
+  const out={};const bad=[];
+  Object.keys(obj||{}).forEach(k=>{
+    const c=canonicalSite(k);
+    if(!c){ if((obj[k]||[]).length) bad.push(k+' ('+obj[k].length+')'); return; }
+    out[c]=(out[c]||[]).concat(Array.isArray(obj[k])?obj[k]:[]);
+  });
+  if(bad.length) console.warn('⚠️ Roster rows with unknown Site ignored: '+bad.join(', ')+' — fix the Site column in the Sheet.');
+  window.__badRosterSites=bad;
+  return out;
+}
 function syncSiteOptions(){
-  const sel = document.getElementById('siteSelect');
-  if(!sel) return;
-  const existing = new Set([...sel.options].map(o=>o.value).filter(Boolean));
-  Object.keys(STAFF||{}).forEach(site=>{
-    if(site && !existing.has(site)){
-      const o = document.createElement('option');
-      o.value = site; o.textContent = site;
-      sel.appendChild(o);
-      existing.add(site);
-    }
+  ['loginSite','siteSelect','incSite','histSiteFilter','exportSite','statusSite','absSite','dashSiteFilter','editSite'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel) return;
+    const existing=new Set([...sel.options].map(o=>(o.value||o.textContent).trim().toLowerCase()).filter(Boolean));
+    Object.keys(STAFF||{}).forEach(site=>{
+      if(!site||!(STAFF[site]||[]).length||!SITE_PINS[site]) return;
+      if(existing.has(site.trim().toLowerCase())) return;
+      const o=document.createElement('option');o.value=site;o.textContent=site;sel.appendChild(o);existing.add(site.trim().toLowerCase());
+    });
   });
 }
 
@@ -1189,6 +1214,7 @@ async function fetchRosterFromGS() {
       cleanup();
       if (data && data.result === 'success' && data.roster && typeof data.roster === 'object') {
         try {
+          data.roster = normalizeRosterSites(data.roster);
           // Mirror the GS roster into the shared localStorage key so the Employee
           // Manager (and offline reloads) see the same source of truth.
           const key = (typeof getRosterKey === 'function') ? getRosterKey() : 'darkstore_staff_roster';
@@ -1407,7 +1433,8 @@ function doLogin(){
   const pin  = getPin();
   const errEl= document.getElementById('loginErr');
   if(!site){ errEl.style.display='block'; errEl.textContent='❌ Please select your site first.'; return; }
-  if(SITE_PINS[site] !== pin){ errEl.style.display='block'; errEl.textContent='❌ Incorrect PIN. Please try again.'; ['p1','p2','p3','p4'].forEach(id=>{document.getElementById(id).value='';document.getElementById(id).classList.remove('filled');}); document.getElementById('p1').focus(); return; }
+  const _pinKey=Object.keys(SITE_PINS).find(k=>k.toLowerCase()===String(site).trim().toLowerCase());
+  if(!_pinKey || SITE_PINS[_pinKey] !== pin){ errEl.style.display='block'; errEl.textContent='❌ Incorrect PIN. Please try again.'; ['p1','p2','p3','p4'].forEach(id=>{document.getElementById(id).value='';document.getElementById(id).classList.remove('filled');}); document.getElementById('p1').focus(); return; }
   errEl.style.display='none';
   loggedInSite=site;
   // Pre-fill site in form
@@ -2851,7 +2878,7 @@ document.addEventListener('keydown', (e) => {
               <option value="">All Sites</option>
               <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
               <option>Khalifa City</option><option>Al Qusais</option>
-              <option>Business Bay</option><option>NIP</option>
+              <option>Business Bay</option><option>NIP</option><option>Sharjah Central</option>
             </select></div>
         </div>
         <button class="tool-btn green" id="exportBtn" onclick="toolExportMonthly()">⬇ Download Excel (.csv)</button>
@@ -2884,7 +2911,7 @@ document.addEventListener('keydown', (e) => {
                 <option value="">All Sites</option>
                 <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
                 <option>Khalifa City</option><option>Al Qusais</option>
-                <option>Business Bay</option><option>NIP</option>
+                <option>Business Bay</option><option>NIP</option><option>Sharjah Central</option>
               </select></div>
           </div>
           <button class="tool-btn accent" id="statusBtn" onclick="toolLoadStatus()">📊 Load Status</button>
@@ -2903,7 +2930,7 @@ document.addEventListener('keydown', (e) => {
                 <option value="">All Sites</option>
                 <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
                 <option>Khalifa City</option><option>Al Qusais</option>
-                <option>Business Bay</option><option>NIP</option>
+                <option>Business Bay</option><option>NIP</option><option>Sharjah Central</option>
               </select></div>
             <div><label class="tool-label">Min Absent Days</label>
               <input type="number" class="tool-input" id="absThreshold" value="3" min="1" max="31"/>

@@ -87,7 +87,7 @@ select.sel option{background:#141c28}
 .preview-table tr.err-row td{background:rgba(255,77,109,.04);color:var(--accent3)}
 .preview-table tr:hover td{background:rgba(255,255,255,.02)}
 .row-ok{color:var(--accent2);font-size:11px;font-weight:600}
-.row-err{color:var(--accent3);font-size:11px;font-weight:600}
+.row-err{color:var(--accent3);font-size:11px;font-weight:600;line-height:1.5;display:block;min-width:180px}.err-row td{background:rgba(255,77,109,.06)}
 .row-dup{color:var(--warn);font-size:11px;font-weight:600}
 
 /* UPLOAD ZONE */
@@ -319,7 +319,7 @@ select.sel option{background:#141c28}
               <option value="">— Select Site —</option>
               <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
               <option>Khalifa City</option><option>Al Qusais</option>
-              <option>Business Bay</option><option>NIP</option>
+              <option>Business Bay</option><option>NIP</option><option>Sharjah Central</option>
               <option value="__new">+ New site…</option>
             </select>
             <input class="inp" id="m-site-other" placeholder="Type new site name" style="display:none;margin-top:8px" oninput="clearFieldErr('f-site')"/>
@@ -362,8 +362,8 @@ select.sel option{background:#141c28}
             <span class="err-msg">Agency is required</span>
           </div>
           <div class="field">
-            <label class="lbl">Store / Location</label>
-            <input class="inp" id="m-store" placeholder="e.g. Al Raha Darkstore"/>
+            <label class="lbl">Store Code</label>
+            <input class="inp" id="m-store" placeholder="e.g. QHA5"/>
           </div>
         </div>
         <div class="field-row">
@@ -478,7 +478,7 @@ select.sel option{background:#141c28}
               <option value="">— Choose site —</option>
               <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
               <option>Khalifa City</option><option>Al Qusais</option>
-              <option>Business Bay</option><option>NIP</option>
+              <option>Business Bay</option><option>NIP</option><option>Sharjah Central</option>
             </select>
           </div>
           <div class="field">
@@ -580,7 +580,7 @@ select.sel option{background:#141c28}
         <option value="">All Sites</option>
         <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
         <option>Khalifa City</option><option>Al Qusais</option>
-        <option>Business Bay</option><option>NIP</option>
+        <option>Business Bay</option><option>NIP</option><option>Sharjah Central</option>
       </select>
     </div>
     <div id="logsLoadInfo" style="font-size:11px;color:var(--text3);margin-bottom:8px;font-family:'JetBrains Mono',monospace"></div>
@@ -621,7 +621,7 @@ select.sel option{background:#141c28}
           <option value="">All Sites</option>
           <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
           <option>Khalifa City</option><option>Al Qusais</option>
-          <option>Business Bay</option><option>NIP</option>
+          <option>Business Bay</option><option>NIP</option><option>Sharjah Central</option>
         </select>
         <button class="btn-outline" onclick="renderRoster()" style="padding:8px 14px;font-size:12px">↻ Refresh</button>
         <button class="btn-dl" onclick="exportRoster()">⬇ Export CSV</button>
@@ -779,7 +779,7 @@ const BASELINE_STAFF = {
   ]
 };
 
-const VALID_SITES = ['Al Raha','Yas Mall','MBZ','Khalifa City','Al Qusais','Business Bay','NIP'];
+const VALID_SITES = ['Al Raha','Yas Mall','MBZ','Khalifa City','Al Qusais','Business Bay','NIP','Sharjah Central'];
 
 // ─── STATE ───
 let parsedRows = [];
@@ -898,7 +898,7 @@ async function seedMissingToGS(){
       const cleanup = () => { done=true; delete window[cbName]; if(script.parentNode) script.remove(); };
       const payload = {
         action: 'addEmployee',
-        name: emp.name, site: emp.site, store: emp.site,
+        name: emp.name, site: emp.site, store: emp.store || emp.site,
         designation: emp.designation || '', agency: emp.agency || '',
         dept: emp.dept || emp.designation || '',
         reason: '', remarks: 'seeded from baseline',
@@ -950,7 +950,7 @@ function showPage(name){
 function downloadTemplate(){
   const blob = new Blob([
     'Name,Site,Store,Department,Designation,Agency,Status\n' +
-    'Hrushikesh Padhi,Al Raha,Al Raha Darkstore,Warehouse,Warehouse Assistant,Flexitalent,Active\n'
+    'Hrushikesh Padhi,Al Raha,QHA5,Warehouse,Warehouse Assistant,Flexitalent,Active\n'
   ],{type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1017,7 +1017,8 @@ function submitManualAdd(){
   const dept   = document.getElementById('m-dept').value;
   let   agency = document.getElementById('m-agency').value;
   if(agency==='Other') agency = document.getElementById('m-agency-other').value.trim();
-  const store  = document.getElementById('m-store').value.trim() || site;
+  const store  = document.getElementById('m-store').value.trim().toUpperCase();
+  if(!store || !STORE_CODE_RE.test(store)){ showToast('❌ Store must be a store code (e.g. QHA5)','err'); document.getElementById('m-store').focus(); return; }
   const joinDate = document.getElementById('m-joindate').value;          // yyyy-mm-dd, optional
   const eid      = document.getElementById('m-eid').value.trim();        // Emirates ID / passport, optional
   let hasErr = false;
@@ -1096,7 +1097,7 @@ function parseCSVData(text, filename){
       _line:i+1,
       name:        cells[colMap.name]        ||'',
       site:        cells[colMap.site]        ||'',
-      store:       cells[colMap.store]       ||'',
+      store:      (cells[colMap.store]       ||'').toUpperCase(),
       department:  cells[colMap.department]  ||'Warehouse',
       designation: cells[colMap.designation] ||'',
       agency:      cells[colMap.agency]      ||'',
@@ -1108,6 +1109,12 @@ function parseCSVData(text, filename){
   validateBulkRows();
 }
 
+const STORE_CODE_RE=/^[A-Za-z]{2,5}\d{1,4}$/;
+function suggestSite(v){
+  const low=String(v||'').toLowerCase().replace(/[^a-z]/g,'');
+  if(low.length<3) return null;
+  return VALID_SITES.find(s=>{const k=s.toLowerCase().replace(/[^a-z]/g,'');return k.startsWith(low.slice(0,5))||low.startsWith(k.slice(0,5));})||null;
+}
 function validateBulkRows(){
   const roster = getRoster();
   let okCount=0, dupCount=0, errCount=0;
@@ -1119,8 +1126,14 @@ function validateBulkRows(){
     const errs = [];
     if(!row.name)  errs.push('Missing Name');
     if(!row.site)  errs.push('Missing Site');
-    else if(!VALID_SITES.includes(row.site)) newSites.add(row.site);  // new site — allowed, not an error
+    else if(!VALID_SITES.includes(row.site)){
+      const fix=VALID_SITES.find(s=>s.toLowerCase()===row.site.toLowerCase().replace(/\s+/g,' ').trim())||suggestSite(row.site);
+      errs.push(fix?'Site "'+row.site+'" — use "'+fix+'"':'Site "'+row.site+'" is not a site name');
+    }
+    if(!row.store) errs.push('Missing Store code');
+    else if(!STORE_CODE_RE.test(row.store)) errs.push('Store "'+row.store+'" is not a store code (e.g. QHA5)');
     if(!row.designation) errs.push('Missing Designation');
+    else if(VALID_SITES.some(s=>s.toLowerCase()===row.designation.toLowerCase())||STORE_CODE_RE.test(row.designation)) errs.push('Designation "'+row.designation+'" looks wrong — columns shifted?');
     if(!row.agency)      errs.push('Missing Agency');
 
     const isDup = row.site && (roster[row.site]||[]).some(e=>e.name.toLowerCase()===row.name.toLowerCase()&&e.status!=='Removed'&&e._src==='gs');
@@ -1154,13 +1167,13 @@ function renderPreviewTable(){
   const el = document.getElementById('previewTable');
   if(!parsedRows.length){ el.innerHTML='<div class="empty-state"><div>📋</div>No rows</div>'; return; }
   el.innerHTML=`<div class="preview-wrap"><table class="preview-table">
-    <thead><tr><th>Line</th><th>Name</th><th>Site</th><th>Designation</th><th>Agency</th><th>Status</th></tr></thead>
+    <thead><tr><th>Line</th><th>Name</th><th>Site</th><th>Store</th><th>Designation</th><th>Agency</th><th>Check</th></tr></thead>
     <tbody>${parsedRows.map(r=>{
       let s='',cls='';
       if(r._isDup){ s='<span class="row-dup">DUP</span>'; }
-      else if(r._errors.length){ s=`<span class="row-err" title="${r._errors.join(', ')}">ERR</span>`; cls='err-row'; }
+      else if(r._errors.length){ s=`<span class="row-err">❌ ${r._errors.join('<br>❌ ')}</span>`; cls='err-row'; }
       else{ s='<span class="row-ok">OK</span>'; }
-      return `<tr class="${cls}"><td>${r._line}</td><td>${r.name||'—'}</td><td>${r.site||'—'}</td><td>${r.designation||'—'}</td><td>${r.agency||'—'}</td><td>${s}</td></tr>`;
+      return `<tr class="${cls}"><td>${r._line}</td><td>${r.name||'—'}</td><td>${r.site||'—'}</td><td>${r.store||'—'}</td><td>${r.designation||'—'}</td><td>${r.agency||'—'}</td><td>${s}</td></tr>`;
     }).join('')}</tbody></table></div>`;
 }
 
@@ -1680,7 +1693,7 @@ function openRenameModal(oldName, site, designation, dept){
             <select class="sel" id="rnNewSite" onchange="updateEditSummary()" style="width:100%;font-size:13px;padding:11px 30px 11px 12px">
               <option>Al Raha</option><option>Yas Mall</option><option>MBZ</option>
               <option>Khalifa City</option><option>Al Qusais</option>
-              <option>Business Bay</option><option>NIP</option>
+              <option>Business Bay</option><option>NIP</option><option>Sharjah Central</option>
             </select>
           </div>
         </div>
