@@ -1132,9 +1132,11 @@ function validateBulkRows(){
     const errs = [];
     if(!row.name)  errs.push('Missing Name');
     if(!row.site)  errs.push('Missing Site');
-    else if(!VALID_SITES.includes(row.site)){
-      const fix=VALID_SITES.find(s=>s.toLowerCase()===row.site.toLowerCase().replace(/\s+/g,' ').trim())||suggestSite(row.site);
-      errs.push(fix?'Site "'+row.site+'" — use "'+fix+'"':'Site "'+row.site+'" is not a site name');
+    else{
+      row.site=row.site.replace(/\s+/g,' ').trim();
+      const known=[...new Set([...VALID_SITES,...Object.keys(roster||{})])];
+      const match=known.find(s=>s.toLowerCase()===row.site.toLowerCase());
+      if(match) row.site=match; else newSites.add(row.site);
     }
     if(!row.store) errs.push('Missing Store code');
     else if(!STORE_CODE_RE.test(row.store)) errs.push('Store "'+row.store+'" is not a store code (e.g. QHA5)');
