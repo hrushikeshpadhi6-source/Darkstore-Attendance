@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Darkstore Attendance Pro</title>
+<script>try{if(localStorage.getItem('ds_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -19,6 +20,18 @@
   --r:12px;--r-sm:8px;
 }
 html{scroll-behavior:smooth}
+.theme-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border2);background:var(--card2);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .2s}.theme-btn:hover{border-color:var(--accent)}
+html[data-theme=light]{--bg:#f3f6fa;--bg2:#e9eef5;--card:#ffffff;--card2:#f1f4f9;--card3:#e6ebf2;--border:#d8e0ea;--border2:#c7d2df;--accent:#0089b3;--accent2:#0a9d5a;--accent3:#d6334f;--warn:#c27400;--purple:#7357d6;--text:#142033;--text2:#4f6380;--text3:#7c8da5;--shift-a:#c27400;--shift-b:#0089b3;--shift-c:#7357d6}
+html[data-theme=light] body::before,html[data-theme=light] .orb{display:none}
+html[data-theme=light] .nav{background:rgba(255,255,255,.92)}
+html[data-theme=light] .site-card,html[data-theme=light] .hk-central,html[data-theme=light] .kpi{box-shadow:0 1px 3px rgba(20,32,51,.06)}
+html[data-theme=light] .sh-row.empty,html[data-theme=light] .hk-p{background:rgba(20,32,51,.04);border-color:rgba(20,32,51,.06)}
+html[data-theme=light] .sh-foot,html[data-theme=light] .hk-row,html[data-theme=light] .site-counts{border-top-color:rgba(20,32,51,.08)}
+html[data-theme=light] .hk-central{border-color:var(--border)}
+html[data-theme=light]{color-scheme:light}:root{color-scheme:dark}
+select option,select optgroup{background:var(--card);color:var(--text)}
+html[data-theme=light] select option{background:#fff;color:#142033}
+
 body{font-family:'Outfit',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);overflow-x:hidden}
 
 /* SCANLINE EFFECT */
@@ -58,7 +71,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .login-field label{font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.3px}
 .login-select,.login-input{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;padding:12px 15px;outline:none;transition:border-color .2s,box-shadow .2s;appearance:none}
 .login-select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%233a4f6a'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;cursor:pointer}
-.login-select option{background:#141c28}
+.login-select option{background:var(--card2);color:var(--text)}
 .login-select:focus,.login-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
 .pin-row{display:flex;gap:10px;justify-content:center;margin:6px 0}
 .pin-digit{width:52px;height:60px;background:var(--card2);border:1.5px solid var(--border2);border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--accent);text-align:center;outline:none;transition:all .2s;caret-color:var(--accent)}
@@ -99,7 +112,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .site-status.pending{background:rgba(255,77,109,.1);color:var(--accent3);border:1px solid rgba(255,77,109,.2)}
 .site-bar-wrap{background:var(--card2);border-radius:6px;height:6px;overflow:hidden;margin-bottom:8px}
 .site-bar{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .6s ease}
-.site-counts{display:flex;gap:10px}
+.site-counts{display:flex;gap:10px;flex-wrap:wrap;padding-top:8px;border-top:1px solid rgba(255,255,255,.06)}.sh-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}.sh-row{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;padding:7px 10px;border-radius:8px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.14)}.sh-row.empty{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.05)}.sh-h{font-size:11px;font-weight:700;color:var(--accent2);white-space:nowrap}.sh-row.empty .sh-h{color:var(--text3)}.sh-exp{font-size:10px;color:var(--text3);text-align:right}.sh-exp b{color:var(--text);font-weight:700}.sh-c{grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--text2)}.sh-c b{color:var(--text);font-weight:700}.hk-central{margin-top:16px;background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px}.hk-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.hk-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px 10px;align-items:center;padding:9px 0;border-top:1px solid rgba(255,255,255,.06)}.hk-site{font-size:12px;font-weight:700;color:var(--text)}.hk-num{font-size:12px;font-weight:700;color:var(--accent2)}.hk-people{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}.hk-p{font-size:10px;padding:2px 8px;border-radius:5px;background:rgba(255,255,255,.04);color:var(--text2)}.hk-p.p{color:var(--accent2);background:rgba(0,255,136,.08)}.hk-p.a{color:var(--accent3);background:rgba(255,77,109,.08)}.hk-p.nm{color:var(--text3)}.sh-total{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--text3);margin-bottom:8px}.sh-total b{color:var(--text);font-weight:700}.sh-total span:first-child b{color:var(--accent)}.sh-foot{display:flex;flex-direction:column;gap:4px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06)}.sh-foot .sh-h{color:var(--text2)}
 .site-count{font-size:11px;color:var(--text2)}
 .site-count span{font-weight:700;color:var(--text)}
 .dash-late{background:rgba(255,179,71,.06);border:1px solid rgba(255,179,71,.2);border-radius:12px;padding:14px 16px;margin-bottom:20px}
@@ -135,7 +148,7 @@ label.lbl .req{color:var(--accent3)}
 select,input[type=text]{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;padding:11px 15px;outline:none;transition:border-color .2s,box-shadow .2s;appearance:none}
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%233a4f6a'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;cursor:pointer;padding-right:36px}
 select:focus,input[type=text]:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
-select option{background:#141c28}
+select option{background:var(--card2);color:var(--text)}
 select:disabled{opacity:.3;cursor:not-allowed}
 .field.has-error select,.field.has-error input{border-color:var(--accent3)}
 .err{font-size:11px;color:var(--accent3);display:none}
@@ -352,6 +365,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
   </div>
   <div class="nav-right">
     <div class="live-dot">LIVE</div>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Switch theme">☀️</button>
   </div>
 </nav>
 
@@ -421,6 +435,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
     <div class="dash-sites" id="dashSites">
       <div class="dash-empty"><div>📊</div>No submissions today yet</div>
     </div>
+    <div class="hk-central" id="dashHK" style="display:none"></div>
   </div>
 </div>
 
@@ -1550,7 +1565,7 @@ function buildDashboard(){
         <span class="site-status ${statusLabel}">${statusLabel.toUpperCase()}</span>
       </div>
       <div class="site-bar-wrap"><div class="site-bar" style="width:${Math.min(pct,100)}%"></div></div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">${shiftBreakdown}</div>
+      <div class="sh-rows">${shiftBreakdown}</div>
       <div class="site-counts">
         <div class="site-count">✅ <span>${present}</span> Present</div>
         <div class="site-count">❌ <span>${absent}</span> Absent</div>
@@ -1607,64 +1622,18 @@ async function fetchDashboardFromSheet(filterDate) {
       bysite[r.site].push(r);
     });
 
-    Object.keys(STAFF).forEach(site => {
-      const recs = bysite[site];
-      if (!recs || !recs.length) return;
-      const totalStaff = STAFF[site].length;
-      const present  = recs.filter(x=>x.status==='Present').length;
-      const absent   = recs.filter(x=>x.status==='Absent').length;
-      const weekoff  = recs.filter(x=>x.status==='Week Off').length;
-      const onleave  = recs.filter(x=>['Sick Leave','Annual Leave','Authorize Leave'].includes(x.status)).length;
-      const pct      = Math.round(recs.length/totalStaff*100);
-      const statusLabel = pct>=100?'submitted':pct>0?'partial':'pending';
-
-      const shiftBreakdown = ['A','B','C'].map(sh => {
-        const shRecs = recs.filter(r=>r.shift===sh);
-        if (!shRecs.length) return `<span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.04);color:var(--text3)">Shift ${sh}: —</span>`;
-        const p2 = shRecs.filter(x=>x.status==='Present').length;
-        const a2 = shRecs.filter(x=>x.status==='Absent').length;
-        const by = shRecs[0].submittedBy ? ` · ${shRecs[0].submittedBy}` : '';
-        return `<span style="font-size:10px;padding:2px 8px;border-radius:5px;background:rgba(0,255,136,.08);color:var(--accent2);border:1px solid rgba(0,255,136,.15)">Shift ${sh}: ✅${p2} ❌${a2}${by}</span>`;
-      }).join('');
-
-      const div = document.createElement('div');
-      div.className = 'site-card';
-      div.onclick = () => { openSiteDayDetail(site); };
-      div.innerHTML = `
-        <div class="site-card-top">
-          <div class="site-name">${site}</div>
-          <span class="site-status ${statusLabel}">${statusLabel.toUpperCase()}</span>
-        </div>
-        <div class="site-bar-wrap"><div class="site-bar" style="width:${Math.min(pct,100)}%"></div></div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">${shiftBreakdown}</div>
-        <div class="site-counts">
-          <div class="site-count">✅ <span>${present}</span> Present</div>
-          <div class="site-count">❌ <span>${absent}</span> Absent</div>
-          <div class="site-count">📅 <span>${weekoff}</span> Week Off</div>
-          <div class="site-count">🌿 <span>${onleave}</span> Leave</div>
-        </div>`;
-      sg.appendChild(div);
-    });
     // Only clear + repaint AFTER we have new data ready
     sg.innerHTML = '';
+    const hkRows=[];
     Object.keys(STAFF).forEach(site => {
-      const recs = bysite[site];
-      if (!recs || !recs.length) return;
-      const totalStaff = STAFF[site].length;
-      const present2  = recs.filter(x=>x.status==='Present').length;
-      const absent2   = recs.filter(x=>x.status==='Absent').length;
-      const weekoff2  = recs.filter(x=>x.status==='Week Off').length;
-      const onleave2  = recs.filter(x=>['Sick Leave','Annual Leave','Authorize Leave'].includes(x.status)).length;
-      const pct2      = Math.round(recs.length/totalStaff*100);
+      const all = bysite[site] || [];
+      const hkStaff = STAFF[site].filter(x=>isHKRec(x,site));
+      if (hkStaff.length) hkRows.push({site, staff:hkStaff, recs:all.filter(r=>isHKRec(r,site))});
+      const recs = all.filter(r=>!isHKRec(r,site));
+      if (!recs.length) return;
+      const totalStaff = STAFF[site].filter(x=>!isHKRec(x,site)).length || 1;
+      const pct2 = Math.round(recs.length/totalStaff*100);
       const statusLabel2 = pct2>=100?'submitted':pct2>0?'partial':'pending';
-      const shiftBreakdown2 = ['A','B','C'].map(sh => {
-        const shRecs = recs.filter(r=>r.shift===sh);
-        if (!shRecs.length) return `<span style="font-size:10px;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.04);color:var(--text3)">Shift ${sh}: —</span>`;
-        const p2 = shRecs.filter(x=>x.status==='Present').length;
-        const a2 = shRecs.filter(x=>x.status==='Absent').length;
-        const by = shRecs[0].submittedBy ? ` · ${shRecs[0].submittedBy}` : '';
-        return `<span style="font-size:10px;padding:2px 8px;border-radius:5px;background:rgba(0,255,136,.08);color:var(--accent2);border:1px solid rgba(0,255,136,.15)">Shift ${sh}: ✅${p2} ❌${a2}${by}</span>`;
-      }).join('');
       const div2 = document.createElement('div');
       div2.className = 'site-card';
       div2.onclick = () => { openSiteDayDetail(site); };
@@ -1674,20 +1643,59 @@ async function fetchDashboardFromSheet(filterDate) {
           <span class="site-status ${statusLabel2}">${statusLabel2.toUpperCase()}</span>
         </div>
         <div class="site-bar-wrap"><div class="site-bar" style="width:${Math.min(pct2,100)}%"></div></div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">${shiftBreakdown2}</div>
-        <div class="site-counts">
-          <div class="site-count">✅ <span>${present2}</span> Present</div>
-          <div class="site-count">❌ <span>${absent2}</span> Absent</div>
-          <div class="site-count">📅 <span>${weekoff2}</span> Week Off</div>
-          <div class="site-count">🌿 <span>${onleave2}</span> Leave</div>
-        </div>`;
+        <div class="sh-total"><span>Associates Expected <b>${STAFF[site].filter(x=>!isHKRec(x,site)).length}</b></span><span>Marked <b>${recs.length}</b></span></div>
+        <div class="sh-rows">${shiftRowsHtml(recs)}</div>
+        <div class="sh-foot"><div class="sh-h">Day total</div>${cntLine(recs)}</div>`;
       sg.appendChild(div2);
     });
+    renderHKCentral(hkRows);
   } catch(e) {
     console.log('Dashboard fetch error:', e);
   }
 }
 
+function isHKRec(r,site){
+  let d=r.designation;
+  if(!d&&STAFF[site]){const m=STAFF[site].find(x=>x.name===r.staffName);d=m&&m.designation;}
+  return String(d||'').toLowerCase().includes('housekeep');
+}
+function cntLine(list){
+  const c=st=>list.filter(x=>x.status===st).length;
+  const lv=list.filter(x=>['Sick Leave','Annual Leave','Authorize Leave'].includes(x.status)).length;
+  return '<div class="sh-c"><span>✅ <b>'+c('Present')+'</b> Present</span><span>❌ <b>'+c('Absent')+'</b> Absent</span><span>📅 <b>'+c('Week Off')+'</b> Week Off</span><span>🌿 <b>'+lv+'</b> Leave</span></div>';
+}
+function shiftRowsHtml(recs){
+  return ['A','B','C'].map(sh=>{
+    const s=recs.filter(r=>r.shift===sh);
+    if(!s.length) return '<div class="sh-row empty"><div class="sh-h">Shift '+sh+'</div><div class="sh-exp">Not submitted</div></div>';
+    const by=s[0].submittedBy?' · '+s[0].submittedBy:'';
+    return '<div class="sh-row"><div class="sh-h">Shift '+sh+'</div><div class="sh-exp">Associates <b>'+s.length+'</b>'+by+'</div>'+cntLine(s)+'</div>';
+  }).join('');
+}
+function renderHKCentral(rows){
+  const box=document.getElementById('dashHK');if(!box)return;
+  if(!rows.length){box.style.display='none';return;}
+  box.style.display='';
+  let tE=0,tP=0,tA=0,tO=0,tN=0;
+  const body=rows.map(({site,staff,recs})=>{
+    const st=n=>{const r=recs.find(x=>x.staffName===n);return r?r.status:null;};
+    const people=staff.map(p=>{const s=st(p.name);const cls=!s?'nm':s==='Present'?'p':s==='Absent'?'a':'o';
+      return '<span class="hk-p '+cls+'">'+(s?STATUS_EMOJI[s]:'⏳')+' '+p.name+'</span>';}).join('');
+    const p=recs.filter(x=>x.status==='Present').length,a=recs.filter(x=>x.status==='Absent').length;
+    const nm=staff.filter(x=>!st(x.name)).length,o=staff.length-p-a-nm;
+    tE+=staff.length;tP+=p;tA+=a;tO+=o;tN+=nm;
+    const flag=p===0?'<span class="site-status pending">NO HK PRESENT</span>':'<span class="site-status submitted">COVERED</span>';
+    return '<div class="hk-row"><div class="hk-site">'+site+'</div><div class="hk-num">'+p+'/'+staff.length+'</div>'+flag+'<div class="hk-people">'+people+'</div></div>';
+  }).join('');
+  box.innerHTML='<div class="hk-head"><div class="site-name">Housekeeping · All Stores</div><div class="sh-total" style="margin:0"><span>Expected <b>'+tE+'</b></span><span>✅ <b>'+tP+'</b></span><span>❌ <b>'+tA+'</b></span><span>📅🌿 <b>'+tO+'</b></span><span>⏳ <b>'+tN+'</b> not marked</span></div></div>'+body;
+}
+function toggleTheme(){
+  const light=document.documentElement.getAttribute('data-theme')!=='light';
+  if(light)document.documentElement.setAttribute('data-theme','light');else document.documentElement.removeAttribute('data-theme');
+  try{localStorage.setItem('ds_theme',light?'light':'dark');}catch(e){}
+  const b=document.getElementById('themeBtn');if(b)b.textContent=light?'🌙':'☀️';
+}
+document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('themeBtn');if(b&&document.documentElement.getAttribute('data-theme')==='light')b.textContent='🌙';});
 // ─── INIT FORM ───
 window.onload=()=>{
   fbInit();
@@ -2747,7 +2755,7 @@ document.addEventListener('keydown', (e) => {
   .tool-input,.tool-select{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:'Outfit',sans-serif;font-size:12px;padding:9px 11px;outline:none;transition:border-color .15s}
   .tool-input:focus,.tool-select:focus{border-color:var(--accent)}
   .tool-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='%233a4f6a'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:26px}
-  .tool-select option{background:#141c28}
+  .tool-select option{background:var(--card2);color:var(--text)}
   .tool-input[type=date]{font-family:'JetBrains Mono',monospace}
   .tool-btn{width:100%;margin-top:12px;background:var(--purple);border:none;color:#070b12;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;padding:11px;border-radius:8px;cursor:pointer;letter-spacing:.3px;transition:opacity .2s, transform .12s;display:flex;align-items:center;justify-content:center;gap:6px}
   .tool-btn:hover{opacity:.92}.tool-btn:active{transform:scale(.98)}
@@ -3411,7 +3419,7 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeToolsDrawe
   .edit-modal input[type=date]{color-scheme:dark;cursor:pointer}
   .edit-modal select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%233a4f6a'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;cursor:pointer;padding-right:36px}
   .edit-modal select:focus,.edit-modal input[type=text]:focus,.edit-modal input[type=date]:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
-  .edit-modal select option{background:#141c28}
+  .edit-modal select option{background:var(--card2);color:var(--text)}
   .edit-modal .em-old{font-size:11px;color:var(--text3);margin-top:5px;font-family:'JetBrains Mono',monospace}
   .edit-modal .em-history{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;white-space:pre-wrap;max-height:120px;overflow-y:auto;line-height:1.5}
   .edit-modal .em-actions{display:flex;gap:8px;margin-top:18px}
