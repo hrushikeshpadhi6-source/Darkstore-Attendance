@@ -99,6 +99,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .kpi.present .kpi-num{color:var(--accent2)}.kpi.absent .kpi-num{color:var(--accent3)}
 .kpi.leave .kpi-num{color:var(--warn)}.kpi.total .kpi-num{color:var(--accent)}.kpi.weekoff .kpi-num{color:var(--accent)}
 .kpi.weekoff::before{background:var(--accent)}
+.shpwa{white-space:nowrap;color:var(--text3)}.shpwa b{font-weight:700}.shpwa .p{color:var(--accent2)}.shpwa .w{color:var(--warn)}.shpwa .a{color:var(--accent3)}
 .kpi-label{font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.8px}
 .kpi-sub{font-size:10px;color:var(--text3);margin-top:3px}
 .dash-sites{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
@@ -1698,7 +1699,8 @@ function renderDashboard(flat){
     const sh=['A','B','C'].map(s=>{const n=recs.filter(r=>r.shift===s);tS[s]+=n.length;
       if(!n.length)return '<td class="num mute">—</td>';
       const by=n[0].submittedBy?' · '+n[0].submittedBy:'';
-      return '<td class="num" title="Present '+n.filter(x=>x.status==='Present').length+' · Absent '+n.filter(x=>x.status==='Absent').length+esc(by)+'">'+n.length+'</td>';}).join('');
+      const cP=n.filter(x=>x.status==='Present').length,cW=n.filter(x=>x.status==='Week Off').length,cA=n.filter(x=>x.status==='Absent').length;
+      return '<td class="num shpwa" title="'+n.length+' marked · Present '+cP+' · Week Off '+cW+' · Absent '+cA+esc(by)+'"><b class="p">'+cP+'</b>/<b class="w">'+cW+'</b>/<b class="a">'+cA+'</b></td>';}).join('');
     return '<tr class="dt-row" data-site="'+esc(site)+'" onclick="openSiteDayDetail(this.dataset.site)"><td class="dt-site">'+esc(site)+'</td><td><span class="st st-'+st+'"><i></i>'+({complete:'Complete',partial:'Partial',pending:'Pending'})[st]+'</span></td><td class="num">'+exp+'</td><td class="num">'+m+'</td><td><div class="prog"><div class="pbar"><i style="width:'+Math.min(pct,100)+'%"></i></div><span>'+pct+'%</span></div></td><td class="num">'+p+'</td><td class="num'+(a?' bad':' mute')+'">'+a+'</td><td class="num">'+w+'</td><td class="num">'+l+'</td>'+sh+'</tr>';
   }).join('');
   document.getElementById('dashSites').innerHTML=body||'<tr><td colspan="12" class="dt-empty">No sites configured</td></tr>';
