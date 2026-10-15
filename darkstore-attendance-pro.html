@@ -1380,7 +1380,19 @@ function parseCSV(csv) {
   return rows;
 }
 
+function mkN(s){return String(s||'').trim().toLowerCase().replace(/\s+/g,' ');}
+function isMarked(set,name){return !!set&&set.has(mkN(name));}
 async function fetchMarkedStaff(site, day, month, year) {
+  // Merge every source (Firebase/Sheet, local history, this-session cache); names normalized
+  const marked=new Set();
+  const same=r=>mkN(r.site)===mkN(site)&&String(parseInt(r.day))===String(parseInt(day))&&mkN(r.month)===mkN(month)&&String(r.year)===String(year);
+  try{(await readLogCSVWithRetry()).forEach(r=>{if(same(r))marked.add(mkN(r.staffName));});}catch(e){console.log('Marked fetch failed:',e.message);}
+  try{getHistory().forEach(g=>{if(same(g))(g.rows||[]).forEach(row=>marked.add(mkN(row.staffName)));});}catch(e){}
+  try{JSON.parse(sessionStorage.getItem('marked_'+site+'|'+day+'|'+month+'|'+year)||'[]').forEach(n=>marked.add(mkN(n)));}catch(e){}
+  globalMarkedStaff=marked;
+  return marked;
+}
+async function fetchMarkedStaffOld(site, day, month, year) {
   try {
     const rows = await readLogCSVWithRetry();
     const marked = new Set();
@@ -1669,13 +1681,17 @@ function renderDashboard(flat){
     const all=bysite[site]||[];
     const hkStaff=STAFF[site].filter(x=>isHKRec(x,site));
     if(hkStaff.length) hkRows.push({site,staff:hkStaff,recs:all.filter(r=>isHKRec(r,site))});
-    const recs=all.filter(r=>!isHKRec(r,site));
-    const exp=STAFF[site].filter(isExpectedAssoc).length,m=recs.length;
+    const nk=s=>String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
+    const dd={};all.filter(r=>!isHKRec(r,site)).forEach(r=>{dd[nk(r.name)]=r;}); // one record per person (latest wins)
+    const recs=Object.values(dd);
+    const expList=STAFF[site].filter(isExpectedAssoc),exp=expList.length;
+    const expSet=new Set(expList.map(x=>nk(x.name)));
+    const m=recs.length,mExp=recs.filter(r=>expSet.has(nk(r.name))).length;
     if(!exp&&!m) return '';
     nSites++;
     const c=st=>recs.filter(x=>x.status===st).length;
     const p=c('Present'),a=c('Absent'),w=c('Week Off'),l=recs.filter(x=>LEAVE_ST.includes(x.status)).length;
-    const pct=exp?Math.round(m/exp*100):100;
+    const pct=exp?Math.min(100,Math.round(mExp/exp*100)):100;
     const st=m===0?'pending':pct>=100?'complete':'partial';
     if(st!=='complete')pend++;if(st==='pending')notStarted++;
     tE+=exp;tM+=m;tP+=p;tA+=a;tW+=w;tL+=l;
@@ -1863,7 +1879,7 @@ function renderStaffListWithMarked(list, markedToday){
   let visibleCount = 0;
   list.forEach(s=>{
     const isHK=s.designation==='Housekeeping';
-    const isLocked=markedToday.has(s.name);
+    const isLocked=isMarked(markedToday,s.name);
     // Hide already-submitted staff completely
     if(isLocked){ checkedStaff.delete(s.name); return; }
     visibleCount++;
@@ -1875,7 +1891,7 @@ function renderStaffListWithMarked(list, markedToday){
     ul.appendChild(div);
   });
   // Show info banner about hidden staff
-  const lockedCount = markedToday.size;
+  const lockedCount = list.filter(s=>isMarked(markedToday,s.name)).length;
   const countEl = document.getElementById('selCount');
   const existingInfo = document.getElementById('lockedInfo');
   if(existingInfo) existingInfo.remove();
@@ -1883,7 +1899,7 @@ function renderStaffListWithMarked(list, markedToday){
     const info = document.createElement('div');
     info.id='lockedInfo';
     info.style.cssText='font-size:12px;color:var(--accent2);margin-bottom:10px;padding:10px 14px;background:rgba(0,255,136,.06);border-radius:9px;border:1px solid rgba(0,255,136,.2);font-weight:600;display:flex;align-items:center;gap:8px';
-    info.innerHTML='✅ <span>'+lockedCount+' staff already submitted today — hidden from list</span>';
+    info.innerHTML='<span>'+lockedCount+' staff already marked for this day — hidden. To change their status use History → Edit.</span>';
     countEl.parentNode.insertBefore(info, countEl);
   }
 }
@@ -1910,8 +1926,8 @@ function selectAllStaff(){
   const day=document.getElementById('daySelect').value;
   const month=MONTHS[parseInt(document.getElementById('monthSelect').value)];
   const year=new Date().getFullYear();
-  const markedToday=(site&&day&&month)?getMarkedStaffToday(site,day,month,year):new Set();
-  currentSiteStaff.filter(s=>(!q||s.name.toLowerCase().includes(q)||s.agency.toLowerCase().includes(q))&&!markedToday.has(s.name)).forEach(s=>checkedStaff.add(s.name));
+  const markedToday=(site&&day&&month)?(globalMarkedStaff||new Set()):new Set();
+  currentSiteStaff.filter(s=>(!q||s.name.toLowerCase().includes(q)||s.agency.toLowerCase().includes(q))&&!isMarked(markedToday,s.name)).forEach(s=>checkedStaff.add(s.name));
   filterStaff(); updateSelCount(); rebuildStatusTable();
 }
 function clearAllStaff(){checkedStaff.clear();filterStaff();updateSelCount();hideStatusCard();}
@@ -1976,7 +1992,19 @@ async function submitForm(){
   const monthName=MONTHS[parseInt(month)];
   const key=getSubmitKey(site,selectedShift,day,monthName,year);
 
-  // No shift blocking — all shifts always open. Only individual staff locked per day.
+  // Hard block: re-check right before saving — anyone already marked for this day (any shift) is removed
+  {
+    const btn0=document.getElementById('submitBtn');btn0.disabled=true;btn0.innerHTML='<span class="spin"></span>Checking…';
+    const fresh=await fetchMarkedStaff(site,day,monthName,year);
+    btn0.disabled=false;btn0.innerHTML='Submit Attendance &rarr;';
+    const dup=[...checkedStaff].filter(n=>isMarked(fresh,n));
+    if(dup.length){
+      dup.forEach(n=>checkedStaff.delete(n));
+      renderStaffListWithMarked(currentSiteStaff,fresh);updateSelCount();rebuildStatusTable();
+      showToast('⚠️ '+dup.length+' already marked today ('+dup.slice(0,3).join(', ')+(dup.length>3?'…':'')+') — removed. Use History → Edit to change.','twarn');
+      return;
+    }
+  }
 
   const ts=new Date().toISOString();
   const rows=[];
