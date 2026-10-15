@@ -1682,11 +1682,11 @@ function renderDashboard(flat){
     const hkStaff=STAFF[site].filter(x=>isHKRec(x,site));
     if(hkStaff.length) hkRows.push({site,staff:hkStaff,recs:all.filter(r=>isHKRec(r,site))});
     const nk=s=>String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
-    const dd={};all.filter(r=>!isHKRec(r,site)).forEach(r=>{dd[nk(r.name)]=r;}); // one record per person (latest wins)
+    const dd={};all.filter(r=>!isHKRec(r,site)).forEach(r=>{dd[nk(r.staffName||r.name)]=r;}); // one record per person (latest wins)
     const recs=Object.values(dd);
     const expList=STAFF[site].filter(isExpectedAssoc),exp=expList.length;
     const expSet=new Set(expList.map(x=>nk(x.name)));
-    const m=recs.length,mExp=recs.filter(r=>expSet.has(nk(r.name))).length;
+    const m=recs.length,mExp=recs.filter(r=>expSet.has(nk(r.staffName||r.name))).length;
     if(!exp&&!m) return '';
     nSites++;
     const c=st=>recs.filter(x=>x.status===st).length;
