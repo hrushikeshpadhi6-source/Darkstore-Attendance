@@ -993,6 +993,7 @@ function goToBulkUpload(){
 }
 
 // ─── MANUAL ADD ───
+function normDesig(d){d=String(d||'').trim();if(/^warehouse\s+associate$/i.test(d))return 'Warehouse Assistant';if(/^house\s*-?\s*keep(ing|er)?$/i.test(d))return 'Housekeeping';return d;}
 function syncDept(){
   const desig = document.getElementById('m-desig').value;
   document.getElementById('m-dept').value = desig==='Housekeeping' ? 'Housekeeping' : 'Warehouse';
@@ -1116,7 +1117,7 @@ function parseCSVData(text, filename){
       site:        cells[colMap.site]        ||'',
       store:      (cells[colMap.store]       ||'').toUpperCase(),
       department:  cells[colMap.department]  ||'Warehouse',
-      designation: cells[colMap.designation] ||'',
+      designation: normDesig(cells[colMap.designation] ||''),
       agency:      cells[colMap.agency]      ||'',
       status:      cells[colMap.status]      ||'Active',
     };

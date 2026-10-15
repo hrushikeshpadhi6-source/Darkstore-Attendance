@@ -99,6 +99,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .kpi.present .kpi-num{color:var(--accent2)}.kpi.absent .kpi-num{color:var(--accent3)}
 .kpi.leave .kpi-num{color:var(--warn)}.kpi.total .kpi-num{color:var(--accent)}.kpi.weekoff .kpi-num{color:var(--accent)}
 .kpi.weekoff::before{background:var(--accent)}
+.xtra{display:inline-block;font-size:10px;font-weight:700;color:var(--warn);border:1px solid var(--warn);border-radius:4px;padding:0 4px;margin-left:4px;cursor:help;vertical-align:1px}
 .shpwa{white-space:nowrap;color:var(--text3)}.shpwa b{font-weight:700}.shpwa .p{color:var(--accent2)}.shpwa .w{color:var(--warn)}.shpwa .a{color:var(--accent3)}
 .kpi-label{font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.8px}
 .kpi-sub{font-size:10px;color:var(--text3);margin-top:3px}
@@ -1657,7 +1658,7 @@ function isExpectedAssoc(x){
 function isHKRec(r,site){
   let d=r.designation;
   if(!d&&STAFF[site]){const m=STAFF[site].find(x=>x.name===r.staffName);d=m&&m.designation;}
-  return String(d||'').toLowerCase().includes('housekeep');
+  return /house\s*-?\s*keep|cleaner/i.test(String(d||''));
 }
 function cntLine(list){
   const c=st=>list.filter(x=>x.status===st).length;
@@ -1688,6 +1689,7 @@ function renderDashboard(flat){
     const expList=STAFF[site].filter(isExpectedAssoc),exp=expList.length;
     const expSet=new Set(expList.map(x=>nk(x.name)));
     const m=recs.length,mExp=recs.filter(r=>expSet.has(nk(r.staffName||r.name))).length;
+    const extra=recs.filter(r=>!expSet.has(nk(r.staffName||r.name))).map(r=>r.staffName||r.name);
     if(!exp&&!m) return '';
     nSites++;
     const c=st=>recs.filter(x=>x.status===st).length;
@@ -1695,13 +1697,13 @@ function renderDashboard(flat){
     const pct=exp?Math.min(100,Math.round(mExp/exp*100)):100;
     const st=m===0?'pending':pct>=100?'complete':'partial';
     if(st!=='complete')pend++;if(st==='pending')notStarted++;
-    tE+=exp;tM+=m;tP+=p;tA+=a;tW+=w;tL+=l;
+    tE+=exp;tM+=mExp;tP+=p;tA+=a;tW+=w;tL+=l;
     const sh=['A','B','C'].map(s=>{const n=recs.filter(r=>r.shift===s);tS[s]+=n.length;
       if(!n.length)return '<td class="num mute">—</td>';
       const by=n[0].submittedBy?' · '+n[0].submittedBy:'';
       const cP=n.filter(x=>x.status==='Present').length,cW=n.filter(x=>x.status==='Week Off').length,cA=n.filter(x=>x.status==='Absent').length;
       return '<td class="num shpwa" title="'+n.length+' marked · Present '+cP+' · Week Off '+cW+' · Absent '+cA+esc(by)+'"><b class="p">'+cP+'</b>/<b class="w">'+cW+'</b>/<b class="a">'+cA+'</b></td>';}).join('');
-    return '<tr class="dt-row" data-site="'+esc(site)+'" onclick="openSiteDayDetail(this.dataset.site)"><td class="dt-site">'+esc(site)+'</td><td><span class="st st-'+st+'"><i></i>'+({complete:'Complete',partial:'Partial',pending:'Pending'})[st]+'</span></td><td class="num">'+exp+'</td><td class="num">'+m+'</td><td><div class="prog"><div class="pbar"><i style="width:'+Math.min(pct,100)+'%"></i></div><span>'+pct+'%</span></div></td><td class="num">'+p+'</td><td class="num'+(a?' bad':' mute')+'">'+a+'</td><td class="num">'+w+'</td><td class="num">'+l+'</td>'+sh+'</tr>';
+    return '<tr class="dt-row" data-site="'+esc(site)+'" onclick="openSiteDayDetail(this.dataset.site)"><td class="dt-site">'+esc(site)+'</td><td><span class="st st-'+st+'"><i></i>'+({complete:'Complete',partial:'Partial',pending:'Pending'})[st]+'</span></td><td class="num">'+exp+'</td><td class="num">'+mExp+(extra.length?' <span class="xtra" title="Not on roster (check name spelling): '+esc(extra.join(', '))+'">+'+extra.length+'</span>':'')+'</td><td><div class="prog"><div class="pbar"><i style="width:'+Math.min(pct,100)+'%"></i></div><span>'+pct+'%</span></div></td><td class="num">'+p+'</td><td class="num'+(a?' bad':' mute')+'">'+a+'</td><td class="num">'+w+'</td><td class="num">'+l+'</td>'+sh+'</tr>';
   }).join('');
   document.getElementById('dashSites').innerHTML=body||'<tr><td colspan="12" class="dt-empty">No sites configured</td></tr>';
   const tp=tE?Math.round(tM/tE*100):0;
