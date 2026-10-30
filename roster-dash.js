@@ -2,9 +2,11 @@
 const MG={loaded:null,last:null,detail:null,tab:'ov'};
 function mgTab(t){
   MG.tab=t;document.querySelectorAll('#mgTabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
-  const P={ov:'mgPaneOv',an:'mgPaneAn',emp:'mgPaneEmp',st:'mgPaneSt'};
+  const P={ov:'mgPaneOv',an:'mgPaneAn',hr:'mgPaneHr',emp:'mgPaneEmp',st:'mgPaneSt'};
   Object.entries(P).forEach(([k,id])=>document.getElementById(id).hidden=k!==t);
-  document.getElementById('mgFilterCard').hidden=!(t==='ov'||t==='an');
+  document.getElementById('mgFilterCard').hidden=!(t==='ov'||t==='an'||t==='hr');
+  ['mgFrom','mgTo'].forEach(id=>{const e=document.getElementById(id);if(t==='hr')e.removeAttribute('max');else{e.max=todayIso();if(e.value>e.max)e.value=e.max;}});
+  if(t==='hr'&&window.hrEnter)hrEnter();
   if(t==='emp')renderEmployees('mgPaneEmp',null);else renderMgr();
 }
 
@@ -91,7 +93,7 @@ function renderMgr(){
   const vl=Object.keys(vend).map(v=>({v,t:tally(vend[v])})).sort((a,b)=>b.t.absPct-a.t.absPct||b.t.total-a.t.total);
   document.getElementById('mgVendor').innerHTML='<thead><tr><th>Agency</th>'+THEAD+'</tr></thead><tbody>'+
     (vl.length?vl.map(x=>'<tr><td><b>'+esc(x.v)+'</b></td>'+tcells(x.t)+'</tr>').join(''):'<tr><td colspan="8" class="empty">No confirmed attendance in this range</td></tr>')+'</tbody>'+(vl.length?'<tfoot><tr><td>Total</td>'+tcells(t)+'</tr></tfoot>':'');
-  renderStores();renderHeadcount();renderAnalysis();
+  renderStores();renderHeadcount();renderAnalysis();if(window.renderHourly)renderHourly();
   if(MG.detail) openDetail(MG.detail,true);
 }
 function openDetail(code,keep){
@@ -123,6 +125,14 @@ async function addStore(){
   const pin=nextPin();RD.stores[code]={site,pin};
   try{await saveStores();toast('Store '+code+' added · PIN '+pin);}catch(e){toast('Save failed',true);}
   fillMgrStores();fillLogin();document.getElementById('nsCode').value='';renderMgr();
+}
+
+async function changePw(){
+  const g=id=>document.getElementById(id).value,kind=g('cpKind'),cur=g('cpCur'),n1=g('cpNew'),n2=g('cpNew2');
+  if(!(await pwCheck('admin',cur))){toast('Current admin password is wrong',true);return;}
+  if(n1.length<4){toast('New password: at least 4 characters',true);return;}
+  if(n1!==n2){toast('New passwords do not match',true);return;}
+  try{await pwSave(kind,n1);['cpCur','cpNew','cpNew2'].forEach(i=>document.getElementById(i).value='');toast((kind==='admin'?'Admin':'Operations')+' password changed');}catch(e){toast('Save failed: '+e.message,true);}
 }
 
 // ─── exports ───

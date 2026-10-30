@@ -338,15 +338,16 @@ select:disabled{opacity:.3;cursor:not-allowed}
   .nav-tabs .nav-tab{padding:6px 8px;font-size:11px}
   .suc-actions{flex-direction:column}
 }
+.back-new{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap}.back-new:hover{border-color:var(--text2);text-decoration:none}
 </style>
 </head>
 <body>
 <div id="verPick" style="display:none;position:fixed;inset:0;z-index:100000;background:var(--bg);align-items:center;justify-content:center;padding:24px;font-family:'IBM Plex Sans',sans-serif">
 <div style="width:100%;max-width:640px">
-<div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px">Darkstore Attendance</div>
+<img src="gwc-logo.png" alt="GWC — Delivering Logistics Innovation" style="height:56px;width:auto;display:block;margin-bottom:14px"/><div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px">Darkstore Attendance</div>
 <div style="color:var(--text2);margin-bottom:20px;font-size:14px">Choose which version to open</div>
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
-<a href="darkstore-roster-pro.html" style="display:block;text-decoration:none;background:var(--card);border:2px solid var(--accent);border-radius:12px;padding:20px;color:var(--text)"><div style="font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--accent);margin-bottom:6px">NEW · FROM NOVEMBER</div><div style="font-size:17px;font-weight:700;margin-bottom:6px">Roster Pro</div><div style="font-size:13px;color:var(--text2);line-height:1.5">Upload the date-wise roster, mark only absences. Operations Overview with shift, store and agency absenteeism.</div></a>
+<a href="darkstore-roster-pro.html" style="display:block;text-decoration:none;background:var(--card);border:2px solid var(--accent);border-radius:12px;padding:20px;color:var(--text)"><div style="font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--accent);margin-bottom:6px">NEW · FROM NOVEMBER</div><div style="font-size:17px;font-weight:700;margin-bottom:6px">GWC Shift Attendance</div><div style="font-size:13px;color:var(--text2);line-height:1.5">Upload the date-wise roster, mark only absences. Operations Overview with shift, store and agency absenteeism.</div></a>
 <a href="#" onclick="sessionStorage.setItem('ds_classic','1');document.getElementById('verPick').style.display='none';return false" style="display:block;text-decoration:none;background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:20px;color:var(--text)"><div style="font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--text3);margin-bottom:6px">CLASSIC</div><div style="font-size:17px;font-weight:700;margin-bottom:6px">Attendance Pro</div><div style="font-size:13px;color:var(--text2);line-height:1.5">The current system: mark every person per shift. All past data and reports.</div></a>
 </div></div></div>
 <script>(function(){if(!/[?&]classic=1/.test(location.search)&&!sessionStorage.getItem('ds_classic'))document.getElementById('verPick').style.display='flex';})();</script>
@@ -376,6 +377,7 @@ select:disabled{opacity:.3;cursor:not-allowed}
     <button class="nav-tab" onclick="showPage('incidents')">Report</button>
   </div>
   <div class="nav-right">
+    <a class="back-new" href="darkstore-roster-pro.html" onclick="sessionStorage.removeItem('ds_classic')" title="Back to GWC Shift Attendance">‹ Back</a>
     <div class="live-dot">LIVE</div>
     <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Switch light / dark">◐</button>
   </div>
@@ -2172,7 +2174,8 @@ function exportPDF(){
     .annual{color:#0c5460;background:#d1ecf1;padding:2px 8px;border-radius:4px;font-weight:600;font-size:11px}
     .authorize{color:#383d41;background:#e2e3e5;padding:2px 8px;border-radius:4px;font-weight:600;font-size:11px}
     .footer{margin-top:24px;font-size:11px;color:#999;text-align:center}
-  </style></head><body>
+  .back-new{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap}.back-new:hover{border-color:var(--text2);text-decoration:none}
+</style></head><body>
   <h1>Darkstore Attendance Report</h1>
   <div class="meta">${site} &nbsp;·&nbsp; ${shift} &nbsp;·&nbsp; Generated: ${new Date().toLocaleString()}</div>
   <div class="stats">
@@ -2634,6 +2637,7 @@ function checkAdminPwd(pwd){
     .sdd-table thead th,.sdd-table tbody td{padding:8px 10px}
     .sdd-table thead th.col-rem,.sdd-table tbody td.col-rem{display:none}
   }
+.back-new{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap}.back-new:hover{border-color:var(--text2);text-decoration:none}
 </style>
 
 <div class="sdd-backdrop" id="sddBackdrop" onclick="closeSiteDayDetail()"></div>
@@ -2932,6 +2936,7 @@ document.addEventListener('keydown', (e) => {
   .abs-rank .pct{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3);text-align:right}
   .abs-section-head{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 6px;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
   .abs-section-head .badge{background:var(--card2);border:1px solid var(--border2);color:var(--text3);padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:none}
+.back-new{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap}.back-new:hover{border-color:var(--text2);text-decoration:none}
 </style>
 
 <button class="tools-fab" id="toolsFab" onclick="openToolsDrawer()" aria-label="Open tools" title="Quick Tools">
@@ -3547,6 +3552,7 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeToolsDrawe
   .edit-modal .em-save{flex:1.4;background:linear-gradient(135deg,var(--accent),#0099cc);border:none;color:var(--on-accent);font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:700;padding:11px;border-radius:9px;cursor:pointer;transition:opacity .15s,transform .1s}
   .edit-modal .em-save:hover{opacity:.9}
   .edit-modal .em-save:disabled{opacity:.4;cursor:not-allowed}
+.back-new{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap}.back-new:hover{border-color:var(--text2);text-decoration:none}
 </style>
 
 <div class="edit-backdrop" id="editBackdrop" onclick="if(event.target===this)closeEditRecord()">
@@ -3914,6 +3920,7 @@ a{color:var(--accent)}a:hover{color:var(--text)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 @media(max-width:980px){.kpi-strip{grid-template-columns:repeat(3,minmax(0,1fr))}.kc:nth-child(4){border-left:none}.kc:nth-child(n+4){border-top:1px solid var(--border)}}
 @media(max-width:640px){.nav{padding:8px 12px;flex-wrap:wrap;gap:8px}.nav-tab{padding:7px 10px;font-size:12px}.dash-wrap{padding:18px 12px 48px}.kpi-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.kc{padding:12px 14px}.kc:nth-child(odd){border-left:none}.kc:nth-child(4){border-left:1px solid var(--border)}.kc:nth-child(n+3){border-top:1px solid var(--border)}.kc-n{font-size:24px}.dash-actions{width:100%}.dt td,.dt th{padding:9px 10px}}
+.back-new{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap}.back-new:hover{border-color:var(--text2);text-decoration:none}
 </style>
 </body>
 </html>

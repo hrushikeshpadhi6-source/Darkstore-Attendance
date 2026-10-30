@@ -1,6 +1,10 @@
 // ═══ Darkstore Roster Pro — data layer (Firebase) ═══
 const FB_CONFIG={apiKey:"AIzaSyDcxK2x1xeFftXX6Xg1tXoGs1WVpV5YY9k",authDomain:"darkstore-attendance.firebaseapp.com",projectId:"darkstore-attendance",storageBucket:"darkstore-attendance.firebasestorage.app",messagingSenderId:"675191225861",appId:"1:675191225861:web:67b88319db36e96e89e66c"};
-const ADMIN_PW='9556905186';
+// Passwords are stored only as SHA-256 hashes (meta/auth in Firebase; these are first-run defaults). Change them in Operations → Stores.
+const PW_DEF={admin:'ef41508be60646ecf44297c3b94f89a6e9089b6f289c3d7ed6d5c40411b74bb0',ops:'6e363346c4da55e75ff5ae511aa8afd39a6eaabfcbc80e7c817859f5d8ecdd5f'};
+async function pwHash(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('rp|'+String(s||'')));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+async function pwCheck(kind,v){return (await pwHash(v))===((RD.auth||{})[kind]||PW_DEF[kind]);}
+async function pwSave(kind,v){const h=await pwHash(v);RD.auth=Object.assign({},PW_DEF,RD.auth||{},{[kind]:h});await tmo(db.collection('meta').doc('auth').set({admin:RD.auth.admin,ops:RD.auth.ops,updatedAt:new Date().toISOString()}),8000);}
 const BASE_PINS={"Al Raha":"1001","Yas Mall":"1002","MBZ":"1003","Khalifa City":"1004","Al Qusais":"1005","Business Bay":"1006","NIP":"1007","Sharjah Central":"1008"};
 // First-run store list: code → linked site (PIN follows the site; unlinked stores get 1010, 1011…). Editable in Manager → Stores.
 const SEED_STORES={QAA1:'MBZ',QAA6:'',QAA7:'Al Raha',QDG8:'DIFC DUBAI',QDD3:'Yas Mall',QDG5:'',QDC6:'Al Qusais',QHA5:'Sharjah Central'};
@@ -23,6 +27,7 @@ function addDays(iso,n){const d=dOf(iso);d.setDate(d.getDate()+n);return isoOf(d
 function dayName(iso){return DAYS[(dOf(iso).getDay()+6)%7];}
 function fmtDate(iso,opt){return dOf(iso).toLocaleDateString('en-GB',opt||{day:'numeric',month:'short',year:'numeric'});}
 function fmtHead(iso){const d=dOf(iso);return pad(d.getDate())+'-'+MON3[d.getMonth()]+'-'+d.getFullYear()+' ('+dayName(iso).slice(0,3)+')';}
+function fmtDateCol(iso){const d=dOf(iso);return pad(d.getDate())+'-'+MON3[d.getMonth()]+'-'+d.getFullYear();}
 function fmtShort(iso){const d=dOf(iso);return dayName(iso).slice(0,3)+' '+d.getDate()+' '+MON3[d.getMonth()];}
 function rangeDates(a,b){const out=[];for(let x=a;x<=b;x=addDays(x,1))out.push(x);return out;}
 function parseDateHead(v,mdy){
@@ -71,6 +76,7 @@ async function rdInit(){
   try{db.enablePersistence({synchronizeTabs:true}).catch(()=>{});}catch(e){}
   let storesDoc=null,storesRead=false,pinsRead=false;
   await Promise.all([
+    tmo(db.collection('meta').doc('auth').get(),9000).then(d=>{if(d&&d.exists)RD.auth=d.data();}).catch(()=>{}),
     tmo(db.collection('meta').doc('sitePins').get(),9000).then(d=>{if(d){pinsRead=true;RD.pins=Object.assign({},BASE_PINS,(d.exists&&d.data().pins)||{});}else RD.pins=Object.assign({},BASE_PINS);}).catch(()=>{RD.pins=Object.assign({},BASE_PINS);}),
     tmo(db.collection('meta').doc('stores').get(),9000).then(d=>{if(d){storesRead=true;storesDoc=d.exists?d.data().stores:null;}}).catch(()=>{})
   ]);
@@ -158,6 +164,13 @@ async function loadRosters(from,to){
 }
 function listenRosters(from,to,cb){const f=snapInto(RD.rosters);return rangeQ('rost__',from,to).onSnapshot(s=>{f(s);cb&&cb();},e=>console.warn('rosters listen',e));}
 
+// Store sessions: read/listen only this store's docs by exact ID (much faster than range reads across all stores)
+async function loadStoreDocs(store,prefix,from,to,target){
+  await Promise.all(rangeDates(from,to).map(dt=>tmo(db.collection('meta').doc(prefix+dt+'__'+sid(store)).get(),12000).then(s=>{if(s&&s.exists)target[s.id]=s.data();}).catch(e=>{RD.err=e.message;})));
+}
+function listenStoreDocs(store,prefix,from,to,target,cb){
+  return rangeDates(from,to).map(dt=>db.collection('meta').doc(prefix+dt+'__'+sid(store)).onSnapshot(s=>{if(s.exists)target[s.id]=s.data();else delete target[s.id];cb&&cb();},e=>console.warn('listen',e)));
+}
 // Day confirmations
 function dayKey(store,date){return 'rday__'+date+'__'+sid(store);}
 function getDay(store,date){return RD.days[dayKey(store,date)]||null;}
@@ -194,6 +207,25 @@ function dayPeople(store,date,marks){
   people=people.map(p=>Object.assign({},p,{confirmed:!!sc[p.shift]}));
   const shs=SHIFTS.filter(s=>people.some(p=>p.shift===s)),done=shs.filter(s=>sc[s]);
   return {hasRoster:true,confirmed:shs.length>0&&done.length===shs.length,partial:done.length>0&&done.length<shs.length,day,sc,shifts:shs,done,people};
+}
+async function clearShift(store,date,shift,by){
+  const day=getDay(store,date);if(!day) return null;
+  const r=getRoster(store,date),sc=Object.assign({},shiftsConf(day));delete sc[shift];
+  const snap=day.people||[],gone=snap.filter(p=>p.shift===shift);
+  const inShift=new Set([...gone.map(p=>nk(p.name)),...(r?r.rows.filter(x=>x.shift===shift).map(x=>nk(x.name)):[])]);
+  const marks=Object.assign({},day.marks||{});Object.keys(marks).forEach(k=>{if(inShift.has(k))delete marks[k];});
+  const people=snap.filter(p=>p.shift!==shift);
+  const t=tally(people.filter(p=>sc[p.shift])),site=day.site||siteOf(store)||store,now=new Date().toISOString();
+  const doc=Object.assign({},day,{marks,shifts:sc,confirmed:false,people,clearedAt:now,clearedBy:by||store,
+    counts:{total:t.total,weekOff:t.weekOff,present:t.present,absent:t.absent,sick:t.sick}});
+  RD.days[dayKey(store,date)]=doc;
+  const b=db.batch();b.set(db.collection('meta').doc(dayKey(store,date)),doc);
+  const dt=dOf(date),y=dt.getFullYear(),mo=dt.getMonth()+1,dd=dt.getDate();
+  gone.forEach(p=>{const sh=SHIFT_ABC[p.shift]||p.shift;
+    const id=[site,y,mo,dd,sh,p.name].map(x=>String(x??'').trim().replace(/[\/#\[\]\.]/g,'-')).join('|');
+    b.delete(db.collection('attendance').doc(id));});
+  await tmo(b.commit(),10000);
+  return doc;
 }
 async function confirmShift(store,date,shift,marks,by){
   const day=getDay(store,date)||{},r=getRoster(store,date);

@@ -19,7 +19,7 @@ function renderRoster(){
   h+='<div class="card"><div class="card-h"><div><h3>Upload roster</h3><div class="sub">CSV or Excel · one row per person · one column per date</div></div><button class="btn sm" onclick="downloadTemplate()">Download template ('+fmtShort(dates[0])+' – '+fmtShort(dates[6])+')</button></div><div class="card-b">'+
     '<label class="drop" ondragover="event.preventDefault();this.classList.add(\'over\')" ondragleave="this.classList.remove(\'over\')" ondrop="event.preventDefault();this.classList.remove(\'over\');onRosterFile(event.dataTransfer.files[0])">'+
     '<input type="file" accept=".csv,.xlsx,.xls" hidden onchange="onRosterFile(this.files[0]);this.value=\'\'"/>Drop the roster file here or <b style="color:var(--navy)">choose file</b>'+
-    '<div style="font-size:12px;color:var(--ink3);margin-top:6px">Columns: Name, Designation, Agency, Shift (DAY / EVENING / NIGHT), Week Off, Start, End, then one column per date (e.g. 01-Nov-2026). Date cells: timing like 8:00 AM - 5:00 PM, or Week Off.</div></label></div></div>';
+    '<div style="font-size:12px;color:var(--ink3);margin-top:6px">Columns: Name, Designation, Agency, Shift (DAY / EVENING / NIGHT), Week Off, Start, End, then one column per date (date only, e.g. 01-Nov-2026 — drag right in Excel to add more days). Date cells: timing like 8:00 AM - 5:00 PM, or Week Off.</div></label></div></div>';
   h+=ST.preview?previewHtml():gridHtml(dates);
   el.innerHTML=h;
 }
@@ -43,7 +43,7 @@ function downloadTemplate(){
       return p.weekOff&&p.weekOff===dayName(d)?'Week Off':def;
     })];
   });
-  downloadCsv('Roster '+store+' '+dates[0]+' to '+dates[6]+'.csv',[[...TPL_FIX,...dates.map(fmtHead)],...rows]);
+  downloadCsv('Roster '+store+' '+dates[0]+' to '+dates[6]+'.csv',[[...TPL_FIX,...dates.map(fmtDateCol)],...rows]);
   toast(base?'Template filled from current roster':'Template filled from employee list — check Shift, timings and Week Off');
 }
 
