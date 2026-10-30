@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Darkstore Roster Pro</title>
+<script>try{if(localStorage.getItem('ds_theme')==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f3f5f8;--card:#fff;--card2:#f5f7fa;--line:#dde3eb;--line2:#c9d2de;--ink:#15202e;--ink2:#4c5b70;--ink3:#7d8a9c;--navy:#1d3a6b;--navy2:#2c52914d;--ok:#0b8a4f;--okbg:#e5f4ec;--warn:#b26a00;--warnbg:#fdf1dc;--bad:#c62f46;--badbg:#fbe7ea;--sick:#6a4bc4;--sickbg:#efeafb;--r:10px}
+html[data-theme=dark]{--bg:#0d121a;--card:#141b26;--card2:#1a2330;--line:#253142;--line2:#33415a;--ink:#e3e9f2;--ink2:#9aa8bc;--ink3:#6a788d;--navy:#7fa6ea;--navy2:#7fa6ea33;--ok:#3fcf8a;--okbg:#123224;--warn:#f0b14f;--warnbg:#3a2b12;--bad:#f2687d;--badbg:#3a1820;--sick:#a78bfa;--sickbg:#2a2140;color-scheme:dark}
+body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.45;min-height:100vh}
+a{color:var(--navy);text-decoration:none}a:hover{text-decoration:underline}
+.mono{font-family:'IBM Plex Mono',monospace}
+button{font:inherit;cursor:pointer}
+.scr{display:none}.scr.on{display:block}
+/* top bar */
+.bar{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
+.brand i{width:28px;height:28px;border-radius:7px;background:var(--navy);color:var(--card);font-style:normal;display:flex;align-items:center;justify-content:center;font-size:12px;font-family:'IBM Plex Mono',monospace}
+.brand .logo{height:36px;width:auto;background:#fff;border-radius:6px;padding:2px 4px;border:1px solid var(--line)}.brand .logo-lg{height:84px;width:auto;background:#fff;border-radius:10px;padding:4px 8px;border:1px solid var(--line)}.login-head .brand{gap:16px;font-size:18px}
+.brand small{display:block;font-weight:500;color:var(--ink3);font-size:11px;letter-spacing:0}
+.bar-r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tabs{display:flex;gap:2px;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:3px}
+.tab{border:0;background:none;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;color:var(--ink2)}
+.tab.on{background:var(--navy);color:var(--card)}
+.wrap{max-width:1180px;margin:0 auto;padding:20px}
+/* controls */
+.btn{border:1px solid var(--line2);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--navy)}
+.btn.pri{background:var(--navy);border-color:var(--navy);color:var(--card)}
+.btn.pri:hover{filter:brightness(1.1)}
+.btn.ghost{border-color:transparent;background:none;color:var(--ink2)}
+.btn.sm{padding:5px 10px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.inp,.sel{border:1px solid var(--line2);background:var(--card);color:var(--ink);padding:8px 10px;border-radius:8px;font:inherit;font-size:13px;min-width:0}
+.inp:focus,.sel:focus{outline:2px solid var(--navy2);border-color:var(--navy)}
+.fld{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:var(--ink2)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px}
+.card-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line)}
+.card-h h3{font-size:14px;font-weight:700}
+.card-h .sub{font-size:12px;color:var(--ink3);font-weight:500}
+.card-b{padding:16px}
+/* login */
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-box{width:100%;max-width:760px}
+.login-head{margin-bottom:22px}
+.login-head h1{font-size:24px;font-weight:700;letter-spacing:-.2px}
+.login-head p{color:var(--ink2);margin-top:4px}
+.login-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.login-grid .card{margin:0}
+.login-grid .card-b{display:flex;flex-direction:column;gap:12px}
+.login-foot{margin-top:18px;font-size:13px;color:var(--ink3);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+/* banners */
+.note{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;border:1px solid var(--line);background:var(--card2);color:var(--ink2)}
+.note.warn{background:var(--warnbg);border-color:transparent;color:var(--warn)}
+.note.bad{background:var(--badbg);border-color:transparent;color:var(--bad)}
+.note.ok{background:var(--okbg);border-color:transparent;color:var(--ok)}
+.note b{font-weight:700}
+/* kpi */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.kpi .l{font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px}
+.kpi .v{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;margin-top:2px}
+.kpi.ok .v{color:var(--ok)}.kpi.bad .v{color:var(--bad)}.kpi.warn .v{color:var(--warn)}.kpi.sick .v{color:var(--sick)}
+/* tables */
+.tw{overflow-x:auto}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--card2);white-space:nowrap}
+.t td{padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.t tr:last-child td{border-bottom:0}
+.t .n{text-align:right;font-family:'IBM Plex Mono',monospace}
+.t tfoot td{font-weight:700;background:var(--card2);border-top:1px solid var(--line2)}
+.t td.ok{color:var(--ok);font-weight:600}.t td.bad{color:var(--bad);font-weight:600}.t td.sick{color:var(--sick);font-weight:600}.t td.wo{color:var(--warn);font-weight:600}
+.t tbody tr.click{cursor:pointer}.t tbody tr.click:hover td{background:var(--card2)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:20px}
+.pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--okbg);color:var(--ok)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.bad{background:var(--badbg);color:var(--bad)}.pill.mute{background:var(--card2);color:var(--ink3)}
+.abs-hi{color:var(--bad);font-weight:700}
+/* marking list */
+.shift-grp{margin-bottom:16px}
+.shift-h{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:13px}
+.shift-h .c{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;color:var(--ink2)}
+.ppl{list-style:none}
+.pp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line)}
+.pp:last-child{border-bottom:0}
+.slot-h{display:flex;justify-content:space-between;gap:10px;padding:6px 16px;background:var(--card2);border-bottom:1px solid var(--line);font-size:12px;font-weight:600;color:var(--ink2);font-family:'IBM Plex Mono',monospace}.slot-h .bad{color:var(--bad)}
+.t tr.sub td{font-size:12px;color:var(--ink2);padding-top:5px;padding-bottom:5px}.t tr.sub td:first-child{padding-left:28px}
+.pp .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pp .meta{font-size:12px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pp.lead .nm::after{content:attr(data-role);margin-left:8px;font-size:10px;font-weight:700;color:var(--navy);border:1px solid var(--navy2);padding:1px 6px;border-radius:4px;vertical-align:1px}
+.seg{display:flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--card);padding:8px 12px;font-size:12px;font-weight:600;color:var(--ink2);min-width:44px;min-height:36px}
+.seg button+button{border-left:1px solid var(--line2)}
+.seg button.on.p{background:var(--ok);color:#fff}.seg button.on.a{background:var(--bad);color:#fff}.seg button.on.s{background:var(--sick);color:#fff}.seg button.on.w{background:var(--warn);color:#fff}
+.wo-chg{font-size:11px;font-weight:700;color:var(--warn);border:1px solid var(--warn);padding:1px 6px;border-radius:4px;white-space:nowrap}
+.seg[aria-disabled=true]{opacity:.55;pointer-events:none}
+.wo-tag{font-size:12px;font-weight:600;color:var(--warn);background:var(--warnbg);padding:6px 10px;border-radius:6px}
+.sticky-foot{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;z-index:10}
+.sticky-foot .sum{font-size:13px;color:var(--ink2);display:flex;gap:14px;flex-wrap:wrap}
+.sticky-foot .sum b{font-family:'IBM Plex Mono',monospace}
+.sum .ok{color:var(--ok)}.sum .bad{color:var(--bad)}.sum .sick{color:var(--sick)}.sum .wo{color:var(--warn)}
+/* roster edit */
+.t select.mini{padding:4px 6px;font-size:12px;border-radius:6px;border:1px solid var(--line2);background:var(--card);color:var(--ink)}
+.err td{background:var(--badbg)}
+.err-msg{color:var(--bad);font-size:12px;white-space:normal}
+.drop{display:block;border:1.5px dashed var(--line2);border-radius:var(--r);padding:22px;text-align:center;color:var(--ink2);cursor:pointer}
+.drop:hover,.drop.over{border-color:var(--navy);background:var(--card2)}
+.empty{padding:30px 16px;text-align:center;color:var(--ink3);font-size:13px}
+/* modal + toast */
+.modal{position:fixed;inset:0;background:rgba(10,16,26,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+.modal.on{display:flex}
+.modal .card{width:100%;max-width:360px;margin:0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--card);padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;opacity:0;transition:.25s;z-index:60;max-width:92vw}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.bad{background:var(--bad);color:#fff}
+.spin{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+.loading{padding:40px;text-align:center;color:var(--ink3)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr));gap:16px}
+.grid2 .card{margin:0}
+.mb{margin-bottom:16px}
+.abar{height:8px;background:var(--badbg);border-radius:4px;min-width:60px}.abar i{display:block;height:100%;background:var(--bad);border-radius:4px}
+#scr-mgr .bar .tabs,#scr-site .bar .tabs{overflow-x:auto;max-width:100%}
+@media(max-width:640px){.wrap{padding:14px}.bar{padding:10px 14px}.pp{grid-template-columns:1fr}.seg{justify-self:stretch}.seg button{flex:1}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<section class="scr on" id="scr-login" data-screen-label="Login">
+<div class="login"><div class="login-box">
+<div class="login-head"><div class="brand"><img class="logo-lg" src="gwc-logo.png" alt="GWC — Delivering Logistics Innovation"/><div>Darkstore Roster Pro<small>Roster-based attendance</small></div></div></div>
+<div class="login-grid">
+<div class="card"><div class="card-h"><h3>Store login</h3><span class="sub">Upload roster, mark absences</span></div>
+<div class="card-b">
+<label class="fld">Store<select class="sel" id="lgSite"><option value="">Loading stores…</option></select></label>
+<label class="fld">PIN<input class="inp mono" id="lgPin" type="password" inputmode="numeric" maxlength="6" placeholder="4-digit PIN" onkeydown="if(event.key==='Enter')siteLogin()"/></label>
+<button class="btn pri" onclick="siteLogin()">Open site</button>
+</div></div>
+<div class="card"><div class="card-h"><h3>Operations Overview</h3><span class="sub">All stores, absenteeism, exports</span></div>
+<div class="card-b">
+<label class="fld">Admin password<input class="inp mono" id="lgAdmin" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')mgrLogin()"/></label>
+<button class="btn pri" onclick="mgrLogin()">Open overview</button>
+</div></div>
+</div>
+<div class="login-foot"><span id="lgStatus">Connecting to Firebase…</span><a href="darkstore-attendance-pro.html?classic=1">Open classic version</a></div>
+</div></div>
+</section>
+
+<!-- SITE -->
+<section class="scr" id="scr-site" data-screen-label="Site">
+<header class="bar">
+<div class="brand"><img class="logo" src="gwc-logo.png" alt="GWC"/><div><span id="stName">—</span><small id="stSub">—</small></div></div>
+<div class="tabs"><button class="tab on" data-t="today" onclick="siteTab('today')">Today</button><button class="tab" data-t="roster" onclick="siteTab('roster')">Roster</button><button class="tab" data-t="hist" onclick="siteTab('hist')">History</button><button class="tab" data-t="emp" onclick="siteTab('emp')">Employees</button></div>
+<div class="bar-r"><button class="btn ghost sm" onclick="toggleTheme()">Theme</button><button class="btn sm" onclick="logout()">Log out</button></div>
+</header>
+<div class="wrap" id="stToday"></div>
+<div class="wrap" id="stRoster" hidden></div>
+<div class="wrap" id="stHist" hidden></div>
+<div class="wrap" id="stEmp" hidden></div>
+<div class="sticky-foot" id="stFoot" hidden></div>
+</section>
+
+<!-- MANAGER -->
+<section class="scr" id="scr-mgr" data-screen-label="Operations Overview">
+<header class="bar">
+<div class="brand"><img class="logo" src="gwc-logo.png" alt="GWC"/><div>Operations Overview<small id="mgSub">Roster attendance</small></div></div>
+<div class="tabs" id="mgTabs"><button class="tab on" data-t="ov" onclick="mgTab('ov')">Overview</button><button class="tab" data-t="an" onclick="mgTab('an')">Absenteeism</button><button class="tab" data-t="emp" onclick="mgTab('emp')">Employees</button><button class="tab" data-t="st" onclick="mgTab('st')">Stores</button></div>
+<div class="bar-r"><span class="pill ok" id="mgLive">Live</span><button class="btn ghost sm" onclick="toggleTheme()">Theme</button><button class="btn sm" onclick="logout()">Log out</button></div>
+</header>
+<div class="wrap">
+<div class="card" id="mgFilterCard"><div class="card-b row">
+<label class="fld">From<input class="inp" type="date" id="mgFrom"/></label>
+<label class="fld">To<input class="inp" type="date" id="mgTo"/></label>
+<label class="fld">Store<select class="sel" id="mgSite"><option value="">All stores</option></select></label>
+<label class="fld">Role<select class="sel" id="mgRole"><option value="Associate">Associates</option><option value="">All roles</option><option value="Lead">Supervisors &amp; TLs</option><option value="Housekeeping">Housekeeping</option></select></label>
+<div class="row" style="gap:6px"><button class="btn sm" onclick="mgQuick(0)">Today</button><button class="btn sm" onclick="mgQuick(-1)">Yesterday</button><button class="btn sm" onclick="mgQuick('w')">This week</button><button class="btn sm" onclick="mgQuick('m')">This month</button></div>
+</div></div>
+<div id="mgPaneOv">
+<div id="mgWarn"></div>
+<div class="kpis" id="mgKpi"></div>
+<div class="card"><div class="card-h"><div><h3>Shift summary</h3><div class="sub" id="mgShiftSub"></div></div></div><div class="tw"><table class="t" id="mgShift"></table></div></div>
+<div class="card"><div class="card-h"><div><h3>Store-wise</h3><div class="sub">Click a store to see absentees</div></div><button class="btn sm" onclick="exportStore()">Export CSV</button></div><div class="tw"><table class="t" id="mgStore"></table></div></div>
+<div class="card"><div class="card-h"><div><h3>Agency-wise</h3><div class="sub">Absenteeism by agency</div></div><button class="btn sm" onclick="exportVendor()">Export CSV</button></div><div class="tw"><table class="t" id="mgVendor"></table></div></div>
+<div class="card" id="mgDetailCard" hidden><div class="card-h"><div><h3 id="mgDetailT">Absentees</h3><div class="sub" id="mgDetailS"></div></div><button class="btn sm" onclick="closeDetail()">Close</button></div><div class="tw"><table class="t" id="mgDetail"></table></div></div>
+<div class="card"><div class="card-h"><div><h3>Attendance sheet</h3><div class="sub">Date-wise P / A / SL / WO per person for the selected range, with totals</div></div><div class="row" style="gap:8px"><button class="btn sm" onclick="exportSheet()">Selected range</button><input class="inp" type="month" id="mgMonth" style="padding:5px 8px;font-size:12px"/><button class="btn pri sm" onclick="exportMonth()">Download month</button></div></div></div>
+<div class="card"><div class="card-h"><div><h3>Full export</h3><div class="sub">Every person, every day in the selected range</div></div><button class="btn sm" onclick="exportDetail()">Download detailed CSV</button></div></div>
+</div>
+<div id="mgPaneAn" hidden></div>
+<div id="mgPaneEmp" hidden></div>
+<div id="mgPaneSt" hidden><div class="card"><div class="card-h"><div><h3>Stores</h3><div class="sub">Store code, linked site and login PIN</div></div></div><div class="tw"><table class="t" id="mgStores"></table></div></div></div>
+</div>
+</section>
+
+<div class="modal" id="pwModal"><div class="card"><div class="card-h"><h3>Admin password</h3></div><div class="card-b" style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:13px;color:var(--ink2)" id="pwMsg">Editing a past day needs the admin password.</p>
+<input class="inp mono" id="pwInp" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')pwOk()"/>
+<div class="row" style="justify-content:flex-end"><button class="btn" onclick="pwClose()">Cancel</button><button class="btn pri" onclick="pwOk()">Unlock</button></div>
+</div></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="roster-data.js?v=1793378121944"></script>
+<script src="roster-site.js?v=1793378121944"></script>
+<script src="roster-upload.js?v=1793378121944"></script>
+<script src="roster-emp.js?v=1793378121944"></script>
+<script src="roster-analysis.js?v=1793378121944"></script>
+<script src="roster-dash.js?v=1793378121944"></script>
+</body>
+</html>
