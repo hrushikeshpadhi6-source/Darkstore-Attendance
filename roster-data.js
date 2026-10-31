@@ -129,7 +129,7 @@ function mergeEmps(store,people,by){
   people.forEach(x=>{
     const k=nk(x.name),e=list.find(y=>nk(y.name)===k);
     const f={designation:x.designation,vendor:x.vendor||'',shift:x.defShift||x.shift,start:x.start||'',end:x.end||'',weekOff:x.weekOff||''};
-    if(!e){list.push(Object.assign({name:x.name,status:'Active',joinDate:todayIso(),addedAt:now,addedBy:by,source:'roster'},f));res.added.push(x.name);}
+    if(!e){list.push(Object.assign({name:x.name,status:'Active',joinDate:x.joinDate||todayIso(),addedAt:now,addedBy:by,source:'roster'},f));res.added.push(x.name);}
     else{if(e.status==='Removed'){e.status='Active';e.reactivatedAt=now;delete e.removedAt;delete e.removedReason;res.reactivated.push(x.name);}
       Object.keys(f).forEach(k2=>{if(f[k2])e[k2]=f[k2];});}
   });

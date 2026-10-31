@@ -13,7 +13,7 @@ function renderRoster(){
   if(!ST.rFrom)ST.rFrom=todayIso();
   const dates=viewDates(),missing=dates.filter(d=>!getRoster(store,d));
   let h='<div class="row mb"><label class="fld">Show 7 days from<input class="inp" type="date" value="'+ST.rFrom+'" onchange="if(this.value){ST.rFrom=this.value;ST.edit=null;renderRoster()}"/></label>'+
-    '<button class="btn" onclick="ST.rFrom=addDays(ST.rFrom,-7);ST.edit=null;renderRoster()">‹ Prev</button><button class="btn" onclick="ST.rFrom=addDays(ST.rFrom,7);ST.edit=null;renderRoster()">Next ›</button></div>';
+    '<button class="btn" onclick="ST.rFrom=addDays(ST.rFrom,-7);ST.edit=null;renderRoster()">‹ Prev</button><button class="btn" onclick="ST.rFrom=addDays(ST.rFrom,7);ST.edit=null;renderRoster()">Next ›</button>'+(missing.length?'<button class="btn pri" onclick="continueRoster()" title="Copy the previous week\'s roster to the days without one">Continue same roster</button>':'')+'</div>';
   h+=missing.length?'<div class="note '+(missing.includes(todayIso())?'bad':'warn')+'"><b>No roster for '+missing.length+' of 7 days:</b> '+missing.map(fmtShort).join(', ')+'</div>'
     :'<div class="note ok"><b>Roster uploaded for all 7 days.</b></div>';
   h+='<div class="card"><div class="card-h"><div><h3>Upload roster</h3><div class="sub">CSV or Excel · one row per person · one column per date</div></div><button class="btn sm" onclick="downloadTemplate()">Download template ('+fmtShort(dates[0])+' – '+fmtShort(dates[6])+')</button></div><div class="card-b">'+
@@ -25,6 +25,18 @@ function renderRoster(){
 }
 
 // ─── template ───
+// ─── continue with the same roster: copy the previous week (same weekday) into days without a roster ───
+function continueRoster(){
+  const store=SESSION.store,all=viewDates().filter(d=>!getRoster(store,d)&&!(ST.edit&&ST.edit[d])),ds=all.filter(d=>!dateLocked(d));
+  if(!all.length){toast('Roster already saved for all 7 days');return;}
+  if(!ds.length){askPw('These days are in the past. Enter the admin password to copy the roster.',()=>{ST.unlocked.rosterPast=true;continueRoster();});return;}
+  const gone=new Set(empsOf(store,true).filter(e=>e.status==='Removed').map(e=>nk(e.name)));
+  let n=0;
+  ds.forEach(d=>{let src=null;for(let w=1;w<=5&&!src;w++)src=getRoster(store,addDays(d,-7*w));if(!src)return;
+    ST.edit=ST.edit||{};ST.edit[d]=JSON.parse(JSON.stringify(src.rows)).filter(x=>!gone.has(nk(x.name)));n++;});
+  if(!n){toast('No earlier roster found to copy — upload one',true);return;}
+  renderRoster();toast('Previous week copied to '+n+' day(s) — check and press Save changes');
+}
 function downloadTemplate(){
   const store=SESSION.store,dates=viewDates();
   const base=latestRoster(store,dates[0]);
@@ -98,7 +110,8 @@ async function onRosterFile(file){
       const blank=dcols.filter(d=>!cells[d.date]).length;if(blank&&!errs.length)warns.push(blank+' blank day(s) — not on roster those days');
       if(!g('vendor'))warns.push('No agency');
       const sc=g('store').toUpperCase();if(sc&&sc!==SESSION.store)errs.push('Store code '+sc+' — you are logged in as '+SESSION.store);
-      rows.push({line:hi+ri+2,person:{name,designation:normDesig(g('designation')),vendor:g('vendor'),defShift:shift,weekOff:wo==='None'?'':wo,start,end},cells,errs,warns});
+      const jd=(dcols.find(d=>cells[d.date])||{}).date||'';
+      rows.push({line:hi+ri+2,person:{name,designation:normDesig(g('designation')),vendor:g('vendor'),defShift:shift,weekOff:wo==='None'?'':wo,start,end,joinDate:jd},cells,errs,warns});
     });
     if(!rows.length) throw new Error('No people found under the Name column');
     ST.preview={file:file.name,dates:dcols.map(d=>d.date),rows};ST.edit=null;renderRoster();
@@ -137,7 +150,9 @@ function gridHtml(dates){
   const store=SESSION.store,ppl=new Map();
   dates.forEach(d=>(rowsFor(d)||[]).forEach(x=>{if(!ppl.has(nk(x.name)))ppl.set(nk(x.name),x);}));
   if(!ppl.size) return '<div class="card"><div class="empty">No roster saved for these dates yet.</div></div>';
-  const dirty=ST.edit&&Object.keys(ST.edit).length;
+  const dirty=ST.edit&&Object.keys(ST.edit).length,em=new Map(empsOf(store,true).map(e=>[nk(e.name),e]));
+  const na=(p,d)=>{const e=em.get(nk(p.name)),j=(e&&e.joinDate)||p.joinDate;return (j&&d<j)||(e&&e.status==='Removed'&&e.removedAt&&d>e.removedAt.slice(0,10));};
+  const blank=(p,d)=>'<td style="color:var(--ink3)"'+(na(p,d)?' title="Not joined yet / removed">N/A':'>—')+'</td>';
   const list=[...ppl.values()].sort((a,b)=>SHIFTS.indexOf(a.defShift||a.shift)-SHIFTS.indexOf(b.defShift||b.shift)||a.name.localeCompare(b.name));
   let h='<div class="card"><div class="card-h"><div><h3>Roster · '+fmtShort(dates[0])+' – '+fmtShort(dates[6])+'</h3><div class="sub">'+ppl.size+' people · change a day to Day / Evening / Night / Week Off'+(dates.some(dateLocked)?' · past dates locked':'')+'</div></div>'+
     '<div class="row">'+(dates.some(dateLocked)?'<button class="btn sm" onclick="askPw(\'Editing past roster dates needs the admin password.\',()=>{ST.unlocked.rosterPast=true;renderRoster();})">Unlock past</button>':'')+
@@ -148,8 +163,8 @@ function gridHtml(dates){
     const k=nk(p.name).replace(/'/g,"\\'");
     h+='<tr><td><b>'+esc(p.name)+'</b></td><td>'+esc(p.designation)+'</td><td>'+esc(p.vendor||'—')+'</td>';
     dates.forEach(d=>{
-      const rows=rowsFor(d);if(!rows){h+='<td style="color:var(--ink3)">—</td>';return;}
-      const x=rows.find(y=>nk(y.name)===nk(p.name));if(!x){h+='<td style="color:var(--ink3)">—</td>';return;}
+      const rows=rowsFor(d);if(!rows){h+=blank(p,d);return;}
+      const x=rows.find(y=>nk(y.name)===nk(p.name));if(!x){h+=blank(p,d);return;}
       const v=x.off?'WO':x.shift;totals[d]=totals[d]||{};totals[d][v]=(totals[d][v]||0)+1;
       h+='<td title="'+esc(x.time||'')+'"><select class="mini"'+(dateLocked(d)?' disabled':'')+' style="'+(x.off?'color:var(--warn);font-weight:600':'')+'" onchange="editCell(\''+d+'\',\''+k+'\',this.value)">'+
         [...SHIFTS.map(s=>[s,SHIFT_LBL[s]]),['WO','Week Off']].map(([o,l])=>'<option value="'+o+'"'+(o===v?' selected':'')+'>'+l+'</option>').join('')+'</select></td>';
@@ -184,21 +199,22 @@ function addPersonForm(){
     '<label class="fld">Start<input class="inp" id="apStart" placeholder="8:00 AM" style="width:90px"/></label>'+
     '<label class="fld">End<input class="inp" id="apEnd" placeholder="5:00 PM" style="width:90px"/></label>'+
     '<label class="fld">Week Off<select class="sel" id="apWo"><option value="">None</option>'+DAYS.map(d=>'<option>'+d+'</option>').join('')+'</select></label>'+
+    '<label class="fld">Joining date<input class="inp" type="date" id="apJoin" value="'+(viewDates().filter(editable)[0]||todayIso())+'"/></label>'+
     '<button class="btn pri" onclick="addPerson()">Add</button><button class="btn" onclick="document.getElementById(\'addForm\').innerHTML=\'\'">Cancel</button></div>';
   document.getElementById('apName').focus();
 }
 function addPerson(){
   const g=id=>document.getElementById(id).value.trim();
   const name=g('apName').replace(/\s+/g,' ');if(!name){toast('Enter a name',true);return;}
-  const ds=viewDates().filter(editable);
-  if(!ds.length){toast('No editable dates with a roster in view — upload a roster first',true);return;}
+  const join=g('apJoin')||todayIso(),ds=viewDates().filter(d=>editable(d)&&d>=join);
+  if(!ds.length){toast('No editable roster dates in view from '+fmtShort(join)+' — upload a roster first',true);return;}
   const start=g('apStart'),end=g('apEnd'),wo=g('apWo');
-  const person={name,designation:g('apDesig'),vendor:g('apVendor'),defShift:g('apShift'),weekOff:wo,start,end};
+  const person={name,designation:g('apDesig'),vendor:g('apVendor'),defShift:g('apShift'),weekOff:wo,start,end,joinDate:join};
   let added=0;
   ds.forEach(d=>{const r=ensureEdit(d);if(r.some(y=>nk(y.name)===nk(name)))return;
     r.push(Object.assign({},person,{shift:person.defShift,off:wo===dayName(d),time:wo===dayName(d)?'':(start&&end?start+' - '+end:'')}));added++;});
   if(!added){toast(name+' is already on these dates',true);return;}
-  renderRoster();toast(name+' added to '+added+' day(s) — press Save changes');
+  renderRoster();toast(name+' added from '+fmtShort(join)+' to '+added+' day(s) — earlier days show N/A · press Save changes');
 }
 // ─── change week off: move a person's WO from one date to another (both in view) ───
 function woPeople(){const m=new Map();viewDates().forEach(d=>(rowsFor(d)||[]).forEach(x=>{if(!m.has(nk(x.name)))m.set(nk(x.name),x.name);}));return [...m.entries()].sort((a,b)=>a[1].localeCompare(b[1]));}
