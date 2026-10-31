@@ -85,14 +85,19 @@ async function onRosterFile(file){
     dcols=dcols.filter(x=>grid.slice(hi+1).some(r=>String(r[x.i]??'').trim())); // ignore date columns left completely empty
     if(!dcols.length) throw new Error('All date columns are empty');
     dcols.sort((a,b)=>a.date.localeCompare(b.date));
-    const seen={},rows=[];
+    const seen={},rows=[],sq=s=>nk(s).replace(/[\s.]/g,'');
+    // previous default timing per person — date cells still holding the old timing follow the new Start/End
+    const oldDef=new Map();
+    empsOf(SESSION.store,true).forEach(e=>{if(e.start&&e.end)oldDef.set(nk(e.name),e.start+' - '+e.end);});
+    const lr=latestRoster(SESSION.store,dcols[0].date);if(lr)lr.rows.forEach(x=>{if(x.start&&x.end)oldDef.set(nk(x.name),x.start+' - '+x.end);});
     grid.slice(hi+1).forEach((r,ri)=>{
       const g=k=>col[k]==null?'':String(r[col[k]]??'').trim();
       const name=g('name').replace(/\s+/g,' ');if(!name) return;
       const start=g('start'),end=g('end'),defTime=start&&end?start+' - '+end:'';
       const defH=parseHour(start)??parseHour(g('startHr'));
       let shift=normShift(g('shift'))||shiftFromHour(defH);
-      const wo=normDay(g('weekOff')),errs=[],warns=[],cells={};
+      const wo=normDay(g('weekOff')),errs=[],warns=[],cells={},od=oldDef.get(nk(name));
+      const changed=defTime&&od&&sq(od)!==sq(defTime);
       dcols.forEach(({i,date})=>{
         const v=String(r[i]??'').trim();
         if(isOffCell(v)){cells[date]={off:true};return;}
@@ -100,7 +105,8 @@ async function onRosterFile(file){
         const ns=normShift(v);if(ns){cells[date]={off:false,shift:ns,time:ns===shift?defTime:''};return;}
         const rg=splitRange(v),h=parseHour(rg?rg[0]:v);
         if(h==null){errs.push(fmtShort(date)+': "'+v+'" not understood');cells[date]=null;return;}
-        const same=defTime&&nk(v).replace(/\s/g,'')===nk(defTime).replace(/\s/g,'');
+        if(changed&&sq(v)===sq(od)){cells[date]={off:false,shift:shift||shiftFromHour(parseHour(start)),time:defTime};return;}
+        const same=defTime&&sq(v)===sq(defTime);
         cells[date]={off:false,shift:same&&shift?shift:shiftFromHour(h),time:v};
       });
       if(!shift){const f=Object.values(cells).find(c=>c&&c.shift);shift=f?f.shift:null;}
@@ -156,7 +162,7 @@ function gridHtml(dates){
   const list=[...ppl.values()].sort((a,b)=>SHIFTS.indexOf(a.defShift||a.shift)-SHIFTS.indexOf(b.defShift||b.shift)||a.name.localeCompare(b.name));
   let h='<div class="card"><div class="card-h"><div><h3>Roster · '+fmtShort(dates[0])+' – '+fmtShort(dates[6])+'</h3><div class="sub">'+ppl.size+' people · change a day to Day / Evening / Night / Week Off'+(dates.some(dateLocked)?' · past dates locked':'')+'</div></div>'+
     '<div class="row">'+(dates.some(dateLocked)?'<button class="btn sm" onclick="askPw(\'Editing past roster dates needs the admin password.\',()=>{ST.unlocked.rosterPast=true;renderRoster();})">Unlock past</button>':'')+
-    '<button class="btn sm" onclick="woForm()">Change week off</button>'+(dirty?'<button class="btn sm" onclick="ST.edit=null;renderRoster()">Discard</button><button class="btn pri sm" onclick="saveEdits()">Save changes</button>':'<button class="btn sm" onclick="addPersonForm()">Add person</button>')+'</div></div><div id="addForm"></div>';
+    '<button class="btn sm" onclick="woForm()">Change week off</button><button class="btn sm" onclick="shForm()">Change shift / timing</button>'+(dirty?'<button class="btn sm" onclick="ST.edit=null;renderRoster()">Discard</button><button class="btn pri sm" onclick="saveEdits()">Save changes</button>':'<button class="btn sm" onclick="addPersonForm()">Add person</button>')+'</div></div><div id="addForm"></div>';
   h+='<div class="tw"><table class="t"><thead><tr><th>Name</th><th>Designation</th><th>Agency</th>'+dates.map(d=>'<th>'+fmtShort(d)+'</th>').join('')+'<th></th></tr></thead><tbody>';
   const totals={};
   list.forEach(p=>{
@@ -244,6 +250,31 @@ function woApply(){
   const y=ensureEdit(to).find(z=>nk(z.name)===k);if(y){y.off=true;y.time='';}
   document.getElementById('addForm').innerHTML='';renderRoster();
   toast('Week off moved'+(from?' from '+fmtShort(from):'')+' to '+fmtShort(to)+' — press Save changes');
+}
+// ─── change shift / timing from a date onward (e.g. Night → Day after week off) ───
+function shForm(){
+  const ppl=woPeople();if(!ppl.length){toast('No roster in view',true);return;}
+  const ds=viewDates().filter(editable);if(!ds.length){toast('These dates are locked',true);return;}
+  document.getElementById('addForm').innerHTML='<div class="card-b row" style="border-bottom:1px solid var(--line)">'+
+    '<label class="fld">Person<select class="sel" id="shP">'+ppl.map(([k,n])=>'<option value="'+esc(k)+'">'+esc(n)+'</option>').join('')+'</select></label>'+
+    '<label class="fld">From date<select class="sel" id="shFrom">'+ds.map(d=>'<option value="'+d+'">'+fmtShort(d)+'</option>').join('')+'</select></label>'+
+    '<label class="fld">New shift<select class="sel" id="shShift">'+SHIFTS.map(s=>'<option value="'+s+'">'+SHIFT_LBL[s]+'</option>').join('')+'</select></label>'+
+    '<label class="fld">Start<input class="inp" id="shStart" placeholder="8:00 AM" style="width:90px"/></label>'+
+    '<label class="fld">End<input class="inp" id="shEnd" placeholder="5:00 PM" style="width:90px"/></label>'+
+    '<button class="btn pri" onclick="shApply()">Change</button><button class="btn" onclick="document.getElementById(\'addForm\').innerHTML=\'\'">Cancel</button>'+
+    '<div style="font-size:12px;color:var(--ink3);flex-basis:100%">Applies from the chosen date to the end of this week; week offs stay as they are. It also becomes the person\'s normal shift for next roster templates.</div></div>';
+}
+function shApply(){
+  const g=id=>document.getElementById(id).value.trim();
+  const k=g('shP'),from=g('shFrom'),sh=g('shShift'),start=g('shStart'),end=g('shEnd');
+  if(!!start!==!!end){toast('Enter both Start and End, or leave both empty',true);return;}
+  const time=start&&end?start+' - '+end:'';let n=0;
+  viewDates().filter(d=>d>=from&&editable(d)).forEach(d=>{const x=ensureEdit(d).find(y=>nk(y.name)===k);if(!x)return;
+    x.defShift=sh;if(time){x.start=start;x.end=end;}
+    if(!x.off){x.shift=sh;x.time=time;n++;}});
+  if(!n){toast('No working days for this person from '+fmtShort(from),true);return;}
+  document.getElementById('addForm').innerHTML='';renderRoster();
+  toast('Shift changed to '+SHIFT_LBL[sh]+' for '+n+' day(s) from '+fmtShort(from)+' — press Save changes');
 }
 async function saveEdits(){
   try{
