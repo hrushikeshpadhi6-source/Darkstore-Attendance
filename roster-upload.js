@@ -19,7 +19,7 @@ function renderRoster(){
   h+='<div class="card"><div class="card-h"><div><h3>Upload roster</h3><div class="sub">CSV or Excel · one row per person · one column per date</div></div><button class="btn sm" onclick="downloadTemplate()">Download template ('+fmtShort(dates[0])+' – '+fmtShort(dates[6])+')</button></div><div class="card-b">'+
     '<label class="drop" ondragover="event.preventDefault();this.classList.add(\'over\')" ondragleave="this.classList.remove(\'over\')" ondrop="event.preventDefault();this.classList.remove(\'over\');onRosterFile(event.dataTransfer.files[0])">'+
     '<input type="file" accept=".csv,.xlsx,.xls" hidden onchange="onRosterFile(this.files[0]);this.value=\'\'"/>Drop the roster file here or <b style="color:var(--navy)">choose file</b>'+
-    '<div style="font-size:12px;color:var(--ink3);margin-top:6px">Columns: Name, Designation, Agency, Shift (DAY / EVENING / NIGHT), Week Off, Start, End, then one column per date (date only, e.g. 01-Nov-2026 — drag right in Excel to add more days). Date cells: timing like 8:00 AM - 5:00 PM, or Week Off.</div></label></div></div>';
+    '<div style="font-size:12px;color:var(--ink3);margin-top:6px">Columns: Name, Designation, Agency, Shift (DAY / EVENING / NIGHT), Week Off, Start, End, then one column per date — Week Off on the Week Off day, Start / End timing on the other days; type a different timing for any day (date only, e.g. 01-Nov-2026 — drag right in Excel to add more days). Date cells: timing like 8:00 AM - 5:00 PM, or Week Off.</div></label></div></div>';
   h+=ST.preview?previewHtml():gridHtml(dates);
   el.innerHTML=h;
 }
@@ -45,14 +45,20 @@ function downloadTemplate(){
   else{
     const st=empsOf(store);
     people=st.length?st.map(e=>({name:e.name,designation:e.designation,vendor:e.vendor||'',shift:e.shift||'',weekOff:e.weekOff||'',start:e.start||'',end:e.end||''}))
-      :[{name:'Hrushikesh Padhi',designation:'Supervisor',vendor:'GWC',shift:'DAY',weekOff:'Sunday',start:'8:00 AM',end:'5:00 PM'}];
+      :[{name:'GWC',designation:'Supervisor',vendor:'GWC',shift:'DAY',weekOff:'Sunday',start:'8:00 AM',end:'5:00 PM'}];
   }
   const rows=people.map((p,i)=>{
     const def=p.start&&p.end?p.start+' - '+p.end:'';
     return [i+1,store,p.name,p.designation,p.vendor,p.shift,p.weekOff?p.weekOff.toUpperCase():'',p.start,p.end,...dates.map(d=>{
       const r=getRoster(store,d),x=r&&r.rows.find(y=>nk(y.name)===nk(p.name));
-      if(x) return cellTxt(x);
-      return p.weekOff&&p.weekOff===dayName(d)?'Week Off':def;
+      const sq=s=>nk(s).replace(/[\s.]/g,'');
+      // formula: Week Off on the Week Off day, otherwise the Start / End timing
+      const n=i+2,dn=dayName(d).toUpperCase(),isWo=p.weekOff&&p.weekOff===dayName(d);
+      // plain text: week off day left blank (read from the Week Off column), other days show the Start / End timing
+      // only the Week Off column's day is Week Off; every other day shows timing
+      if(p.weekOff)return isWo?'Week Off':(x&&!x.off&&x.time&&!(def&&sq(x.time)===sq(def))?x.time:def);
+      if(x){if(x.off)return 'Week Off';if(!x.time||(def&&sq(x.time)===sq(def)))return x.shift===p.shift||!x.shift?def:(SHIFT_LBL[x.shift]||x.shift).toUpperCase();return x.time;}
+      return def;
     })];
   });
   downloadCsv('Roster '+store+' '+dates[0]+' to '+dates[6]+'.csv',[[...TPL_FIX,...dates.map(fmtDateCol)],...rows]);
@@ -99,9 +105,11 @@ async function onRosterFile(file){
       const wo=normDay(g('weekOff')),errs=[],warns=[],cells={},od=oldDef.get(nk(name));
       const changed=defTime&&od&&sq(od)!==sq(defTime);
       dcols.forEach(({i,date})=>{
-        const v=String(r[i]??'').trim();
+        let v=String(r[i]??'').trim();
+        if(v.startsWith('='))v=''; // template formula not calculated (file not opened/saved in Excel) → use Week Off + Start / End columns
         if(isOffCell(v)){cells[date]={off:true};return;}
         if(!v){if(wo&&wo!=='None'&&wo===dayName(date))cells[date]={off:true};else if(defTime)cells[date]={off:false,time:defTime};else cells[date]=null;return;}
+        if(/^(p|present)$/i.test(v)){if(!defTime&&!shift){errs.push(fmtShort(date)+': "P" needs Start/End or Shift');cells[date]=null;return;}cells[date]={off:false,shift,time:defTime};return;}
         const ns=normShift(v);if(ns){cells[date]={off:false,shift:ns,time:ns===shift?defTime:''};return;}
         const rg=splitRange(v),h=parseHour(rg?rg[0]:v);
         if(h==null){errs.push(fmtShort(date)+': "'+v+'" not understood');cells[date]=null;return;}
@@ -115,6 +123,7 @@ async function onRosterFile(file){
       const k=nk(name);if(seen[k])errs.push('Duplicate of row '+seen[k]);else seen[k]=hi+ri+2;
       const blank=dcols.filter(d=>!cells[d.date]).length;if(blank&&!errs.length)warns.push(blank+' blank day(s) — not on roster those days');
       if(!g('vendor'))warns.push('No agency');
+      if(dcols.length>=7){const offs=Object.values(cells).filter(c=>c&&c.off).length;if(offs===0)warns.push('No week off in this week');else if(offs>1)warns.push(offs+' week offs in this week — normally 1');}
       const sc=g('store').toUpperCase();if(sc&&sc!==SESSION.store)errs.push('Store code '+sc+' — you are logged in as '+SESSION.store);
       const jd=(dcols.find(d=>cells[d.date])||{}).date||'';
       rows.push({line:hi+ri+2,person:{name,designation:normDesig(g('designation')),vendor:g('vendor'),defShift:shift,weekOff:wo==='None'?'':wo,start,end,joinDate:jd},cells,errs,warns});
