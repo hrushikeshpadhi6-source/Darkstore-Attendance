@@ -27,8 +27,7 @@ function siteLogin(){
   document.getElementById('lgPin').value='';openSite(store);
 }
 async function mgrLogin(){
-  if(!(await pwCheck('ops',document.getElementById('lgAdmin').value))){toast('Wrong password',true);document.getElementById('lgAdmin').value='';return;}
-  document.getElementById('lgAdmin').value='';openMgr();
+  openMgr(); // Operations Overview is open — no password
 }
 function showPinHint(){const c=document.getElementById('lgSite').value,el=document.getElementById('lgPinHint');el.innerHTML=c&&pinOf(c)?'PIN for '+esc(c)+': <b>'+esc(pinOf(c))+'</b>':'';}
 function togglePin(b){const i=document.getElementById('lgPin'),sh=i.type==='password';i.type=sh?'text':'password';b.textContent=sh?'Hide':'Show';}

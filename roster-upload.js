@@ -126,7 +126,7 @@ async function onRosterFile(file){
       if(dcols.length>=7){const offs=Object.values(cells).filter(c=>c&&c.off).length;if(offs===0)warns.push('No week off in this week');else if(offs>1)warns.push(offs+' week offs in this week — normally 1');}
       const sc=g('store').toUpperCase();if(sc&&sc!==SESSION.store)errs.push('Store code '+sc+' — you are logged in as '+SESSION.store);
       const jd=(dcols.find(d=>cells[d.date])||{}).date||'';
-      rows.push({line:hi+ri+2,person:{name,designation:normDesig(g('designation')),vendor:g('vendor'),defShift:shift,weekOff:wo==='None'?'':wo,start,end,joinDate:jd},cells,errs,warns});
+      rows.push({line:hi+ri+2,person:{name,designation:normDesig(g('designation')),vendor:normVendor(g('vendor')),defShift:shift,weekOff:wo==='None'?'':wo,start,end,joinDate:jd},cells,errs,warns});
     });
     if(!rows.length) throw new Error('No people found under the Name column');
     ST.preview={file:file.name,dates:dcols.map(d=>d.date),rows};ST.edit=null;renderRoster();

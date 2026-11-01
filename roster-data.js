@@ -54,6 +54,9 @@ const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 const tmo=(p,ms)=>Promise.race([p,new Promise(r=>setTimeout(()=>r(null),ms||8000))]);
 function roleOf(desig){const d=nk(desig);if(/supervisor/.test(d))return 'Supervisor';if(/team\s*lead|^tl$/.test(d))return 'Team Leader';if(/house\s*-?\s*keep|cleaner/.test(d))return 'Housekeeping';return 'Associate';}
 function normDesig(d){d=String(d||'').trim();if(/^warehouse\s+associate$/i.test(d))return 'Warehouse Assistant';if(/^house\s*-?\s*keep(ing|er)?$/i.test(d))return 'Housekeeping';if(/^(tl|team\s*lead(er)?)$/i.test(d))return 'Team Leader';return d||'Associate';}
+// one spelling per agency: Al Mahir / Al Maahir / almahir → "Al Mahir"; Flexi talent / flexitalent → "Flexi Talent"
+function normVendor(v){v=String(v||'').trim();const k=v.toLowerCase().replace(/[^a-z]/g,'');if(!k)return '';if(/ma+h+i+r/.test(k))return 'Al Mahir';if(/flexi/.test(k))return 'Flexi Talent';return v;}
+function fixVendors(o){if(o&&Array.isArray(o.rows))o.rows.forEach(x=>{if('vendor' in x)x.vendor=normVendor(x.vendor);});if(o&&Array.isArray(o.list))o.list.forEach(x=>{if('vendor' in x)x.vendor=normVendor(x.vendor);});return o;}
 function normDay(s){const t=nk(s);if(!t)return '';if(/^(none|no|nil|-|na|n\/a)$/.test(t))return 'None';return DAYS.find(d=>d.toLowerCase().startsWith(t.slice(0,3)))||'';}
 function normShift(s){const t=nk(s).replace(/\s*shift$/,'');if(/^(day|morning|morn|general|gen|a)$/.test(t))return 'DAY';if(/^(evening|eve|afternoon|mid|b)$/.test(t))return 'EVENING';if(/^(night|c)$/.test(t))return 'NIGHT';return null;}
 function parseHour(s){
@@ -106,7 +109,7 @@ async function saveStores(){if(!RD.storesOk)throw new Error('Store list not load
 // Built only from Roster Pro (roster uploads + Employees tab). Nothing is read from the classic app.
 function empKey(store){return 'emp__'+sid(store);}
 function empQ(){return db.collection('meta').where(firebase.firestore.FieldPath.documentId(),'>=','emp__').where(firebase.firestore.FieldPath.documentId(),'<=','emp__~');}
-async function loadEmps(){RD.empsOk=false;try{const s=await tmo(empQ().get(),12000);if(s){s.docs.forEach(x=>{const v=x.data();RD.emps[v.store]=v.list||[];});RD.empsOk=true;}}catch(e){console.warn('loadEmps',e);RD.err=e.message;}}
+async function loadEmps(){RD.empsOk=false;try{const s=await tmo(empQ().get(),12000);if(s){s.docs.forEach(x=>{const v=x.data();RD.emps[v.store]=fixVendors({list:v.list||[]}).list;});RD.empsOk=true;}}catch(e){console.warn('loadEmps',e);RD.err=e.message;}}
 // One-time: stores whose roster was uploaded before the employee list existed get their list built from the latest roster.
 // Writes only when the employee read actually succeeded (never on a slow/failed load).
 async function backfillEmps(){
@@ -120,15 +123,15 @@ async function backfillEmps(){
   }
   return n;
 }
-function listenEmps(cb){return empQ().onSnapshot(s=>{s.docChanges().forEach(c=>{const v=c.doc.data();if(c.type==='removed')delete RD.emps[v.store];else RD.emps[v.store]=v.list||[];});cb&&cb();},e=>console.warn('emps listen',e));}
+function listenEmps(cb){return empQ().onSnapshot(s=>{s.docChanges().forEach(c=>{const v=c.doc.data();if(c.type==='removed')delete RD.emps[v.store];else RD.emps[v.store]=fixVendors({list:v.list||[]}).list;});cb&&cb();},e=>console.warn('emps listen',e));}
 function empsOf(store,all){return (RD.emps[store]||[]).filter(e=>all||e.status!=='Removed');}
-async function saveEmps(store,list){RD.emps[store]=list;const r=await tmo(db.collection('meta').doc(empKey(store)).set({store,list,updatedAt:new Date().toISOString()}),8000);return r;}
+async function saveEmps(store,list){fixVendors({list});RD.emps[store]=list;const r=await tmo(db.collection('meta').doc(empKey(store)).set({store,list,updatedAt:new Date().toISOString()}),8000);return r;}
 // Add new names from a roster, update details of existing ones, re-activate removed ones that are rostered again
 function mergeEmps(store,people,by){
   const list=JSON.parse(JSON.stringify(RD.emps[store]||[])),now=new Date().toISOString(),res={added:[],reactivated:[],list};
   people.forEach(x=>{
     const k=nk(x.name),e=list.find(y=>nk(y.name)===k);
-    const f={designation:x.designation,vendor:x.vendor||'',shift:x.defShift||x.shift,start:x.start||'',end:x.end||'',weekOff:x.weekOff||''};
+    const f={designation:x.designation,vendor:normVendor(x.vendor),shift:x.defShift||x.shift,start:x.start||'',end:x.end||'',weekOff:x.weekOff||''};
     if(!e){list.push(Object.assign({name:x.name,status:'Active',joinDate:x.joinDate||todayIso(),addedAt:now,addedBy:by,source:'roster'},f));res.added.push(x.name);}
     else{if(e.status==='Removed'){e.status='Active';e.reactivatedAt=now;delete e.removedAt;delete e.removedReason;res.reactivated.push(x.name);}
       Object.keys(f).forEach(k2=>{if(f[k2])e[k2]=f[k2];});}
@@ -139,7 +142,7 @@ function mergeEmps(store,people,by){
 // ─── storage in 'meta' (allowed by Firestore rules); IDs start with the date so range reads need no index ───
 const DOCID=()=>firebase.firestore.FieldPath.documentId();
 function rangeQ(prefix,a,b){return db.collection('meta').where(DOCID(),'>=',prefix+a).where(DOCID(),'<=',prefix+b+'~');}
-function snapInto(target){return s=>{s.docChanges().forEach(c=>{if(c.type==='removed')delete target[c.doc.id];else target[c.doc.id]=c.doc.data();});};}
+function snapInto(target){return s=>{s.docChanges().forEach(c=>{if(c.type==='removed')delete target[c.doc.id];else target[c.doc.id]=fixVendors(c.doc.data());});};}
 
 // Roster: one doc per store per date → rows [{name,designation,vendor,defShift,weekOff,start,end,shift,off,time}]
 function rosterKey(store,date){return 'rost__'+date+'__'+sid(store);}
@@ -151,7 +154,7 @@ function latestRoster(store,beforeOrOn){
 async function saveRosterDates(store,byDate,by){
   const b=db.batch(),now=new Date().toISOString();
   Object.entries(byDate).forEach(([date,rows])=>{
-    const doc={store,site:siteOf(store),date,rows,updatedAt:now,by:by||store};
+    const doc=fixVendors({store,site:siteOf(store),date,rows,updatedAt:now,by:by||store});
     RD.rosters[rosterKey(store,date)]=doc;
     b.set(db.collection('meta').doc(rosterKey(store,date)),doc);
   });
@@ -159,7 +162,7 @@ async function saveRosterDates(store,byDate,by){
   return r;
 }
 async function loadRosters(from,to){
-  try{const s=await tmo(rangeQ('rost__',from,to).get(),12000);if(s)s.docs.forEach(d=>{RD.rosters[d.id]=d.data();});}
+  try{const s=await tmo(rangeQ('rost__',from,to).get(),12000);if(s)s.docs.forEach(d=>{RD.rosters[d.id]=fixVendors(d.data());});}
   catch(e){console.warn('loadRosters',e);RD.err=e.message;}
 }
 function listenRosters(from,to,cb){const f=snapInto(RD.rosters);return rangeQ('rost__',from,to).onSnapshot(s=>{f(s);cb&&cb();},e=>console.warn('rosters listen',e));}
@@ -189,7 +192,7 @@ function buildPeople(rows,m){
     if(x.off){if(mk==='Working'){status='Present';time=def;woChanged=true;}else status='Week Off';}
     else if(mk==='Week Off'){status='Week Off';woChanged=true;}
     else status=(mk&&mk!=='Working')?mk:'Present';
-    return {name:x.name,designation:x.designation,role:roleOf(x.designation),vendor:x.vendor||'',shift:x.shift,time,status,woChanged,rosterOff:!!x.off};
+    return {name:x.name,designation:x.designation,role:roleOf(x.designation),vendor:normVendor(x.vendor),shift:x.shift,time,status,woChanged,rosterOff:!!x.off};
   });
 }
 function shiftsConf(day){

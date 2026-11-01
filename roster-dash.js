@@ -2,12 +2,12 @@
 const MG={loaded:null,last:null,detail:null,tab:'ov'};
 function mgTab(t){
   MG.tab=t;document.querySelectorAll('#mgTabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
-  const P={ov:'mgPaneOv',an:'mgPaneAn',hr:'mgPaneHr',emp:'mgPaneEmp',st:'mgPaneSt'};
+  const P={ov:'mgPaneOv',an:'mgPaneAn',hr:'mgPaneHr',ot:'mgPaneOt',emp:'mgPaneEmp',st:'mgPaneSt'};
   Object.entries(P).forEach(([k,id])=>document.getElementById(id).hidden=k!==t);
   document.getElementById('mgFilterCard').hidden=!(t==='ov'||t==='an'||t==='hr');
   ['mgFrom','mgTo'].forEach(id=>{const e=document.getElementById(id);if(t==='hr')e.removeAttribute('max');else{e.max=todayIso();if(e.value>e.max)e.value=e.max;}});
   if(t==='hr'&&window.hrEnter)hrEnter();
-  if(t==='emp')renderEmployees('mgPaneEmp',null);else renderMgr();
+  if(t==='emp')renderEmployees('mgPaneEmp',null);else if(t==='ot')otEnter();else renderMgr();
 }
 
 async function openMgr(){
@@ -23,8 +23,9 @@ async function openMgr(){
   await Promise.all([loadRosters(lf,addDays(t,45)),loadDays(lf,t),loadEmps()]);
   MG.loaded={from:lf,to:t};
   await backfillEmps();
-  window._unsubs=[listenRosters(lf,addDays(t,45),renderMgr),listenDays(lf,t,renderMgr),listenEmps(()=>{if(MG.tab==='emp')renderEmployees('mgPaneEmp',null);else renderHeadcount();})];
-  renderMgr();
+  const rr=()=>{if(MG.tab==='ot')renderOt();else renderMgr();};
+  window._unsubs=[listenRosters(lf,addDays(t,45),rr),listenDays(lf,t,rr),listenEmps(()=>{if(MG.tab==='emp')renderEmployees('mgPaneEmp',null);else if(MG.tab==='ot')renderOt();else renderHeadcount();})];
+  rr();
   if(RD.err) document.getElementById('mgWarn').insertAdjacentHTML('afterbegin','<div class="note bad"><b>Could not load data:</b> '+esc(RD.err)+'</div>');
 }
 function fillMgrStores(){

@@ -184,7 +184,6 @@ table.t{width:100%;border-collapse:collapse;font-size:13px}
 </div></div>
 <div class="card"><div class="card-h"><h3>Operations Overview</h3><span class="sub">All stores, absenteeism, exports</span></div>
 <div class="card-b">
-<label class="fld">Admin password<input class="inp mono" id="lgAdmin" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')mgrLogin()"/></label>
 <button class="btn pri" onclick="mgrLogin()">Open overview</button>
 </div></div>
 </div>
@@ -210,7 +209,7 @@ table.t{width:100%;border-collapse:collapse;font-size:13px}
 <section class="scr" id="scr-mgr" data-screen-label="Operations Overview">
 <header class="bar">
 <div class="brand"><img class="logo" src="gwc-logo.png" alt="GWC"/><div>Operations Overview<small id="mgSub">Roster attendance</small></div></div>
-<div class="tabs" id="mgTabs"><button class="tab on" data-t="ov" onclick="mgTab('ov')">Overview</button><button class="tab" data-t="an" onclick="mgTab('an')">Absenteeism</button><button class="tab" data-t="hr" onclick="mgTab('hr')">Hourly</button><button class="tab" data-t="emp" onclick="mgTab('emp')">Employees</button><button class="tab" data-t="st" onclick="mgTab('st')">Stores</button></div>
+<div class="tabs" id="mgTabs"><button class="tab on" data-t="ov" onclick="mgTab('ov')">Overview</button><button class="tab" data-t="an" onclick="mgTab('an')">Absenteeism</button><button class="tab" data-t="hr" onclick="mgTab('hr')">Hourly</button><button class="tab" data-t="ot" onclick="mgTab('ot')">OT</button><button class="tab" data-t="emp" onclick="mgTab('emp')">Employees</button><button class="tab" data-t="st" onclick="mgTab('st')">Stores</button></div>
 <div class="bar-r"><span class="pill ok" id="mgLive">Live</span><button class="btn ghost sm" onclick="toggleTheme()">Theme</button><button class="btn sm" onclick="logout()">Log out</button></div>
 </header>
 <div class="wrap">
@@ -233,10 +232,11 @@ table.t{width:100%;border-collapse:collapse;font-size:13px}
 </div>
 <div id="mgPaneAn" hidden></div>
 <div id="mgPaneHr" hidden></div>
+<div id="mgPaneOt" hidden></div>
 <div id="mgPaneEmp" hidden></div>
 <div id="mgPaneSt" hidden><div class="card"><div class="card-h"><div><h3>Stores</h3><div class="sub">Store code, linked site and login PIN</div></div></div><div class="tw"><table class="t" id="mgStores"></table></div></div>
 <div class="card"><div class="card-h"><div><h3>Passwords</h3><div class="sub">Admin password unlocks past days. Passwords are never shown — enter the current admin password to change either one.</div></div></div><div class="card-b row">
-<label class="fld">Change<select class="sel" id="cpKind"><option value="admin">Admin password</option><option value="ops">Operations login</option></select></label>
+<label class="fld">Change<select class="sel" id="cpKind"><option value="admin">Admin password</option></select></label>
 <label class="fld">Current admin password<input class="inp" type="password" id="cpCur" autocomplete="off"/></label>
 <label class="fld">New password<input class="inp" type="password" id="cpNew" autocomplete="new-password"/></label>
 <label class="fld">Confirm new<input class="inp" type="password" id="cpNew2" autocomplete="new-password"/></label>
@@ -252,12 +252,13 @@ table.t{width:100%;border-collapse:collapse;font-size:13px}
 </div></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="roster-data.js?v=1793400000000"></script>
-<script src="roster-site.js?v=1793400000000"></script>
-<script src="roster-upload.js?v=1793400000000"></script>
-<script src="roster-emp.js?v=1793400000000"></script>
-<script src="roster-analysis.js?v=1793400000000"></script>
-<script src="roster-dash.js?v=1793400000000"></script>
-<script src="roster-hourly.js?v=1793400000000"></script>
+<script src="roster-data.js?v=1793500000000"></script>
+<script src="roster-site.js?v=1793500000000"></script>
+<script src="roster-upload.js?v=1793500000000"></script>
+<script src="roster-emp.js?v=1793500000000"></script>
+<script src="roster-analysis.js?v=1793500000000"></script>
+<script src="roster-dash.js?v=1793500000000"></script>
+<script src="roster-hourly.js?v=1793500000000"></script>
+<script src="roster-ot.js?v=1793500000000"></script>
 </body>
 </html>
