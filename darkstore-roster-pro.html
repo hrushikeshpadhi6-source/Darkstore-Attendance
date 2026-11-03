@@ -82,6 +82,9 @@ table.t{width:100%;border-collapse:collapse;font-size:13px}
 .pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
 .pill.ok{background:var(--okbg);color:var(--ok)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.bad{background:var(--badbg);color:var(--bad)}.pill.mute{background:var(--card2);color:var(--ink3)}
 .abs-hi{color:var(--bad);font-weight:700}
+.seg.sm{flex:none}.seg.sm button{white-space:nowrap;flex:none}.seg.sm button.on{background:var(--navy);color:#fff}.ssum-key{padding:8px 16px;font-size:11px;color:var(--ink3);border-top:1px solid var(--line)}
+.t tr.grp td{background:var(--card2);font-size:12px;font-weight:700;color:var(--navy);padding-top:6px;padding-bottom:6px;text-transform:uppercase;letter-spacing:.5px}.t tr.grp td span{color:var(--ink3);font-weight:600;margin-left:6px}
+.t th.srt{cursor:pointer;user-select:none}.t th.srt:hover{color:var(--ink)}.t th.srt.on{color:var(--navy)}
 /* marking list */
 .shift-grp{margin-bottom:16px}
 .shift-h{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:13px}
@@ -223,10 +226,11 @@ table.t{width:100%;border-collapse:collapse;font-size:13px}
 <div id="mgPaneOv">
 <div id="mgWarn"></div>
 <div class="kpis" id="mgKpi"></div>
-<div class="card"><div class="card-h"><div><h3>Shift summary</h3><div class="sub" id="mgShiftSub"></div></div></div><div class="tw"><table class="t" id="mgShift"></table></div></div>
-<div class="card"><div class="card-h"><div><h3>Store-wise</h3><div class="sub">Click a store to see absentees</div></div><button class="btn sm" onclick="exportStore()">Export CSV</button></div><div class="tw"><table class="t" id="mgStore"></table></div></div>
-<div class="card"><div class="card-h"><div><h3>Agency-wise</h3><div class="sub">Absenteeism by agency</div></div><button class="btn sm" onclick="exportVendor()">Export CSV</button></div><div class="tw"><table class="t" id="mgVendor"></table></div></div>
+<div id="mgShiftCard"></div>
 <div class="card" id="mgDetailCard" hidden><div class="card-h"><div><h3 id="mgDetailT">Absentees</h3><div class="sub" id="mgDetailS"></div></div><button class="btn sm" onclick="closeDetail()">Close</button></div><div class="tw"><table class="t" id="mgDetail"></table></div></div>
+<div class="card"><div class="card-h"><div><h3>Store-wise</h3><div class="sub">Click a store to see everyone's status</div></div><button class="btn sm" onclick="exportStore()">Export CSV</button></div><div class="tw"><table class="t" id="mgStore"></table></div></div>
+<div class="card"><div class="card-h"><div><h3>Agency-wise</h3><div class="sub">Absenteeism by agency</div></div><button class="btn sm" onclick="exportVendor()">Export CSV</button></div><div class="tw"><table class="t" id="mgVendor"></table></div></div>
+
 <div class="card"><div class="card-h"><div><h3>Attendance sheet</h3><div class="sub">Date-wise P / A / SL / WO per person for the selected range, with totals</div></div><div class="row" style="gap:8px"><button class="btn sm" onclick="exportSheet()">Selected range</button><input class="inp" type="month" id="mgMonth" style="padding:5px 8px;font-size:12px"/><button class="btn pri sm" onclick="exportMonth()">Download month</button></div></div></div>
 <div class="card"><div class="card-h"><div><h3>Full export</h3><div class="sub">Every person, every day in the selected range</div></div><button class="btn sm" onclick="exportDetail()">Download detailed CSV</button></div></div>
 </div>
@@ -252,12 +256,13 @@ table.t{width:100%;border-collapse:collapse;font-size:13px}
 </div></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="roster-data.js?v=1793500000000"></script>
-<script src="roster-site.js?v=1793500000000"></script>
+<script src="roster-data.js?v=1793715000000"></script>
+<script src="roster-summary.js?v=1793715000000"></script>
+<script src="roster-site.js?v=1793715000000"></script>
 <script src="roster-upload.js?v=1793500000000"></script>
-<script src="roster-emp.js?v=1793500000000"></script>
+<script src="roster-emp.js?v=1793715000000"></script>
 <script src="roster-analysis.js?v=1793500000000"></script>
-<script src="roster-dash.js?v=1793500000000"></script>
+<script src="roster-dash.js?v=1793715000000"></script>
 <script src="roster-hourly.js?v=1793500000000"></script>
 <script src="roster-ot.js?v=1793500000000"></script>
 </body>

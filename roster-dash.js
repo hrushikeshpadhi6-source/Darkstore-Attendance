@@ -69,6 +69,7 @@ function tcells(t){return '<td class="n">'+t.total+'</td><td class="n wo">'+t.we
 
 function renderMgr(){
   if(!SESSION||SESSION.type!=='mgr') return;
+  if(SSUM.mode==='date')SSUM.mode='all';
   const c=MG.last=computeMgr(),single=c.from===c.to,today=todayIso(),tmr=addDays(today,1);
   document.getElementById('mgSub').textContent=(single?fmtDate(c.from):fmtDate(c.from,{day:'numeric',month:'short'})+' – '+fmtDate(c.to))+' · '+(c.stores.length===1?storeLabel(c.stores[0]):c.stores.length+' stores');
   const all=storeList(),noT=all.filter(s=>!getRoster(s,today)),noTm=all.filter(s=>!getRoster(s,tmr)),notConf=all.filter(s=>getRoster(s,today)&&!dayPeople(s,today).confirmed).map(s=>{const r=dayPeople(s,today),p=r.shifts.filter(x=>!r.done.includes(x)).map(x=>SHIFT_LBL[x]);return s+(r.done.length?' ('+p.join(', ')+')':'');});
@@ -80,31 +81,33 @@ function renderMgr(){
   const t=tally(c.conf),pend=c.recs.filter(r=>!r.confirmed&&r.status!=='Week Off').length;
   const k=(l,v,cls)=>'<div class="kpi '+(cls||'')+'"><div class="l">'+l+'</div><div class="v">'+v+'</div></div>';
   document.getElementById('mgKpi').innerHTML=k('Total',t.total)+k('Week off',t.weekOff,'warn')+k('Rostered',t.rostered)+k('Present',t.present,'ok')+k('Absent',t.absent,'bad')+k('Sick',t.sick,'sick')+k('Absenteeism',t.rostered?pctTxt(t.absPct):'—',t.absPct>=10?'bad':'')+(pend?k('Pending',pend,'warn'):'');
-  document.getElementById('mgShiftSub').textContent='Confirmed days only'+(pend?' · '+pend+' rostered still pending':'');
-  document.getElementById('mgShift').innerHTML='<thead><tr><th>Shift</th>'+THEAD+'</tr></thead><tbody>'+
-    SHIFTS.map(s=>{const L=c.conf.filter(r=>r.shift===s),by={};L.forEach(r=>{const k=slotStart(r.time);if(k)(by[k]=by[k]||[]).push(r);});
-      const subs=Object.keys(by).sort((a,b)=>slotKey(a+' - x',s)-slotKey(b+' - x',s));
-      return '<tr><td><b>'+SHIFT_LBL[s]+'</b></td>'+tcells(tally(L))+'</tr>'+(subs.length>1?subs.map(k=>{const sb=by[k],wo=L.filter(r=>r.status==='Week Off'&&!r.time).length;return '<tr class="sub"><td>'+esc(k)+' start</td>'+tcells(tally(sb))+'</tr>';}).join(''):'');}).join('')+'</tbody><tfoot><tr><td>Total</td>'+tcells(t)+'</tr></tfoot>';
+  const ssStatus=(sh,L)=>{if(!sh)return '';const g={};L.forEach(p=>{const k=p.store+'|'+p.date;g[k]=g[k]||p.confirmed;});const n=Object.keys(g).length,d=Object.values(g).filter(Boolean).length;
+    const lbl=c.dates.length>1?' store-days':(c.stores.length>1?' stores':'');return '<span class="pill '+(d===n?'ok':'warn')+' xs">'+(n===1?(d?'Confirmed':'Pending'):d+'/'+n+lbl+' confirmed')+'</span>';};
+  document.getElementById('mgShiftCard').innerHTML=shiftSummaryHtml(c.recs,{key:'ops|'+(c.stores.length===1?c.stores[0]:'all')+'|'+c.from+(c.from!==c.to?'|'+c.to:''),multi:true,noAgency:true,rerender:'renderMgr()',onStore:'openDetail',statusFn:ssStatus,extra:'<select class="sel" style="min-height:0;padding:4px 8px;font-size:12px" onchange="document.getElementById(\'mgRole\').value=this.value;renderMgr()">'+[...document.getElementById('mgRole').options].map(o=>'<option value="'+esc(o.value)+'"'+(o.value===c.role?' selected':'')+'>'+esc(o.text)+'</option>').join('')+'</select>',sub:(c.dates.length>1?'<b>'+c.dates.length+' days added together</b> (each person counted once per day) · pick a single day for daily figures · ':'')+(single?fmtDate(c.from):fmtDate(c.from,{day:'numeric',month:'short'})+' – '+fmtDate(c.to))+' · '+(c.stores.length===1?storeLabel(c.stores[0]):c.stores.length+' stores')+(SSUM.mode==='store'?' · click a store to see everyone\'s status':' · use the Store filter above for one store')});
   document.getElementById('mgStore').innerHTML='<thead><tr><th>Store</th><th>Site</th><th>Status</th>'+THEAD+'</tr></thead><tbody>'+
     Object.values(c.store).map(s=>{
       const status=!s.days?'<span class="pill bad">No roster</span>':s.conf===s.days?'<span class="pill ok">'+(single?'Confirmed':s.conf+'/'+s.days+' days')+'</span>':'<span class="pill warn">'+(single?(s.sd?s.sd+'/'+s.st+' shifts':'Pending'):s.conf+'/'+s.days+' days')+'</span>';
       return '<tr class="click" onclick="openDetail(\''+esc(s.code)+'\')"><td class="mono"><b>'+esc(s.code)+'</b></td><td>'+esc(s.site||'—')+'</td><td>'+status+'</td>'+tcells(tally(s.people))+'</tr>';
     }).join('')+'</tbody><tfoot><tr><td>Total</td><td></td><td></td>'+tcells(t)+'</tr></tfoot>';
-  const vend={};c.conf.forEach(r=>{const v=r.vendor||'(No agency)';(vend[v]=vend[v]||[]).push(r);});
+  const vend={};c.conf.forEach(r=>{const v=normVendor(r.vendor)||'(No agency)';(vend[v]=vend[v]||[]).push(r);});
   const vl=Object.keys(vend).map(v=>({v,t:tally(vend[v])})).sort((a,b)=>b.t.absPct-a.t.absPct||b.t.total-a.t.total);
   document.getElementById('mgVendor').innerHTML='<thead><tr><th>Agency</th>'+THEAD+'</tr></thead><tbody>'+
     (vl.length?vl.map(x=>'<tr><td><b>'+esc(x.v)+'</b></td>'+tcells(x.t)+'</tr>').join(''):'<tr><td colspan="8" class="empty">No confirmed attendance in this range</td></tr>')+'</tbody>'+(vl.length?'<tfoot><tr><td>Total</td>'+tcells(t)+'</tr></tfoot>':'');
   renderStores();renderHeadcount();renderAnalysis();if(window.renderHourly)renderHourly();
   if(MG.detail) openDetail(MG.detail,true);
 }
+const DT_F=[['all','Everyone'],['out','Absent / sick'],['pend','Not marked'],['wo','Week off'],['p','Present']];
 function openDetail(code,keep){
-  MG.detail=code;const s=MG.last.store[code];if(!s)return;
-  const ab=s.people.filter(p=>p.status==='Absent'||p.status==='Sick Leave').sort((a,b)=>b.date.localeCompare(a.date)||SHIFTS.indexOf(a.shift)-SHIFTS.indexOf(b.shift));
+  MG.detail=code;const c=MG.last;if(!c||!c.store[code])return;MG.dtF=MG.dtF||'all';
+  const st=p=>p.status==='Week Off'?'wo':(p.status==='Absent'||p.status==='Sick Leave')?'out':p.confirmed?'p':'pend';
+  const all=c.recs.filter(p=>p.store===code),L=all.filter(p=>MG.dtF==='all'||st(p)===MG.dtF).sort((a,b)=>b.date.localeCompare(a.date)||SHIFTS.indexOf(a.shift)-SHIFTS.indexOf(b.shift)||startMin(a.time,a.shift)-startMin(b.time,b.shift)||a.name.localeCompare(b.name));
+  const lbl={wo:['Week Off','wo'],out:[null,'bad'],p:['Present','ok'],pend:['Not marked','wo']};
   document.getElementById('mgDetailCard').hidden=false;
-  document.getElementById('mgDetailT').textContent=storeLabel(code)+' · absentees';
-  document.getElementById('mgDetailS').textContent=ab.length+' absent / sick in range';
-  document.getElementById('mgDetail').innerHTML='<thead><tr><th>Date</th><th>Name</th><th>Shift</th><th>Timing</th><th>Designation</th><th>Agency</th><th>Status</th></tr></thead><tbody>'+
-    (ab.length?ab.map(p=>'<tr><td>'+fmtDate(p.date)+'</td><td><b>'+esc(p.name)+'</b></td><td>'+SHIFT_LBL[p.shift]+'</td><td>'+esc(p.time||'—')+'</td><td>'+esc(p.designation)+'</td><td>'+esc(p.vendor||'—')+'</td><td class="'+(p.status==='Absent'?'bad':'sick')+'">'+p.status+'</td></tr>').join(''):'<tr><td colspan="7" class="empty">No absences</td></tr>')+'</tbody>';
+  document.getElementById('mgDetailT').textContent=storeLabel(code)+' · status';
+  document.getElementById('mgDetailS').innerHTML='<div class="seg sm" style="margin-top:6px;display:inline-flex">'+DT_F.map(([k,l])=>'<button class="'+(MG.dtF===k?'on':'')+'" onclick="MG.dtF=\''+k+'\';openDetail(\''+esc(code)+'\',true)">'+l+' '+(k==='all'?all.length:all.filter(p=>st(p)===k).length)+'</button>').join('')+'</div>';
+  const multi=c.from!==c.to;
+  document.getElementById('mgDetail').innerHTML='<thead><tr>'+(multi?'<th>Date</th>':'')+'<th>Name</th><th>Shift</th><th>Timing</th><th>Designation</th><th>Agency</th><th>Status</th></tr></thead><tbody>'+
+    (L.length?L.map(p=>{const s=st(p),[t,cl]=lbl[s];return '<tr>'+(multi?'<td>'+fmtDate(p.date)+'</td>':'')+'<td><b>'+esc(p.name)+'</b>'+(p.woChanged?' <span class="wo-chg">WO changed</span>':'')+'</td><td>'+SHIFT_LBL[p.shift]+'</td><td>'+esc(p.time||'—')+'</td><td>'+esc(p.designation)+'</td><td>'+esc(normVendor(p.vendor)||'—')+'</td><td class="'+cl+'">'+(t||p.status)+'</td></tr>';}).join(''):'<tr><td colspan="7" class="empty">No one in this filter</td></tr>')+'</tbody>';
   if(!keep){const el=document.getElementById('mgDetailCard');window.scrollTo({top:el.getBoundingClientRect().top+window.scrollY-70,behavior:'smooth'});}
 }
 function closeDetail(){MG.detail=null;document.getElementById('mgDetailCard').hidden=true;}
@@ -113,19 +116,22 @@ function closeDetail(){MG.detail=null;document.getElementById('mgDetailCard').hi
 function renderStores(){
   const el=document.getElementById('mgStores');if(!el)return;
   if(el.contains(document.activeElement)) return;
-  const sites=siteList(),opt=v=>'<option value="">— none —</option>'+sites.map(s=>'<option'+(s===v?' selected':'')+'>'+esc(s)+'</option>').join('');
-  el.innerHTML='<thead><tr><th>Store code</th><th>Linked site</th><th>PIN</th><th>Today</th></tr></thead><tbody>'+
-    storeList().map(c=>{const r=getRoster(c,todayIso());return '<tr><td class="mono"><b>'+esc(c)+'</b></td><td><select class="mini" onchange="setStoreSite(\''+esc(c)+'\',this.value)">'+opt(siteOf(c))+'</select></td><td class="mono">'+esc(pinOf(c))+'</td><td>'+(r?'<span class="pill ok">'+r.rows.length+' rostered</span>':'<span class="pill bad">No roster</span>')+'</td></tr>';}).join('')+
-    '</tbody><tfoot><tr><td><input class="inp mono" id="nsCode" placeholder="QAA9" maxlength="8" style="width:100px;text-transform:uppercase"/></td><td><select class="sel" id="nsSite">'+opt('')+'</select></td><td colspan="2"><button class="btn pri sm" onclick="addStore()">Add store</button></td></tr></tfoot>';
+  const sites=[...new Set([...siteList(),...storeList().map(siteOf).filter(Boolean)])].sort();
+  el.innerHTML='<thead><tr><th>Store code</th><th>Store name / site</th><th>PIN</th><th>Today</th></tr></thead><tbody>'+
+    storeList().map(c=>{const r=getRoster(c,todayIso());return '<tr><td class="mono"><b>'+esc(c)+'</b></td><td><input class="inp" list="stSites" value="'+esc(siteOf(c))+'" placeholder="Type a name" onchange="setStoreSite(\''+esc(c)+'\',this.value)" style="width:200px"/></td><td class="mono">'+esc(pinOf(c))+'</td><td>'+(r?'<span class="pill ok">'+r.rows.length+' rostered</span>':'<span class="pill bad">No roster</span>')+'</td></tr>';}).join('')+
+    '</tbody><tfoot><tr><td><input class="inp mono" id="nsCode" placeholder="QAA9" maxlength="8" style="width:100px;text-transform:uppercase"/></td><td><input class="inp" id="nsSite" list="stSites" placeholder="Store name — pick or type new" style="width:200px"/></td><td colspan="2"><button class="btn pri sm" onclick="addStore()">Add store</button></td></tr></tfoot>';
+  let dl=document.getElementById('stSites');if(!dl){dl=document.createElement('datalist');dl.id='stSites';document.body.appendChild(dl);}
+  dl.innerHTML=sites.map(s=>'<option value="'+esc(s)+'"></option>').join('');
 }
-async function setStoreSite(code,site){RD.stores[code].site=site;try{await saveStores();toast(code+' linked to '+(site||'no site'));}catch(e){toast('Save failed',true);}fillMgrStores();renderMgr();}
+async function setStoreSite(code,site){site=String(site||'').replace(/\s+/g,' ').trim();if(site===siteOf(code))return;RD.stores[code].site=site;try{await saveStores();toast(code+' linked to '+(site||'no site'));}catch(e){toast('Save failed',true);}fillMgrStores();renderMgr();}
 async function addStore(){
-  const code=document.getElementById('nsCode').value.trim().toUpperCase(),site=document.getElementById('nsSite').value;
+  const code=document.getElementById('nsCode').value.trim().toUpperCase(),site=document.getElementById('nsSite').value.trim().replace(/\s+/g,' ');
+  if(!site){toast('Enter a store name',true);return;}
   if(!/^[A-Z0-9]{3,8}$/.test(code)){toast('Store code like QAA9',true);return;}
   if(RD.stores[code]){toast(code+' already exists',true);return;}
   const pin=nextPin();RD.stores[code]={site,pin};
   try{await saveStores();toast('Store '+code+' added · PIN '+pin);}catch(e){toast('Save failed',true);}
-  fillMgrStores();fillLogin();document.getElementById('nsCode').value='';renderMgr();
+  fillMgrStores();fillLogin();document.getElementById('nsCode').value='';document.getElementById('nsSite').value='';renderMgr();
 }
 
 async function changePw(){
@@ -148,7 +154,7 @@ function exportStore(){
 }
 function exportVendor(){
   const c=MG.last,rows=[['Agency','Store',...HCSV]],vend={};
-  c.conf.forEach(r=>{const v=r.vendor||'(No agency)';(vend[v]=vend[v]||{all:[],by:{}});vend[v].all.push(r);(vend[v].by[r.store]=vend[v].by[r.store]||[]).push(r);});
+  c.conf.forEach(r=>{const v=normVendor(r.vendor)||'(No agency)';(vend[v]=vend[v]||{all:[],by:{}});vend[v].all.push(r);(vend[v].by[r.store]=vend[v].by[r.store]||[]).push(r);});
   Object.keys(vend).sort().forEach(v=>{rows.push([v,'All stores',...tcsv(tally(vend[v].all))]);Object.keys(vend[v].by).sort().forEach(s=>rows.push(['',s,...tcsv(tally(vend[v].by[s]))]));});
   downloadCsv(fname('agency-wise'),rows);
 }
@@ -167,7 +173,7 @@ async function exportMonth(){
 }
 function buildSheet(c,headFn,name,title){
   const dates=c.dates,ppl=new Map();
-  const code=p=>p.status==='Week Off'?(p.woChanged?'WO*':'WO'):!p.confirmed?'-':p.status==='Absent'?'A':p.status==='Sick Leave'?'SL':(p.woChanged?'P*':'P');
+  const code=p=>p.status==='Week Off'?'WO':!p.confirmed?'-':p.status==='Absent'?'A':p.status==='Sick Leave'?'SL':'P';
   c.recs.forEach(p=>{const k=p.store+'|'+nk(p.name);
     if(!ppl.has(k))ppl.set(k,{store:p.store,site:p.site,name:p.name,designation:p.designation,vendor:p.vendor,shift:p.shift,cells:{}});
     ppl.get(k).cells[p.date]=code(p);});
@@ -192,7 +198,7 @@ function buildSheet(c,headFn,name,title){
   rows.push([]);
   [['Total P','P'],['Total A','A'],['Total SL','SL'],['Total WO','WO']].forEach(([l,x])=>rows.push(['','','',l,'','','','','',...tot(x)]));
   rows.push(['','','','Absenteeism %','','','','','',...dates.map(d=>{const g=x=>list.filter(p=>(p.cells[d]||'').replace('*','')===x).length,P=g('P'),A=g('A')+g('SL');return (P+A)?(A/(P+A)*100).toFixed(1):'';})]);
-  rows.push([]);rows.push(['','','','Key: P Present · A Absent · SL Sick Leave · WO Week Off · * week off changed · - not confirmed · N/A not joined yet / removed · blank = not on roster']);
+  rows.push([]);rows.push(['','','','Key: P Present · A Absent · SL Sick Leave · WO Week Off · - not confirmed · N/A not joined yet / removed · blank = not on roster']);
   downloadCsv(name,rows);
 }
 function exportDetail(){

@@ -88,6 +88,7 @@ function renderToday(){
   else if(res.partial) h+='<div class="note warn"><b>'+res.done.length+' of '+res.shifts.length+' shifts confirmed.</b> Confirm each shift once its people have started — no need to wait for end of day.</div>';
   else h+='<div class="note warn"><b>No shift confirmed yet.</b> Everyone is Present by default. Mark only Absent, Sick or week-off changes, then press Confirm on that shift.</div>';
   if(locked) h+='<div class="row mb"><button class="btn" onclick="askPw(\'Editing a past day needs the admin password.\',()=>{ST.unlocked[ST.date]=true;renderToday();})">Unlock past day</button></div>';
+  h+=shiftSummaryHtml(res.people,{key:'today|'+store+'|'+ST.date,isConf:p=>!!res.sc[p.shift],sub:fmtDate(ST.date)+' · present / absent update as you mark',statusFn:sh=>sh?(res.sc[sh]?'<span class="pill ok xs">Confirmed '+hm(res.sc[sh].at)+'</span>':'<span class="pill warn xs">Pending</span>'):''});
   const q=nk(ST.q),ppl=res.people.filter(p=>!q||nk(p.name).includes(q)||nk(p.vendor).includes(q));
   const order={'Supervisor':0,'Team Leader':1,'Associate':2,'Housekeeping':3};
   SHIFTS.forEach(sh=>{

@@ -55,8 +55,8 @@ const tmo=(p,ms)=>Promise.race([p,new Promise(r=>setTimeout(()=>r(null),ms||8000
 function roleOf(desig){const d=nk(desig);if(/supervisor/.test(d))return 'Supervisor';if(/team\s*lead|^tl$/.test(d))return 'Team Leader';if(/house\s*-?\s*keep|cleaner/.test(d))return 'Housekeeping';return 'Associate';}
 function normDesig(d){d=String(d||'').trim();if(/^warehouse\s+associate$/i.test(d))return 'Warehouse Assistant';if(/^house\s*-?\s*keep(ing|er)?$/i.test(d))return 'Housekeeping';if(/^(tl|team\s*lead(er)?)$/i.test(d))return 'Team Leader';return d||'Associate';}
 // one spelling per agency: Al Mahir / Al Maahir / almahir → "Al Mahir"; Flexi talent / flexitalent → "Flexi Talent"
-function normVendor(v){v=String(v||'').trim();const k=v.toLowerCase().replace(/[^a-z]/g,'');if(!k)return '';if(/ma+h+i+r/.test(k))return 'Al Mahir';if(/flexi/.test(k))return 'Flexi Talent';return v;}
-function fixVendors(o){if(o&&Array.isArray(o.rows))o.rows.forEach(x=>{if('vendor' in x)x.vendor=normVendor(x.vendor);});if(o&&Array.isArray(o.list))o.list.forEach(x=>{if('vendor' in x)x.vendor=normVendor(x.vendor);});return o;}
+function normVendor(v){v=String(v||'').trim();const k=v.toLowerCase().replace(/[^a-z]/g,'');if(!k)return '';if(/ma+h+i+r/.test(k))return 'Al Mahir';if(/flexi/.test(k))return 'Flexi Talent';if(/^amgl/.test(k))return 'AM Global';if(/^ea?[sz]+y?bu+z+/.test(k))return 'EzyBuzz';return v;}
+function fixVendors(o){if(o&&Array.isArray(o.rows))o.rows.forEach(x=>{if('vendor' in x)x.vendor=normVendor(x.vendor);});if(o&&Array.isArray(o.people))o.people.forEach(x=>{if(x&&'vendor' in x)x.vendor=normVendor(x.vendor);});if(o&&Array.isArray(o.list))o.list.forEach(x=>{if('vendor' in x)x.vendor=normVendor(x.vendor);});return o;}
 function normDay(s){const t=nk(s);if(!t)return '';if(/^(none|no|nil|-|na|n\/a)$/.test(t))return 'None';return DAYS.find(d=>d.toLowerCase().startsWith(t.slice(0,3)))||'';}
 function normShift(s){const t=nk(s).replace(/\s*shift$/,'');if(/^(day|morning|morn|general|gen|a)$/.test(t))return 'DAY';if(/^(evening|eve|afternoon|mid|b)$/.test(t))return 'EVENING';if(/^(night|c)$/.test(t))return 'NIGHT';return null;}
 function parseHour(s){
@@ -101,7 +101,7 @@ async function rdInit(){
 function storeList(){return Object.keys(RD.stores).sort();}
 function pinOf(c){return (RD.stores[c]||{}).pin||null;}
 function siteOf(c){return (RD.stores[c]||{}).site||'';}
-function storeLabel(c){const s=siteOf(c);return s?c+' — '+s:c;}
+function storeLabel(c){const s=siteOf(c).trim();return s?c+' — '+s:c;}
 function siteList(){return Object.keys(RD.pins).filter(x=>x&&!/^[a-z]{2,4}\d{1,3}$/i.test(x)).sort();}
 function nextPin(){const used=new Set([...Object.values(RD.pins),...Object.values(RD.stores||{}).map(x=>x.pin)]);let n=1010;while(used.has(String(n)))n++;return String(n);}
 async function saveStores(){if(!RD.storesOk)throw new Error('Store list not loaded — refresh first');try{localStorage.setItem('rp_stores',JSON.stringify(RD.stores));}catch(e){}await tmo(db.collection('meta').doc('stores').set({stores:RD.stores,updatedAt:new Date().toISOString()}),8000);}
@@ -178,7 +178,7 @@ function listenStoreDocs(store,prefix,from,to,target,cb){
 function dayKey(store,date){return 'rday__'+date+'__'+sid(store);}
 function getDay(store,date){return RD.days[dayKey(store,date)]||null;}
 async function loadDays(from,to){
-  try{const s=await tmo(rangeQ('rday__',from,to).get(),12000);if(s)s.docs.forEach(d=>{RD.days[d.id]=d.data();});}
+  try{const s=await tmo(rangeQ('rday__',from,to).get(),12000);if(s)s.docs.forEach(d=>{RD.days[d.id]=fixVendors(d.data());});}
   catch(e){console.warn('loadDays',e);RD.err=e.message;}
 }
 function listenDays(from,to,cb){const f=snapInto(RD.days);return rangeQ('rday__',from,to).onSnapshot(s=>{f(s);cb&&cb();},e=>console.warn('days listen',e));}
