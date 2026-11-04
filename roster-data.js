@@ -116,7 +116,9 @@ async function backfillEmps(){
   if(!RD.empsOk) return 0;
   let n=0;
   for(const store of storeList()){
-    if(RD.emps[store]) continue;
+    if(RD.emps[store]){ // give an Emp ID to anyone who doesn't have one yet
+      if(RD.emps[store].some(e=>!e.empId)){const l=JSON.parse(JSON.stringify(RD.emps[store]));try{await saveEmps(store,l);n++;}catch(e){console.warn('empId',store,e);}}
+      continue;}
     const r=latestRoster(store);if(!r||!r.rows||!r.rows.length) continue;
     const res=mergeEmps(store,r.rows.map(x=>({name:x.name,designation:x.designation,vendor:x.vendor,defShift:x.defShift||x.shift,weekOff:x.weekOff,start:x.start,end:x.end})),'roster backfill');
     try{await saveEmps(store,res.list);n++;}catch(e){console.warn('backfill',store,e);}
@@ -124,8 +126,22 @@ async function backfillEmps(){
   return n;
 }
 function listenEmps(cb){return empQ().onSnapshot(s=>{s.docChanges().forEach(c=>{const v=c.doc.data();if(c.type==='removed')delete RD.emps[v.store];else RD.emps[v.store]=fixVendors({list:v.list||[]}).list;});cb&&cb();},e=>console.warn('emps listen',e));}
+// Emp ID: auto-created per store (e.g. QAA1-0001), never reused — removed staff keep theirs.
+// Assignment order is fixed (joining date → added time → name) so two devices give the same IDs.
+function ensureEmpIds(store,list){
+  const pre=String(store).toUpperCase().replace(/[^A-Z0-9]/g,'')+'-';
+  let max=0;list.forEach(e=>{const m=String(e.empId||'').match(/-(\d+)$/);if(m)max=Math.max(max,+m[1]);});
+  const need=list.filter(e=>!e.empId).sort((a,b)=>String(a.joinDate||'').localeCompare(String(b.joinDate||''))||String(a.addedAt||'').localeCompare(String(b.addedAt||''))||nk(a.name).localeCompare(nk(b.name)));
+  need.forEach(e=>{e.empId=pre+String(++max).padStart(4,'0');});
+  return need.length;
+}
+function empIdOf(store,name,vendor){
+  const L=RD.emps[store]||[],k=nk(name),v=nk(normVendor(vendor||''));
+  const e=L.find(x=>nk(x.name)===k&&(!v||nk(x.vendor)===v))||L.find(x=>nk(x.name)===k);
+  return e&&e.empId||'';
+}
 function empsOf(store,all){return (RD.emps[store]||[]).filter(e=>all||e.status!=='Removed');}
-async function saveEmps(store,list){fixVendors({list});RD.emps[store]=list;const r=await tmo(db.collection('meta').doc(empKey(store)).set({store,list,updatedAt:new Date().toISOString()}),8000);return r;}
+async function saveEmps(store,list){fixVendors({list});ensureEmpIds(store,list);RD.emps[store]=list;return await safeCommit(db.collection('meta').doc(empKey(store)).set({store,list,updatedAt:new Date().toISOString()}),8000,'Employee save');}
 // Add new names from a roster, update details of existing ones, re-activate removed ones that are rostered again
 function mergeEmps(store,people,by){
   const list=JSON.parse(JSON.stringify(RD.emps[store]||[])),now=new Date().toISOString(),res={added:[],reactivated:[],list};
@@ -139,6 +155,17 @@ function mergeEmps(store,people,by){
   return res;
 }
 
+// Safe commit: waits up to ms; if the network is slow the write keeps going in the background,
+// the user is told, the page warns before closing, and a later failure is reported (never silently lost).
+let PENDING_WRITES=0;
+window.addEventListener('beforeunload',e=>{if(PENDING_WRITES>0){e.preventDefault();e.returnValue='Saving is still in progress';return e.returnValue;}});
+async function safeCommit(p,ms,what){
+  PENDING_WRITES++;
+  const done=p.then(()=>true).catch(err=>{const t=window.toast;t&&t((what||'Save')+' failed: '+err.message+' — please try again',true);throw err;}).finally(()=>{PENDING_WRITES--;});
+  const r=await Promise.race([done,new Promise(res=>setTimeout(()=>res('slow'),ms||10000))]);
+  if(r==='slow'){const t=window.toast;t&&t('Network is slow — still saving, keep this page open',true);done.catch(()=>{});}
+  return r;
+}
 // ─── storage in 'meta' (allowed by Firestore rules); IDs start with the date so range reads need no index ───
 const DOCID=()=>firebase.firestore.FieldPath.documentId();
 function rangeQ(prefix,a,b){return db.collection('meta').where(DOCID(),'>=',prefix+a).where(DOCID(),'<=',prefix+b+'~');}
@@ -154,12 +181,11 @@ function latestRoster(store,beforeOrOn){
 async function saveRosterDates(store,byDate,by){
   const b=db.batch(),now=new Date().toISOString();
   Object.entries(byDate).forEach(([date,rows])=>{
-    const doc=fixVendors({store,site:siteOf(store),date,rows,updatedAt:now,by:by||store});
+    const doc=fixVendors({store,site:siteOf(store),date,rows:uniqRows(rows),updatedAt:now,by:by||store});
     RD.rosters[rosterKey(store,date)]=doc;
     b.set(db.collection('meta').doc(rosterKey(store,date)),doc);
   });
-  const r=await tmo(b.commit(),10000);
-  return r;
+  return await safeCommit(b.commit(),10000,'Roster save');
 }
 async function loadRosters(from,to){
   try{const s=await tmo(rangeQ('rost__',from,to).get(),12000);if(s)s.docs.forEach(d=>{RD.rosters[d.id]=fixVendors(d.data());});}
@@ -185,8 +211,23 @@ function listenDays(from,to,cb){const f=snapInto(RD.days);return rangeQ('rday__'
 
 // People + status for one store on one date. Each shift is confirmed separately (day.shifts = {DAY:{at,by},…}).
 // marks: 'Absent' | 'Sick Leave' | 'Week Off' (week off moved to today) | 'Working' (came in on rostered week off)
+// One row per person: same name listed twice in a roster → last one wins
+// Person key = name + agency, so two different people who share a name (different agency) are never merged
+function pk(x){return nk(x.name)+'|'+nk(normVendor(x.vendor));}
+function uniqRows(rows){const m=new Map();(rows||[]).forEach(x=>{const k=pk(x)+'|'+nk(x.designation);if(m.has(k))m.delete(k);m.set(k,x);});return [...m.values()];}
+// One entry per person per day: if a name appears in more than one shift (shift changed after a roster re-upload),
+// the shift in the current roster wins; otherwise the later entry wins.
+function uniqPeople(people,rows){
+  const rs={};uniqRows(rows).forEach(x=>rs[pk(x)]=x.shift);
+  const m=new Map();
+  people.forEach(p=>{const k=pk(p),cur=m.get(k),want=rs[k];
+    if(!cur){m.set(k,p);return;}
+    if(want&&cur.shift===want&&p.shift!==want) return;
+    m.set(k,p);});
+  return [...m.values()];
+}
 function buildPeople(rows,m){
-  return rows.map(x=>{
+  return uniqRows(rows).map(x=>{
     const mk=m[nk(x.name)],def=x.start&&x.end?x.start+' - '+x.end:'';
     let status,time=x.off?'':(x.time||''),woChanged=false;
     if(x.off){if(mk==='Working'){status='Present';time=def;woChanged=true;}else status='Week Off';}
@@ -207,7 +248,7 @@ function dayPeople(store,date,marks){
   const fresh=r?buildPeople(r.rows,marks||(day&&day.marks)||{}):[],freshSh=new Set(fresh.map(p=>p.shift));
   let people=marks?[...fresh,...snap.filter(p=>sc[p.shift]&&!freshSh.has(p.shift))]
                   :[...snap.filter(p=>sc[p.shift]),...fresh.filter(p=>!sc[p.shift])];
-  people=people.map(p=>Object.assign({},p,{confirmed:!!sc[p.shift]}));
+  people=uniqPeople(people,r?r.rows:[]).map(p=>Object.assign({},p,{confirmed:!!sc[p.shift]}));
   const shs=SHIFTS.filter(s=>people.some(p=>p.shift===s)),done=shs.filter(s=>sc[s]);
   return {hasRoster:true,confirmed:shs.length>0&&done.length===shs.length,partial:done.length>0&&done.length<shs.length,day,sc,shifts:shs,done,people};
 }
@@ -227,7 +268,7 @@ async function clearShift(store,date,shift,by){
   gone.forEach(p=>{const sh=SHIFT_ABC[p.shift]||p.shift;
     const id=[site,y,mo,dd,sh,p.name].map(x=>String(x??'').trim().replace(/[\/#\[\]\.]/g,'-')).join('|');
     b.delete(db.collection('attendance').doc(id));});
-  await tmo(b.commit(),10000);
+  await safeCommit(b.commit(),10000,'Clear shift');
   return doc;
 }
 async function confirmShift(store,date,shift,marks,by){
@@ -235,16 +276,18 @@ async function confirmShift(store,date,shift,marks,by){
   if(!r) throw new Error('No roster for this date');
   const prev=shiftsConf(day),sc=Object.assign({},prev),now=new Date().toISOString();
   const inShift=new Set(r.rows.filter(x=>x.shift===shift).map(x=>nk(x.name)));
+  const movedIn=new Set(r.rows.filter(x=>x.shift===shift).map(pk));
   const merged=Object.assign({},day.marks||{});
   Object.keys(merged).forEach(k=>{if(inShift.has(k))delete merged[k];});
   Object.entries(marks||{}).forEach(([k,v])=>{if(inShift.has(k))merged[k]=v;});
   sc[shift]={at:now,by:by||store};
   const fresh=buildPeople(r.rows,merged),snap=day.people||[];
-  const people=SHIFTS.flatMap(s=>{
+  const people0=SHIFTS.flatMap(s=>{
     if(s===shift) return fresh.filter(p=>p.shift===s);
-    const old=snap.filter(p=>p.shift===s);
+    const old=snap.filter(p=>p.shift===s&&!movedIn.has(pk(p)));
     return prev[s]&&old.length?old:fresh.filter(p=>p.shift===s);
   }).map(p=>{const q=Object.assign({},p);delete q.confirmed;return q;});
+  const people=uniqPeople(people0,r.rows);
   const shs=SHIFTS.filter(s=>people.some(p=>p.shift===s)),all=shs.every(s=>sc[s]);
   const t=tally(people.filter(p=>sc[p.shift])),site=siteOf(store)||store;
   const doc={store,site,date,marks:merged,shifts:sc,confirmed:all,confirmedAt:now,by:by||store,people,
@@ -259,8 +302,11 @@ async function confirmShift(store,date,shift,marks,by){
     const rec={staffName:p.name,site,store,shift:sh,shiftName:p.shift,timing:p.time||'',status:p.status,designation:p.designation,agency:p.vendor,day:String(dd),month:MONTHS[mo],year:String(y),dateKey:y*10000+mo*100+dd,submittedBy:by||store,source:'roster',submittedAt:now};
     const id=[site,y,mo,dd,sh,p.name].map(x=>String(x??'').trim().replace(/[\/#\[\]\.]/g,'-')).join('|');
     b.set(db.collection('attendance').doc(id),rec);
+    // remove this person's record under any other shift for the same day (shift was changed) — no duplicates
+    SHIFTS.filter(o=>o!==shift&&!r.rows.some(x=>x.shift===o&&nk(x.name)===nk(p.name))).forEach(o=>{const so=SHIFT_ABC[o]||o;
+      b.delete(db.collection('attendance').doc([site,y,mo,dd,so,p.name].map(x=>String(x??'').trim().replace(/[\/#\[\]\.]/g,'-')).join('|')));});
   });
-  await tmo(b.commit(),10000);
+  await safeCommit(b.commit(),10000,'Shift confirmation');
   return doc;
 }
 

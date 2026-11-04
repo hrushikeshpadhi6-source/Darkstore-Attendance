@@ -51,14 +51,14 @@ function exportAbsXlsx(){
     .forEach(r=>D.push([fmtDate(r.date,{day:'2-digit',month:'short',year:'numeric'}),dayName(r.date),r.store,r.site,r.name,r.designation,r.vendor,SHIFT_LBL[r.shift],r.time,r.status]));
   // 3. Person-wise
   const per={};conf.forEach(r=>{const k=r.store+'|'+nk(r.name);(per[k]=per[k]||{r,l:[]}).l.push(r);});
-  const P=[['Name','Store Code','Site','Designation','Agency','Shift',...H,'Absent dates','Sick dates']];
+  const P=[['Emp ID','Name','Store Code','Site','Designation','Agency','Shift',...H,'Absent dates','Sick dates']];
   Object.values(per).map(x=>({x,t:tally(x.l)})).sort((p,q)=>(q.t.absent+q.t.sick)-(p.t.absent+p.t.sick)||p.x.r.name.localeCompare(q.x.r.name)).forEach(({x,t})=>{
     const ds=s=>x.l.filter(r=>r.status===s).map(r=>r.date).sort().map(fmtShort).join(', ');
-    P.push([x.r.name,x.r.store,x.r.site,x.r.designation,x.r.vendor,SHIFT_LBL[x.r.shift],...tr(t),ds('Absent'),ds('Sick Leave')]);});
+    P.push([empIdOf(x.r.store,x.r.name,x.r.vendor),x.r.name,x.r.store,x.r.site,x.r.designation,x.r.vendor,SHIFT_LBL[x.r.shift],...tr(t),ds('Absent'),ds('Sick Leave')]);});
   // 4. Repeat absentees (2+)
-  const R=[['Name','Store Code','Site','Agency','Shift','Absent','Sick Leave','Total out','Dates']];
-  Object.values(per).forEach(x=>{const a=x.l.filter(r=>r.status==='Absent').length,s=x.l.filter(r=>r.status==='Sick Leave').length;if(a+s>=2)R.push([x.r.name,x.r.store,x.r.site,x.r.vendor,SHIFT_LBL[x.r.shift],a,s,a+s,x.l.filter(out).map(r=>r.date).sort().map(fmtShort).join(', ')]);});
-  R.splice(1,R.length,...R.slice(1).sort((p,q)=>q[7]-p[7]));
+  const R=[['Emp ID','Name','Store Code','Site','Agency','Shift','Absent','Sick Leave','Total out','Dates']];
+  Object.values(per).forEach(x=>{const a=x.l.filter(r=>r.status==='Absent').length,s=x.l.filter(r=>r.status==='Sick Leave').length;if(a+s>=2)R.push([empIdOf(x.r.store,x.r.name,x.r.vendor),x.r.name,x.r.store,x.r.site,x.r.vendor,SHIFT_LBL[x.r.shift],a,s,a+s,x.l.filter(out).map(r=>r.date).sort().map(fmtShort).join(', ')]);});
+  R.splice(1,R.length,...R.slice(1).sort((p,q)=>q[8]-p[8]));
   // 5. Daily by store (absenteeism %)
   const ds=[...new Set(conf.map(r=>r.date))].sort(),ss=[...new Set(conf.map(r=>r.store))].sort();
   const G=[['Store',...ds.map(fmtShort),'Total']];
@@ -69,14 +69,14 @@ function exportAbsXlsx(){
   const wb=XLSX.utils.book_new(),add=(rows,n,w)=>{const ws=XLSX.utils.aoa_to_sheet(rows);if(w)ws['!cols']=w.map(x=>({wch:x}));XLSX.utils.book_append_sheet(wb,ws,n);};
   add(S,'Summary',[22,10,10,10,11,10,14]);
   add(D,'Absence detail',[13,11,10,16,24,20,14,9,20,11]);
-  add(P,'Person-wise',[24,10,16,20,14,9,10,9,9,11,10,14,40,30]);
-  add(R,'Repeat absentees',[24,10,16,14,9,8,10,10,50]);
+  add(P,'Person-wise',[12,24,10,16,20,14,9,10,9,9,11,10,14,40,30]);
+  add(R,'Repeat absentees',[12,24,10,16,14,9,8,10,10,50]);
   add(G,'Daily by store %',[12,...ds.map(()=>10),8]);
   XLSX.writeFile(wb,name+'.xlsx');
   toast('Excel downloaded · '+(D.length-1)+' absences');
 }
 function exportRepeat(){
-  const rows=[['Name','Store Code','Site','Agency','Shift','Absent','Sick Leave','Dates']];
-  (MG.repeat||[]).forEach(x=>rows.push([x.r.name,x.r.store,x.r.site,x.r.vendor,SHIFT_LBL[x.r.shift],x.a,x.s,x.dates.sort().join(' ')]));
+  const rows=[['Emp ID','Name','Store Code','Site','Agency','Shift','Absent','Sick Leave','Dates']];
+  (MG.repeat||[]).forEach(x=>rows.push([empIdOf(x.r.store,x.r.name,x.r.vendor),x.r.name,x.r.store,x.r.site,x.r.vendor,SHIFT_LBL[x.r.shift],x.a,x.s,x.dates.sort().join(' ')]));
   downloadCsv(fname('repeat absentees'),rows);
 }

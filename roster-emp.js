@@ -1,6 +1,6 @@
 // ═══ Darkstore Roster Pro — employee master (Roster Pro only, independent of the classic app) ═══
 const EMP={q:'',status:'Active',store:'',vendor:'',el:null,scope:null,form:null,sort:null};
-const EMP_COLS=[['store','Store'],['name','Name'],['designation','Designation'],['vendor','Agency'],['shift','Shift'],['timing','Timing'],['weekOff','Week Off'],['joinDate','Joined'],['status','Status']];
+const EMP_COLS=[['store','Store'],['empId','Emp ID'],['name','Name'],['designation','Designation'],['vendor','Agency'],['shift','Shift'],['timing','Timing'],['weekOff','Week Off'],['joinDate','Joined'],['status','Status']];
 function empSort(k){const s=EMP.sort;EMP.sort=(k==='shift'||k==='timing')&&!(s&&s.k===k&&s.dir===1)?null:{k,dir:s&&s.k===k?-s.dir:1};empRerender();}
 const empTm=e=>startMin((e.start||'')+' - '+(e.end||''),e.shift);
 function empCmp(a,b){const s=EMP.sort;if(!s)return SHIFTS.indexOf(a.shift)-SHIFTS.indexOf(b.shift)||empTm(a)-empTm(b)||a.store.localeCompare(b.store)||a.name.localeCompare(b.name);
@@ -32,11 +32,11 @@ function renderEmployees(elId,scope){
     '<div class="row" style="gap:8px"><button class="btn sm" onclick="exportEmployees()">Export CSV</button><button class="btn pri sm" onclick="empForm()">Add employee</button></div></div>'+
     '<div id="empForm"></div><div class="tw"><table class="t"><thead><tr>'+EMP_COLS.filter(c=>!scope||c[0]!=='store').map(([k,l])=>{const on=EMP.sort?EMP.sort.k===k:(k==='shift'||k==='timing');return '<th class="srt'+(on?' on':'')+'" onclick="empSort(\''+k+'\')" title="Sort by '+l+'">'+l+(EMP.sort&&EMP.sort.k===k?(EMP.sort.dir>0?' ↑':' ↓'):'')+'</th>';}).join('')+'<th>'+(EMP.sort?'<button class="btn ghost xs" onclick="EMP.sort=null;empRerender()">By shift timing</button>':'')+'</th></tr></thead><tbody>'+
     (vis.length?vis.map((e,i)=>{const k=esc(nk(e.name)).replace(/'/g,"\\'"),s=esc(e.store);
-      const grp=!EMP.sort&&(i===0||vis[i-1].shift!==e.shift)?'<tr class="grp"><td colspan="'+(scope?9:10)+'">'+esc(SHIFT_LBL[e.shift]||'No shift')+' shift<span>'+vis.filter(x=>x.shift===e.shift).length+'</span></td></tr>':'';
-      return grp+'<tr>'+(scope?'':'<td class="mono">'+s+'</td>')+'<td><b>'+esc(e.name)+'</b></td><td>'+esc(e.designation)+'</td><td>'+esc(e.vendor||'—')+'</td><td>'+esc(SHIFT_LBL[e.shift]||'—')+'</td><td>'+esc(e.start&&e.end?e.start+' - '+e.end:'—')+'</td><td>'+esc(e.weekOff||'—')+'</td><td>'+(e.joinDate?fmtDate(e.joinDate):'—')+'</td>'+
+      const grp=!EMP.sort&&(i===0||vis[i-1].shift!==e.shift)?'<tr class="grp"><td colspan="'+(scope?10:11)+'">'+esc(SHIFT_LBL[e.shift]||'No shift')+' shift<span>'+vis.filter(x=>x.shift===e.shift).length+'</span></td></tr>':'';
+      return grp+'<tr>'+(scope?'':'<td class="mono">'+s+'</td>')+'<td class="mono">'+esc(e.empId||'—')+'</td><td><b>'+esc(e.name)+'</b></td><td>'+esc(e.designation)+'</td><td>'+esc(e.vendor||'—')+'</td><td>'+esc(SHIFT_LBL[e.shift]||'—')+'</td><td>'+esc(e.start&&e.end?e.start+' - '+e.end:'—')+'</td><td>'+esc(e.weekOff||'—')+'</td><td>'+(e.joinDate?fmtDate(e.joinDate):'—')+'</td>'+
         '<td>'+(e.status==='Removed'?'<span class="pill bad" title="'+esc(e.removedReason||'')+'">Removed '+(e.removedAt?fmtDate(e.removedAt.slice(0,10),{day:'numeric',month:'short'}):'')+'</span>':'<span class="pill ok">Active</span>')+'</td>'+
         '<td style="text-align:right"><button class="btn ghost sm" onclick="empForm(\''+s+'\',\''+k+'\')">Edit</button>'+(e.status==='Removed'?'<button class="btn ghost sm" onclick="empRestore(\''+s+'\',\''+k+'\')">Restore</button>':'<button class="btn ghost sm" style="color:var(--bad)" onclick="empRemove(\''+s+'\',\''+k+'\')">Remove</button>')+'</td></tr>';}).join('')
-      :'<tr><td colspan="10" class="empty">'+(list.length?'No one matches':'No employees yet — they are added automatically when a roster is uploaded, or use Add employee')+'</td></tr>')+
+      :'<tr><td colspan="11" class="empty">'+(list.length?'No one matches':'No employees yet — they are added automatically when a roster is uploaded, or use Add employee')+'</td></tr>')+
     '</tbody></table></div></div>';
   el.innerHTML=h;
 }
@@ -119,8 +119,8 @@ async function empRestore(store,key){
 }
 function exportEmployees(){
   const stores=EMP.scope?[EMP.scope]:(EMP.store?[EMP.store]:storeList());
-  const rows=[['Store Code','Site','Name','Designation','Role','Agency','Shift','Start','End','Week Off','Joining Date','Status','Removed On','Removal Reason','Added By','Source']];
-  allEmps(stores).sort((a,b)=>a.store.localeCompare(b.store)||a.name.localeCompare(b.name)).forEach(e=>rows.push([e.store,siteOf(e.store),e.name,e.designation,roleOf(e.designation),e.vendor,SHIFT_LBL[e.shift]||e.shift,e.start,e.end,e.weekOff,e.joinDate,e.status||'Active',e.removedAt?e.removedAt.slice(0,10):'',e.removedReason||'',e.addedBy||'',e.source||'']));
+  const rows=[['Emp ID','Store Code','Site','Name','Designation','Role','Agency','Shift','Start','End','Week Off','Joining Date','Status','Removed On','Removal Reason','Added By','Source']];
+  allEmps(stores).sort((a,b)=>a.store.localeCompare(b.store)||a.name.localeCompare(b.name)).forEach(e=>rows.push([e.empId||'',e.store,siteOf(e.store),e.name,e.designation,roleOf(e.designation),e.vendor,SHIFT_LBL[e.shift]||e.shift,e.start,e.end,e.weekOff,e.joinDate,e.status||'Active',e.removedAt?e.removedAt.slice(0,10):'',e.removedReason||'',e.addedBy||'',e.source||'']));
   downloadCsv('Darkstore employees '+(stores.length===1?stores[0]+' ':'')+todayIso()+'.csv',rows);
 }
 

@@ -186,25 +186,25 @@ function buildSheet(c,headFn,name,title){
     dates.forEach(d=>{if(!p.cells[d]&&((join&&d<join)||(left&&d>left)))p.cells[d]='N/A';});
   });
   const rows=[];
-  if(title){rows.push(['Attendance '+title]);rows.push(['','','','','','','','','',...dates.map(d=>dayName(d).slice(0,3))]);}
-  rows.push(['#','Store Code','Site','Name','Designation','Agency','Shift','Joining Date','Status',...dates.map(headFn),'Working Days (P)','Absent (A)','Sick Leave (SL)','Week Off (WO)','Pending','Absenteeism %']);
+  if(title){rows.push(['Attendance '+title]);rows.push(['','','','','','','','','','',...dates.map(d=>dayName(d).slice(0,3))]);}
+  rows.push(['#','Emp ID','Store Code','Site','Name','Designation','Agency','Shift','Joining Date','Status',...dates.map(headFn),'Working Days (P)','Absent (A)','Sick Leave (SL)','Week Off (WO)','Pending','Absenteeism %']);
   list.forEach((p,i)=>{
     const v=dates.map(d=>p.cells[d]||'');
     const n=x=>v.filter(y=>y.replace('*','')===x).length,P=n('P'),A=n('A'),S=n('SL'),W=n('WO'),pend=n('-');
-    rows.push([i+1,p.store,p.site,p.name,p.designation,p.vendor,SHIFT_LBL[p.shift]||p.shift,p.join||'',p.status||'',...v,P,A,S,W,pend,(P+A+S)?((A+S)/(P+A+S)*100).toFixed(1):'']);
+    rows.push([i+1,empIdOf(p.store,p.name,p.vendor),p.store,p.site,p.name,p.designation,p.vendor,SHIFT_LBL[p.shift]||p.shift,p.join||'',p.status||'',...v,P,A,S,W,pend,(P+A+S)?((A+S)/(P+A+S)*100).toFixed(1):'']);
   });
   // per-date totals
   const tot=x=>dates.map(d=>list.filter(p=>(p.cells[d]||'').replace('*','')===x).length);
   rows.push([]);
-  [['Total P','P'],['Total A','A'],['Total SL','SL'],['Total WO','WO']].forEach(([l,x])=>rows.push(['','','',l,'','','','','',...tot(x)]));
-  rows.push(['','','','Absenteeism %','','','','','',...dates.map(d=>{const g=x=>list.filter(p=>(p.cells[d]||'').replace('*','')===x).length,P=g('P'),A=g('A')+g('SL');return (P+A)?(A/(P+A)*100).toFixed(1):'';})]);
-  rows.push([]);rows.push(['','','','Key: P Present · A Absent · SL Sick Leave · WO Week Off · - not confirmed · N/A not joined yet / removed · blank = not on roster']);
+  [['Total P','P'],['Total A','A'],['Total SL','SL'],['Total WO','WO']].forEach(([l,x])=>rows.push(['','','','',l,'','','','','',...tot(x)]));
+  rows.push(['','','','','Absenteeism %','','','','','',...dates.map(d=>{const g=x=>list.filter(p=>(p.cells[d]||'').replace('*','')===x).length,P=g('P'),A=g('A')+g('SL');return (P+A)?(A/(P+A)*100).toFixed(1):'';})]);
+  rows.push([]);rows.push(['','','','','Key: P Present · A Absent · SL Sick Leave · WO Week Off · - not confirmed · N/A not joined yet / removed · blank = not on roster']);
   downloadCsv(name,rows);
 }
 function exportDetail(){
-  const c=MG.last,rows=[['Date','Day','Store Code','Site','Name','Designation','Role','Agency','Shift','Timing','Status','Week Off Changed','Day Confirmed']];
+  const c=MG.last,rows=[['Date','Day','Store Code','Site','Emp ID','Name','Designation','Role','Agency','Shift','Timing','Status','Week Off Changed','Day Confirmed']];
   c.recs.slice().sort((a,b)=>a.date.localeCompare(b.date)||a.store.localeCompare(b.store)||SHIFTS.indexOf(a.shift)-SHIFTS.indexOf(b.shift)||a.name.localeCompare(b.name))
-    .forEach(p=>rows.push([p.date,dayName(p.date),p.store,p.site,p.name,p.designation,p.role,p.vendor,SHIFT_LBL[p.shift]||p.shift,p.time,p.confirmed||p.status==='Week Off'?p.status:'Pending',p.woChanged?'Yes':'',p.confirmed?'Yes':'No']));
+    .forEach(p=>rows.push([p.date,dayName(p.date),p.store,p.site,empIdOf(p.store,p.name,p.vendor),p.name,p.designation,p.role,p.vendor,SHIFT_LBL[p.shift]||p.shift,p.time,p.confirmed||p.status==='Week Off'?p.status:'Pending',p.woChanged?'Yes':'',p.confirmed?'Yes':'No']));
   downloadCsv(fname('attendance detail'),rows);
 }
 
