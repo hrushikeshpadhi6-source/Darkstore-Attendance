@@ -75,6 +75,7 @@ async function empSave(){
   if(e){Object.assign(e,f);if(!key){e.status='Active';e.reactivatedAt=now;delete e.removedAt;delete e.removedReason;}}
   else{e=Object.assign({name,status:'Active',addedAt:now,addedBy:by,source:'manual'},f);list.push(e);}
   const toRoster=document.getElementById('efRoster').checked;
+  if(!key&&!toRoster)e.keepActive=true; // added by hand without a roster: keep Active until rostered
   try{
     await saveEmps(store,list);
     let n=0;
@@ -114,7 +115,7 @@ async function empRemove(store,key){
 }
 async function empRestore(store,key){
   const list=JSON.parse(JSON.stringify(RD.emps[store]||[])),e=list.find(x=>nk(x.name)===key);if(!e)return;
-  e.status='Active';e.reactivatedAt=new Date().toISOString();delete e.removedAt;delete e.removedReason;
+  e.status='Active';e.reactivatedAt=new Date().toISOString();delete e.removedAt;delete e.removedReason;e.keepActive=true;
   try{await saveEmps(store,list);toast(e.name+' restored — add them to the roster if they are working');empRerender();}catch(err){toast('Save failed: '+err.message,true);}
 }
 function exportEmployees(){

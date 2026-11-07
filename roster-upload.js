@@ -156,7 +156,7 @@ function savePreview(){
   const byDate={};
   p.dates.forEach(d=>{byDate[d]=p.rows.filter(x=>x.cells[d]).map(x=>Object.assign({},x.person,{shift:x.cells[d].shift,off:!!x.cells[d].off,time:x.cells[d].off?'':(x.cells[d].time||'')}));});
   const em=mergeEmps(SESSION.store,p.rows.map(x=>x.person),SESSION.store);
-  Promise.all([saveRosterDates(SESSION.store,byDate,SESSION.store),saveEmps(SESSION.store,em.list)]).then(()=>{toast('Roster saved · '+p.rows.length+' people · '+p.dates.length+' days'+(em.added.length?' · '+em.added.length+' new employees':''));ST.preview=null;ST.rFrom=p.dates[0]<todayIso()?ST.rFrom:p.dates[0];renderSite();})
+  Promise.all([saveRosterDates(SESSION.store,byDate,SESSION.store),saveEmps(SESSION.store,em.list)]).then(()=>syncRosterRemovals([SESSION.store])).then(()=>{toast('Roster saved · '+p.rows.length+' people · '+p.dates.length+' days'+(em.added.length?' · '+em.added.length+' new employees':''));ST.preview=null;ST.rFrom=p.dates[0]<todayIso()?ST.rFrom:p.dates[0];renderSite();})
     .catch(e=>toast('Save failed: '+e.message,true));
 }
 
@@ -290,6 +290,7 @@ async function saveEdits(){
     const ppl=new Map();Object.values(ST.edit).flat().forEach(x=>ppl.set(nk(x.name),x));
     const em=mergeEmps(SESSION.store,[...ppl.values()],SESSION.store);
     await Promise.all([saveRosterDates(SESSION.store,ST.edit,SESSION.store),saveEmps(SESSION.store,em.list)]);
+    await syncRosterRemovals([SESSION.store]);
     ST.edit=null;toast('Roster updated'+(em.added.length?' · '+em.added.length+' new employee(s) added':''));renderSite();}
   catch(e){toast('Save failed: '+e.message,true);}
 }
