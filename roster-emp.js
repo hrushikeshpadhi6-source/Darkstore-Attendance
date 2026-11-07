@@ -110,6 +110,8 @@ async function empRemove(store,key){
     const t=todayIso(),byDate={};
     Object.values(RD.rosters).filter(r=>r.store===store&&r.date>t&&r.rows.some(y=>nk(y.name)===key)).forEach(r=>{byDate[r.date]=r.rows.filter(y=>nk(y.name)!==key);});
     if(Object.keys(byDate).length) await saveRosterDates(store,byDate,e.removedBy);
+    await syncRosterRemovals([store]); // also takes them off today's roster (unless their shift is already confirmed)
+    if(SESSION.type==='site')renderSite();
     toast(e.name+' removed'+(Object.keys(byDate).length?' · taken off '+Object.keys(byDate).length+' future roster day(s)':''));empRerender();
   }catch(err){toast('Save failed: '+err.message,true);}
 }

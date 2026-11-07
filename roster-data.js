@@ -167,16 +167,30 @@ async function syncRosterRemovals(stores){
     const fut=mine.filter(r=>r.date>t),cur=fut.length?fut:mine.filter(r=>r.date===t);
     if(!cur.length) continue;
     const on=new Set();cur.forEach(r=>r.rows.forEach(x=>on.add(nk(x.name))));
-    const last={};mine.forEach(r=>r.rows.forEach(x=>{const k=nk(x.name);if(!last[k]||r.date>last[k])last[k]=r.date;}));
-    const list=JSON.parse(JSON.stringify(L)),now=new Date().toISOString();let ch=false;
+    const last={};mine.forEach(r=>r.rows.forEach(x=>{const k=nk(x.name);if(r.date<t&&(!last[k]||r.date>last[k]))last[k]=r.date;}));
+    const list=JSON.parse(JSON.stringify(L)),now=new Date().toISOString();let ch=false;const off=new Set();
     list.forEach(e=>{const k=nk(e.name);
       if(on.has(k)){if(e.keepActive){delete e.keepActive;ch=true;}return;}
-      if(e.status==='Removed'||e.keepActive||(e.joinDate&&e.joinDate>t)) return;
-      const d=last[k]&&last[k]<=t?last[k]:addDays(t,-1);
+      if(e.keepActive||(e.joinDate&&e.joinDate>t)) return;
+      if(fut.length) off.add(k); // not on the coming roster days: take off today's roster too
+      if(e.status==='Removed') return;
+      const d=last[k]||addDays(t,-1);
       e.status='Removed';e.removedAt=d+'T12:00:00.000Z';e.removedReason='Not on roster';e.removedBy='Roster';e.autoRemovedAt=now;ch=true;});
     if(ch){try{await saveEmps(store,list);n++;}catch(err){console.warn('roster sync',store,err);}}
+    // Today and later roster days: drop everyone who is Removed (past days keep their attendance)
+    list.forEach(e=>{if(e.status==='Removed'&&!e.keepActive)off.add(nk(e.name));});
+    if(off.size){const byDate={};
+      mine.filter(r=>r.date>=t).forEach(r=>{const keep=r.rows.filter(x=>!off.has(nk(x.name)));if(keep.length<r.rows.length)byDate[r.date]=keep;});
+      if(Object.keys(byDate).length){try{await saveRosterDates(store,byDate,'Roster');n++;}catch(err){console.warn('roster sync today',store,err);}}
+    }
   }
   return n;
+}
+// Removed staff are hidden from today onward, and from any day after their removal date
+function isGone(store,name,date){
+  const k=nk(name),e=(RD.emps[store]||[]).find(x=>nk(x.name)===k);
+  if(!e||e.status!=='Removed'||e.keepActive) return false;
+  return date>=todayIso()||(!!e.removedAt&&date>e.removedAt.slice(0,10));
 }
 
 // Safe commit: waits up to ms; if the network is slow the write keeps going in the background,
@@ -273,6 +287,7 @@ function dayPeople(store,date,marks){
   let people=marks?[...fresh,...snap.filter(p=>sc[p.shift]&&!freshSh.has(p.shift))]
                   :[...snap.filter(p=>sc[p.shift]),...fresh.filter(p=>!sc[p.shift])];
   people=uniqPeople(people,r?r.rows:[]).map(p=>Object.assign({},p,{confirmed:!!sc[p.shift]}));
+  people=people.filter(p=>!isGone(store,p.name,date)); // removed staff: not shown from today / after their removal date
   const shs=SHIFTS.filter(s=>people.some(p=>p.shift===s)),done=shs.filter(s=>sc[s]);
   return {hasRoster:true,confirmed:shs.length>0&&done.length===shs.length,partial:done.length>0&&done.length<shs.length,day,sc,shifts:shs,done,people};
 }

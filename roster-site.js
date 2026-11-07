@@ -64,7 +64,7 @@ function siteTab(t){
 function renderSite(){
   const store=SESSION&&SESSION.store;if(!store) return;
   const r=getRoster(store,todayIso()),site=siteOf(store);
-  document.getElementById('stSub').textContent=(site?site+' · ':'')+(r?r.rows.length+' on today\'s roster':'No roster for today');
+  document.getElementById('stSub').textContent=(site?site+' · ':'')+(r?r.rows.filter(x=>!isGone(store,x.name,todayIso())).length+' on today\'s roster':'No roster for today');
   if(ST.tab==='today')renderToday();else if(ST.tab==='roster')renderRoster();else if(ST.tab==='emp'){document.getElementById('stFoot').hidden=true;renderEmployees('stEmp',store);}else renderHist();
 }
 function loadMarks(){const d=getDay(SESSION.store,ST.date);ST.marks=Object.assign({},(d&&d.marks)||{});ST.dirty=false;ST.dirtyShifts=new Set();}
