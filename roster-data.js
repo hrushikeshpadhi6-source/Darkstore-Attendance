@@ -154,35 +154,30 @@ function mergeEmps(store,people,by){
   });
   return res;
 }
-// Roster is the source of truth for who is active. Anyone still Active in the employee list who is
-// not on the current roster (later saved roster days if any, else today's) is set to Removed, dated
-// their last rostered day: attendance up to that day stays, the month sheet shows N/A after it.
-// Rostering them again re-activates them (mergeEmps). Restored / manually added people are kept (keepActive).
+// Keeps the employee list in line with the roster. It only changes the employee list, never a roster:
+// - anyone on today's or a later saved roster is Active (undoes an automatic removal)
+// - anyone Active who is on neither today's nor any later roster is set to Removed, dated their last rostered day
+//   (attendance up to that day stays, the month sheet shows N/A after it). Needs today's roster to be saved.
+// Restored / manually added people are kept (keepActive). People removed with the Remove button stay removed.
 async function syncRosterRemovals(stores){
   if(!RD.empsOk||RD.err) return 0;
   const t=todayIso();let n=0;
   for(const store of (stores||storeList())){
     const L=RD.emps[store];if(!L||!L.length) continue;
     const mine=Object.values(RD.rosters).filter(r=>r&&r.store===store&&Array.isArray(r.rows));
-    const fut=mine.filter(r=>r.date>t),cur=fut.length?fut:mine.filter(r=>r.date===t);
-    if(!cur.length) continue;
-    const on=new Set();cur.forEach(r=>r.rows.forEach(x=>on.add(nk(x.name))));
+    if(!mine.some(r=>r.date===t&&r.rows.length)) continue; // no roster for today: change nothing
+    const on=new Set();mine.filter(r=>r.date>=t).forEach(r=>r.rows.forEach(x=>on.add(nk(x.name))));
     const last={};mine.forEach(r=>r.rows.forEach(x=>{const k=nk(x.name);if(r.date<t&&(!last[k]||r.date>last[k]))last[k]=r.date;}));
-    const list=JSON.parse(JSON.stringify(L)),now=new Date().toISOString();let ch=false;const off=new Set();
+    const list=JSON.parse(JSON.stringify(L)),now=new Date().toISOString();let ch=false;
     list.forEach(e=>{const k=nk(e.name);
-      if(on.has(k)){if(e.keepActive){delete e.keepActive;ch=true;}return;}
-      if(e.keepActive||(e.joinDate&&e.joinDate>t)) return;
-      if(fut.length) off.add(k); // not on the coming roster days: take off today's roster too
-      if(e.status==='Removed') return;
+      if(on.has(k)){
+        if(e.keepActive){delete e.keepActive;ch=true;}
+        if(e.status==='Removed'&&e.removedBy==='Roster'){e.status='Active';e.reactivatedAt=now;delete e.removedAt;delete e.removedReason;delete e.removedBy;delete e.autoRemovedAt;ch=true;}
+        return;}
+      if(e.status==='Removed'||e.keepActive||(e.joinDate&&e.joinDate>t)) return;
       const d=last[k]||addDays(t,-1);
       e.status='Removed';e.removedAt=d+'T12:00:00.000Z';e.removedReason='Not on roster';e.removedBy='Roster';e.autoRemovedAt=now;ch=true;});
     if(ch){try{await saveEmps(store,list);n++;}catch(err){console.warn('roster sync',store,err);}}
-    // Today and later roster days: drop everyone who is Removed (past days keep their attendance)
-    list.forEach(e=>{if(e.status==='Removed'&&!e.keepActive)off.add(nk(e.name));});
-    if(off.size){const byDate={};
-      mine.filter(r=>r.date>=t).forEach(r=>{const keep=r.rows.filter(x=>!off.has(nk(x.name)));if(keep.length<r.rows.length)byDate[r.date]=keep;});
-      if(Object.keys(byDate).length){try{await saveRosterDates(store,byDate,'Roster');n++;}catch(err){console.warn('roster sync today',store,err);}}
-    }
   }
   return n;
 }
