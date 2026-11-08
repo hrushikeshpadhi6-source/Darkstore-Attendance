@@ -23,10 +23,10 @@ async function openMgr(){
   await Promise.all([loadRosters(lf,addDays(t,45)),loadDays(lf,t),loadEmps()]);
   MG.loaded={from:lf,to:t};
   await backfillEmps();
-  await syncRosterRemovals();
   const rr=()=>{if(MG.tab==='ot')renderOt();else renderMgr();};
   window._unsubs=[listenRosters(lf,addDays(t,45),rr),listenDays(lf,t,rr),listenEmps(()=>{if(MG.tab==='emp')renderEmployees('mgPaneEmp',null);else if(MG.tab==='ot')renderOt();else renderHeadcount();})];
   rr();
+  syncRosterRemovals().then(n=>{if(n&&SESSION&&SESSION.type==='mgr')rr();}).catch(()=>{}); // in the background, after the page shows
   if(RD.err) document.getElementById('mgWarn').insertAdjacentHTML('afterbegin','<div class="note bad"><b>Could not load data:</b> '+esc(RD.err)+'</div>');
 }
 function fillMgrStores(){

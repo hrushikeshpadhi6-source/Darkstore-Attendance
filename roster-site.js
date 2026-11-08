@@ -47,7 +47,7 @@ async function openSite(store){
   await Promise.all([loadRosters(addDays(t,-35),addDays(t,28)),loadDays(addDays(t,-35),t),loadEmps()]);
   if(RD.err) toast('Could not load data: '+RD.err,true);
   await backfillEmps();
-  await syncRosterRemovals([store]);
+  syncRosterRemovals([store]).then(n=>{if(n&&!ST.dirty&&!ST.edit&&!ST.preview)renderSite();}).catch(()=>{}); // in the background
   const re=()=>{if(!ST.dirty&&!ST.edit&&!ST.preview)renderSite();};
   window._unsubs=[listenRosters(addDays(t,-14),addDays(t,28),re),listenDays(addDays(t,-7),t,re),listenEmps(()=>{if(ST.tab==='emp')renderEmployees('stEmp',SESSION.store);})];
   if(!ST.dirty){loadMarks();siteTab(ST.tab||'today');}

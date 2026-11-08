@@ -182,8 +182,11 @@ async function syncRosterRemovals(stores){
   return n;
 }
 // Removed staff are hidden from today onward, and from any day after their removal date
+const GONE_IX=new Map(); // per store: name → employee, rebuilt when that store's list changes
 function isGone(store,name,date){
-  const k=nk(name),e=(RD.emps[store]||[]).find(x=>nk(x.name)===k);
+  const L=RD.emps[store];if(!L) return false;
+  let ix=GONE_IX.get(store);if(!ix||ix.L!==L){ix={L,m:new Map(L.map(x=>[nk(x.name),x]))};GONE_IX.set(store,ix);}
+  const e=ix.m.get(nk(name));
   if(!e||e.status!=='Removed'||e.keepActive) return false;
   return date>=todayIso()||(!!e.removedAt&&date>e.removedAt.slice(0,10));
 }
@@ -276,11 +279,21 @@ function shiftsConf(day){
   return {};
 }
 function dayPeople(store,date,marks){
-  const day=getDay(store,date),r=getRoster(store,date),sc=shiftsConf(day),snap=(day&&day.people)||[];
+  const day=getDay(store,date),r=getRoster(store,date),snap=(day&&day.people)||[];
+  let sc=shiftsConf(day);
+  // A confirmed shift goes back to Pending when the roster has changed who is in it since it was confirmed
+  // (someone moved in or out, e.g. Night → Day). Marks already made are kept. Today and later only.
+  if(r&&snap.length&&date>=todayIso()){
+    const names=(L,s)=>new Set(L.filter(x=>x.shift===s&&!isGone(store,x.name,date)).map(x=>nk(x.name)));
+    const rr=uniqRows(r.rows),stale=Object.keys(sc).filter(s=>{const a=names(rr,s),b=names(snap,s);return a.size!==b.size||[...a].some(k=>!b.has(k));});
+    if(stale.length){sc=Object.assign({},sc);stale.forEach(s=>delete sc[s]);}
+  }
   if(!r&&!snap.length) return {hasRoster:false,confirmed:false,partial:false,day,sc,shifts:[],done:[],people:[]};
   const fresh=r?buildPeople(r.rows,marks||(day&&day.marks)||{}):[],freshSh=new Set(fresh.map(p=>p.shift));
+  // people moved into a shift after it was confirmed are not in that shift's saved list: still show them
+  const snapIn=new Set(snap.filter(p=>sc[p.shift]).map(p=>pk(p)+'|'+p.shift));
   let people=marks?[...fresh,...snap.filter(p=>sc[p.shift]&&!freshSh.has(p.shift))]
-                  :[...snap.filter(p=>sc[p.shift]),...fresh.filter(p=>!sc[p.shift])];
+                  :[...snap.filter(p=>sc[p.shift]),...fresh.filter(p=>!sc[p.shift]||!snapIn.has(pk(p)+'|'+p.shift))];
   people=uniqPeople(people,r?r.rows:[]).map(p=>Object.assign({},p,{confirmed:!!sc[p.shift]}));
   people=people.filter(p=>!isGone(store,p.name,date)); // removed staff: not shown from today / after their removal date
   const shs=SHIFTS.filter(s=>people.some(p=>p.shift===s)),done=shs.filter(s=>sc[s]);
