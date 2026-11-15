@@ -151,7 +151,28 @@ function exportStore(){
   const c=MG.last,rows=[['Store Code','Site','Days with roster','Days confirmed',...HCSV,...SHIFTS.flatMap(s=>[SHIFT_LBL[s]+' Present',SHIFT_LBL[s]+' Absent'])]];
   Object.values(c.store).forEach(s=>rows.push([s.code,s.site,s.days,s.conf,...tcsv(tally(s.people)),...SHIFTS.flatMap(sh=>{const x=tally(s.people.filter(p=>p.shift===sh));return [x.present,x.absent+x.sick];})]));
   rows.push(['Total','','','',...tcsv(tally(c.conf))]);
-  downloadCsv(fname('store-wise'),rows);
+  const daily=storeDailyRows(c);
+  if(!window.XLSX){downloadCsv(fname('store-wise'),rows);downloadCsv(fname('store daily headcount'),daily);toast('Excel library not loaded, downloaded 2 CSV files',true);return;}
+  const wb=XLSX.utils.book_new(),add=(r,n,w)=>{const ws=XLSX.utils.aoa_to_sheet(r);ws['!cols']=w.map(x=>({wch:x}));XLSX.utils.book_append_sheet(wb,ws,n);};
+  add(rows,'Store-wise',[11,16,9,9,...HCSV.map(()=>11),...SHIFTS.flatMap(()=>[11,11])]);
+  add(daily,'Store daily headcount',[11,16,12,11,11,13,15,10,10,10,10,10,10,11]);
+  XLSX.writeFile(wb,fname('store-wise').replace(/\.csv$/,'.xlsx'));
+}
+// One row per store per date: headcount by role (all roles, not the Role filter) and attendance
+function storeDailyRows(c){
+  const out=[['Store Code','Site','Date','Day','Associates','Housekeeping','TL & Supervisors','Total Headcount','Week Off','Rostered','Present','Absent','Not Marked','Absent %']];
+  const tot=[0,0,0,0,0,0,0,0,0];
+  c.stores.forEach(code=>c.dates.forEach(d=>{
+    const r=dayPeople(code,d);if(!r.hasRoster)return;
+    const L=r.people,rc=f=>L.filter(f).length;
+    const aa=rc(p=>p.role==='Associate'),hk=rc(p=>p.role==='Housekeeping'),tl=rc(p=>p.role==='Supervisor'||p.role==='Team Leader');
+    const wo=rc(p=>p.status==='Week Off'),ros=L.length-wo;
+    const ab=rc(p=>(p.status==='Absent'||p.status==='Sick Leave')&&p.confirmed),pr=rc(p=>p.status!=='Week Off'&&p.status!=='Absent'&&p.status!=='Sick Leave'&&p.confirmed),nm=ros-ab-pr;
+    const v=[aa,hk,tl,L.length,wo,ros,pr,ab,nm];v.forEach((x,i)=>tot[i]+=x);
+    out.push([code,siteOf(code),fmtDate(d,{day:'2-digit',month:'short',year:'numeric'}),dayName(d),...v,(pr+ab)?+(ab/(pr+ab)*100).toFixed(1):'']);
+  }));
+  out.push(['Total','','','',...tot,(tot[6]+tot[7])?+(tot[7]/(tot[6]+tot[7])*100).toFixed(1):'']);
+  return out;
 }
 function exportVendor(){
   const c=MG.last,rows=[['Agency','Store',...HCSV]],vend={};
