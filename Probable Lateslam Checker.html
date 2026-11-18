@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+(function(){
+  var K='dms_session_date';
+  function today(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+  function valid(){try{var v=localStorage.getItem(K);return !!v && v===today();}catch(e){return true;}}
+  function kick(){try{localStorage.removeItem(K);}catch(e){}location.href='index.html';}
+  var framed=false; try{framed=window.self!==window.top;}catch(e){framed=true;}
+  if(framed) return;
+  if(!valid()){ kick(); return; }
+  var now=new Date(), b=new Date(now.getFullYear(),now.getMonth(),now.getDate(),23,59,59,0);
+  setTimeout(kick, Math.max(0,b.getTime()-now.getTime())+500);
+  window.addEventListener('storage', function(e){ if(e.key===K && !e.newValue){ kick(); } });
+})();
+</script>
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Probable Lateslam Checker</title>
+<script>
+(function(){
+  function load(urls,test){ var i=0; (function next(){ if(test()||i>=urls.length) return; var s=document.createElement('script'); s.src=urls[i++]; s.async=true; s.onerror=next; s.onload=function(){ if(!test()) next(); }; document.head.appendChild(s); })(); }
+  load(["https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js","https://unpkg.com/papaparse@5.4.1/papaparse.min.js","https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"],function(){return !!window.Papa;});
+  load(["https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js","https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js","https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"],function(){return !!window.XLSX;});
+})();
+</script>
+<style>
+  :root{
+    --ink:#11161c; --muted:#5d6b7a; --line:#d7dee6; --bg:#e8ecf3; --panel:#fff;
+    --purple:#7c3aed; --blue:#4361ee;
+    --raw-h:#1f3a5f; --raw-t:#e9eff6;
+    --cls-h:#8a1c1c; --cls-t:#fbe7e7;
+    --der-h:#8a5a00; --der-t:#fcf1dd;
+    --fva-h:#0f5e57; --fva-t:#e1f1ee;
+    --man-h:#5b2a86; --man-t:#f1e8f8;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{background:var(--bg);color:var(--ink);
+    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;
+    padding:30px 28px 90px;}
+  .wrap{max-width:1520px;margin:0 auto;}
+
+  .backbtn{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);
+    color:var(--muted);font-size:13px;font-weight:700;padding:8px 16px;border-radius:9px;cursor:pointer;
+    text-decoration:none;margin-bottom:18px;transition:background .15s,color .15s,border-color .15s;}
+  .backbtn:hover{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  .masthead{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;
+    border-bottom:2px solid var(--ink);padding-bottom:16px;}
+  .eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 6px;}
+  h1{font-size:26px;line-height:1.1;margin:0;font-weight:800;letter-spacing:-.01em;}
+  .sub{font-size:13px;color:var(--muted);margin:7px 0 0;max-width:620px;line-height:1.5;}
+
+  /* upload cards */
+  .uploads{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:22px 0 8px;}
+  .ucard{background:#fff;border:2px dashed var(--line);border-radius:14px;padding:20px 22px;
+    cursor:pointer;transition:border-color .18s, background .18s;text-align:center;position:relative;}
+  .ucard:hover{background:#fbfaff;}
+  .ucard.f1{--accent:var(--purple);}
+  .ucard.f2{--accent:var(--blue);}
+  .ucard.loaded{border-style:solid;border-color:var(--accent);background:#fff;}
+  .ucard .ico{font-size:30px;line-height:1;}
+  .ucard h3{font-size:15px;font-weight:800;margin:8px 0 4px;}
+  .ucard .cols{font-size:11.5px;color:var(--muted);line-height:1.4;font-family:"SF Mono",Menlo,Consolas,monospace;}
+  .ucard .status{margin-top:10px;font-size:12px;font-weight:800;color:var(--accent);min-height:16px;}
+  .ucard .num{position:absolute;top:12px;left:14px;font-size:11px;font-weight:800;color:var(--accent);
+    background:color-mix(in srgb,var(--accent) 12%,#fff);border:1px solid color-mix(in srgb,var(--accent) 30%,#fff);
+    padding:2px 9px;border-radius:20px;letter-spacing:.08em;}
+
+  /* controls bar */
+  .controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 4px;}
+  .ctrl{display:flex;flex-direction:column;gap:4px;}
+  .ctrl label{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+  select,.btn{font-family:inherit;font-size:13px;font-weight:700;border-radius:9px;}
+  select,.datefield{padding:8px 12px;border:1px solid var(--line);background:#fff;color:var(--ink);min-width:160px;font-family:inherit;font-size:13px;font-weight:700;border-radius:9px;}
+  .datefield{min-width:150px;}
+  #fcStatus{font-size:12px;font-weight:700;color:var(--muted);align-self:center;}
+  .btn{border:1px solid var(--ink);background:var(--ink);color:#fff;padding:10px 16px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:8px;transition:transform .08s, background .15s;}
+  .btn:active{transform:translateY(1px);} .btn:hover{background:#22303f;}
+  .btn.ghost{background:#fff;color:var(--ink);} .btn.ghost:hover{background:#f1f3f7;}
+  .btn[disabled]{opacity:.4;cursor:not-allowed;}
+  .btn .dot{width:7px;height:7px;border-radius:50%;background:#37d07a;}
+
+  /* kpi strip */
+  .kpis{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 4px;}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px;min-width:120px;}
+  .kpi .v{font-size:22px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+  .kpi .l{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px;}
+  .kpi.alert .v{color:#c0392b;} .kpi.warn .v{color:#b8730a;}
+
+  /* hourly forecast strip */
+  .fc-panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:18px 0 6px;}
+  .fc-panel h4{margin:0 0 4px;font-size:13px;font-weight:800;}
+  .fc-panel .hint{font-size:11.5px;color:var(--muted);margin:0 0 12px;}
+  .fc-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .fc-table th{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);
+    text-align:center;padding:6px 8px;border-bottom:1px solid var(--line);}
+  .fc-table th:first-child{text-align:left;}
+  .fc-table td{padding:5px 8px;text-align:center;border-bottom:1px solid #eef1f5;font-variant-numeric:tabular-nums;}
+  .fc-table td:first-child{text-align:left;font-weight:700;}
+  .fc-table input{width:74px;padding:5px 7px;border:1px solid var(--line);border-radius:7px;text-align:center;
+    font-family:inherit;font-size:12px;font-weight:700;background:var(--man-t);}
+  .fc-table input:focus{outline:2px solid var(--man-h);background:#fff;}
+  .fc-table .gap{font-weight:800;}
+  .gap-pos{color:#0f8a4f;} .gap-neg{color:#c0392b;}
+
+  .legend{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 14px;}
+  .lg{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:7px 12px 7px 9px;}
+  .sw{width:15px;height:15px;border-radius:4px;flex:none;}
+  .lg b{font-size:12px;font-weight:800;} .lg span{font-size:11px;color:var(--muted);}
+
+  .scroller{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:auto;
+    box-shadow:0 18px 40px -28px rgba(16,22,28,.35);}
+  table.grid{border-collapse:collapse;width:100%;font-size:12px;}
+  table.grid th,table.grid td{border:1px solid #cfd8e2;padding:6px 9px;text-align:left;white-space:nowrap;vertical-align:top;}
+  tr.band th{color:#fff;font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;
+    text-align:center;padding:8px 6px;border-color:rgba(255,255,255,.25);}
+  tr.cols th{font-size:11.5px;font-weight:800;color:var(--ink);position:sticky;top:0;}
+  tr.cols th .code{display:block;font-weight:600;color:var(--muted);font-size:9.5px;margin-top:2px;
+    font-family:"SF Mono",Menlo,Consolas,monospace;}
+  tr.notes td{font-size:10.5px;font-style:italic;color:#46525f;background:#f7f9fb;white-space:normal;min-width:120px;line-height:1.35;}
+  tr.notes td.auto{color:#9aa6b2;}
+  tbody td{height:28px;color:#1b2530;font-variant-numeric:tabular-nums;}
+  td.rownum{background:#f2f5f8;color:#8b97a4;text-align:center;font-weight:700;font-size:11px;
+    position:sticky;left:0;z-index:1;}
+  th.rownum{background:#e9edf2;color:#5d6b7a;text-align:center;position:sticky;left:0;z-index:3;}
+  .more-note{font-size:12px;color:var(--muted);padding:10px 14px;text-align:center;}
+
+  .foot{margin-top:16px;font-size:12px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;align-items:center;}
+  .foot .pill{background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-weight:700;color:var(--ink);}
+  .empty-hint{font-size:12px;color:var(--muted);}
+
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;
+    opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;z-index:50;
+    box-shadow:0 12px 30px -10px rgba(0,0,0,.5);}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .hide{display:none !important;}
+</style>
+</head>
+<body>
+<style>@keyframes annMarquee{0%{transform:translateX(100%);}100%{transform:translateX(-100%);}}</style>
+<div id="ann-banner" style="display:none;position:relative;z-index:50;padding:12px 20px;font-family:'Syne',sans-serif;font-size:13px;font-weight:600;color:#fff;background:#2563EB;line-height:1.5;overflow:hidden;">
+  <span id="ann-banner-text" style="display:block;white-space:pre-wrap;"></span>
+</div>
+<script>
+(function(){
+  var KEY='dms_announce';
+  function render(){
+    var s=null; try{ s=JSON.parse(localStorage.getItem(KEY)||'null'); }catch(e){}
+    var banner=document.getElementById('ann-banner'), txt=document.getElementById('ann-banner-text');
+    if(!banner||!txt) return;
+    if(!s || !s.enabled || !s.text){ banner.style.display='none'; return; }
+    banner.style.background=s.color||'#2563EB';
+    banner.style.color=s.textColor||'#ffffff';
+    var speed=s.speed||20;
+    if(s.style==='running'||s.style==='chain'){
+      banner.style.padding='12px 0';
+      txt.style.whiteSpace='nowrap'; txt.style.display='inline-block';
+      txt.style.animation='annMarquee '+speed+'s linear infinite'; txt.style.paddingLeft='20px';
+      txt.textContent = s.style==='chain' ? Array(6).fill(s.text).join('   \u2022   ') : s.text;
+    } else {
+      banner.style.padding='12px 20px';
+      txt.style.whiteSpace='pre-wrap'; txt.style.display='block'; txt.style.animation='none';
+      txt.textContent=s.text;
+    }
+    banner.style.display='block';
+  }
+  window.addEventListener('storage', function(e){ if(e.key===KEY) render(); });
+  document.addEventListener('DOMContentLoaded', render);
+  if(document.readyState!=='loading') render();
+})();
+</script>
+
+<div class="wrap">
+  <a href="index.html" class="backbtn">← Back to Dashboard</a>
+  <div class="masthead">
+    <div>
+      <p class="eyebrow">New Logic · Probable Lateslam</p>
+      <h1>Probable Lateslam Checker</h1>
+      <p class="sub">Upload a late slam file. Each order is checked on its own: if the file has a <b>promise_utr</b> for that order, it is used; if the promise is blank or 0, the fixed promise time from the table below (by store × units) is used instead. Late slam = pl_create_to_stage &gt; promise.</p>
+    </div>
+  </div>
+  <div role="note" style="display:flex;gap:10px;align-items:flex-start;background:#FFE566;color:#000;border:1px solid #E0B800;border-radius:10px;padding:12px 16px;margin:0 0 18px;font-size:13px;line-height:1.5;">
+    <span style="font-size:16px;line-height:1.3;">🔔</span>
+    <span><b>Note:</b> For all stores, the actual late slam count will come <b>less</b> than the probable count shown here. For <b>QAA6</b>, it may be <b>more or less</b>, because QAA6 promise times are not fixed.</span>
+  </div>
+  <div class="uploads" style="grid-template-columns:1fr;">
+    <label class="ucard f1" id="pz">
+      <div class="ico">📋</div>
+      <h3>Late Slam Files (select one or more)</h3>
+      <div class="cols">delivery_station_code · units_picked · pl_create_to_stage (or picklist_created_time + staging_time)</div>
+      <div class="status" id="ps">click or drop CSV / XLSX</div>
+      <input type="file" id="pf" accept=".csv,.xls,.xlsx" class="hide" multiple />
+    </label>
+  </div>
+  <div class="controls">
+    <button class="btn" id="ptExport" disabled>⬇ Export Excel</button>
+    <button class="btn" id="ptBlur" type="button" aria-pressed="false">🙈 Blur Lateslam</button>
+    <button class="btn" id="ptView" type="button" disabled>📊 Quick View</button>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:#1d1d1b;">Drop window
+      <select id="ptDropWin" style="padding:8px 10px;border:1px solid #cfd6de;border-radius:8px;font-size:13px;font-weight:700;background:#fff;">
+        <option value="1">1 min</option><option value="2">2 min</option><option value="3">3 min</option><option value="4">4 min</option><option value="5" selected>5 min</option><option value="10">10 min</option><option value="30">30 min</option><option value="60">1 hour</option>
+      </select></label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:#1d1d1b;">Promise time
+      <select id="ptPMode" style="padding:8px 10px;border:1px solid #cfd6de;border-radius:8px;font-size:13px;font-weight:700;background:#fff;">
+        <option value="std">Standard</option><option value="upd">Updated · QHA5 &amp; QDH5 (13–16 Nov)</option>
+      </select></label>
+  </div>
+  <div id="ptMode" style="font-size:12px;font-weight:800;color:#5b2a86;margin-top:14px;"></div>
+  <div id="ptLastUpd" class="hide" style="display:flex;align-items:center;gap:10px;background:#1d1d1b;color:#fff;border-radius:10px;padding:12px 16px;margin:0 0 14px;font-size:14px;"><span style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.8;">Last updated · latest picklist created</span><b id="ptLastUpdVal" style="font-size:18px;"></b></div>
+  <div class="fc-panel" id="ptManPanel" style="margin-bottom:14px;">
+    <h4 style="margin-bottom:4px;">➕ Add store manually</h4>
+    <p class="hint" style="margin:0 0 10px;">For a store with no raw data. Enter orders and units; Late Slam, LS %, throughput and other metrics show N/A. Orders and units are added to the Total.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+      <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:800;color:#5d6b7a;">STORE<input id="ptManS" type="text" placeholder="e.g. QDB1" style="padding:8px 10px;border:1px solid #cfd6de;border-radius:8px;font-size:13px;font-weight:700;width:130px;text-transform:uppercase;" /></label>
+      <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:800;color:#5d6b7a;">ORDERS<input id="ptManO" type="number" min="0" style="padding:8px 10px;border:1px solid #cfd6de;border-radius:8px;font-size:13px;font-weight:700;width:120px;" /></label>
+      <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:800;color:#5d6b7a;">UNITS<input id="ptManU" type="number" min="0" style="padding:8px 10px;border:1px solid #cfd6de;border-radius:8px;font-size:13px;font-weight:700;width:120px;" /></label>
+      <button class="btn" id="ptManAdd" type="button">Add / Update</button>
+    </div>
+    <div id="ptManList" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
+  </div>
+  <div class="kpis hide" id="ptKpis"></div>
+  <style>body.ls-blur .lsv{filter:blur(6px);user-select:none;transition:filter .15s}.lsv{transition:filter .15s}</style>
+  <div class="fc-panel hide" id="ptQuickPanel" style="width:fit-content;max-width:100%;">
+    <h4 style="font-size:19px;">Quick View · Orders, Units, UPO, Lateslam &amp; Throughput <span id="ptQuickTill" style="font-weight:700;color:#5d6b7a;font-size:12px;margin-left:6px;"></span></h4>
+    <div style="overflow-x:auto;"><table class="fc-table" id="ptQuickTable" style="width:auto;min-width:0;font-size:16px;"></table></div>
+  </div>
+  <div class="fc-panel hide" id="ptStorePanel">
+    <h4>Probable Lateslam · Store-wise <span id="ptTill" style="font-weight:700;color:#5d6b7a;font-size:12px;margin-left:6px;"></span></h4>
+    <p class="hint">If an order's unit count isn't in the promise table, the next lower unit's promise is used. Reason: if picklist created → acceptance (pick_assignment_time) is more than 30s it counts as <b>Late acceptance</b>, otherwise <b>Pick / pack delay</b>.</p>
+    <div style="overflow-x:auto;"><table class="fc-table" id="ptStoreTable"></table></div>
+  </div>
+  <div class="fc-panel hide" id="ptDropPanel">
+    <h4>Order Drop · <span class="ptWinLbl">5-min</span> windows (picklist created time)</h4>
+    <p class="hint">Orders dropped in each <span class="ptWinLbl">5-min</span> window, store by store in time order, and how many of them became late slams. Only windows with at least one late slam are shown.</p>
+    <div style="overflow-x:auto;max-height:520px;"><table class="fc-table" id="ptDropTable"></table></div>
+  </div>
+  <div class="fc-panel" id="ptRefPanel">
+    <h4>Promise Time Table · promise_utr (sec) by store × units</h4>
+    <p class="hint">Fixed values — the standard (most frequent) promise_utr per store and unit count from the Updated from 1–10 Nov 2026 raw data (72,907 orders): most common promise per store × units (QAA6 uses the median, as its promise varies per order). Unit counts with fewer than 5 orders keep the previous value.</p>
+    <div style="overflow-x:auto;"><table class="fc-table" id="ptRefTable"></table></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const PROMISE={"QAA1":{"1":120,"2":180,"3":180,"4":180,"5":180,"6":300,"7":300,"8":300,"9":300,"10":300,"11":360,"12":360,"13":360,"14":420,"15":420,"16":420,"17":480,"18":480,"19":480,"20":540,"21":540,"22":540,"23":540,"24":600,"25":600,"26":600,"27":660,"28":660,"29":660,"30":720,"31":720,"32":720,"33":780,"34":780,"35":780,"36":780,"39":840,"40":900,"48":960,"49":960},"QAA6":{"1":152,"2":152,"3":211,"4":211,"5":212,"6":273,"7":270,"8":330,"9":329,"10":330,"11":390,"12":395,"13":390,"14":447,"15":451,"16":454,"17":447,"18":514,"19":507,"20":515,"21":574,"22":573,"23":576,"24":569,"25":633,"26":646,"27":639,"28":692,"29":682,"30":693,"31":677,"32":761,"33":758,"34":762,"36":816,"38":808,"40":853,"41":892,"42":868,"44":924,"46":1025,"47":1014,"48":1017,"54":1028,"64":1220,"82":1481,"84":1550},"QAA7":{"1":60,"2":120,"3":120,"4":180,"5":180,"6":240,"7":240,"8":240,"9":300,"10":300,"11":300,"12":360,"13":360,"14":420,"15":420,"16":420,"17":420,"18":480,"19":480,"20":480,"21":540,"22":540,"23":540,"24":600,"25":600,"26":600,"27":660,"28":660,"29":660,"30":720,"31":720,"32":720,"33":720,"34":780,"36":780,"48":1020,"50":1020},"QDC6":{"1":120,"2":120,"3":120,"4":180,"5":180,"6":240,"7":240,"8":240,"9":300,"10":300,"11":300,"12":360,"13":360,"14":360,"15":420,"16":420,"17":420,"18":420,"19":480,"20":480,"21":480,"22":540,"23":540,"24":540,"25":540,"26":600,"27":600,"28":600,"29":600,"30":660,"31":660,"32":660,"34":720,"35":720,"38":780},"QDD3":{"1":120,"2":120,"3":180,"4":180,"5":240,"6":240,"7":240,"8":300,"9":300,"10":300,"11":360,"12":360,"13":420,"14":420,"15":420,"16":420,"17":480,"18":480,"19":480,"20":540,"21":540,"22":540,"23":600,"24":600,"25":600,"26":660,"27":660,"28":660,"29":660,"30":720,"31":720,"32":720,"33":780,"34":780,"36":780,"44":960},"QDG5":{"1":120,"2":120,"3":120,"4":180,"5":180,"6":240,"7":240,"8":240,"9":300,"10":300,"11":300,"12":360,"13":360,"14":360,"15":420,"16":420,"17":420,"18":420,"19":480,"20":480,"21":480,"22":540,"23":540,"24":540,"25":540,"26":600,"27":600,"28":600,"30":660,"31":660,"33":720,"34":720,"35":720,"40":780},"QDG5_SS":{"1":120,"2":120,"3":180,"4":180,"5":240},"QDG8":{"1":120,"2":180,"3":180,"4":240,"5":300,"6":300,"7":360,"8":420,"9":420,"10":480,"11":540,"12":540,"13":600,"14":660,"15":660,"16":720,"17":720,"18":780,"19":840,"20":840,"21":900,"22":900,"23":960,"24":1020,"25":1020,"26":1080,"27":1080,"28":1140,"29":1140,"30":1200,"31":1260,"32":1260,"37":1440,"40":1560,"43":1620},"QDH5":{"1":120,"2":120,"3":120,"4":180,"5":180,"6":180,"7":300,"8":300,"9":300,"10":360,"11":360,"12":360,"13":420,"14":420,"15":420,"16":540,"17":540,"18":540,"19":600,"20":600,"21":600,"22":720,"23":720,"24":720,"25":840,"26":840,"27":840,"28":900,"29":900,"30":900,"31":960,"32":960,"33":960,"34":1020,"35":1020,"36":1020,"37":1080,"38":1080,"39":1080,"40":1140,"41":1140,"42":1140,"43":1200,"44":1200,"45":1200,"46":1260,"47":1260,"48":1260,"49":1260,"50":1260},"QHA5":{"1":120,"2":120,"3":180,"4":180,"5":240,"6":240,"7":360,"8":360,"9":420,"10":420,"11":480,"12":480,"13":600,"14":600,"15":660,"16":660,"17":840,"18":840,"19":840,"20":840,"21":1200,"22":1200,"23":1200,"24":1200,"25":1200,"26":1200,"27":1200,"34":2040,"37":2040}};
+const PROMISE_UPD={"QHA5":{"1":120,"2":120,"3":120,"4":180,"5":180,"6":180,"7":240,"8":240,"9":240,"10":300,"11":300,"12":300,"13":360,"14":360,"15":360,"16":420,"17":420,"18":420,"19":420,"20":420,"21":420,"22":480,"23":480,"28":600,"31":660,"44":780},"QDH5":{"1":120,"2":120,"3":120,"4":180,"5":180,"6":180,"7":300,"8":300,"9":300,"10":360,"11":360,"12":360,"13":420,"14":420,"15":420,"16":540,"17":540,"18":540,"19":600,"20":600,"21":600,"22":720,"23":720,"24":720,"25":840,"26":840,"27":840,"28":900,"29":900,"30":900,"31":960,"32":960,"33":1020,"34":1020,"35":1020,"36":1020,"37":1080,"38":1080,"39":1080,"40":1140,"41":1140,"42":1140,"43":1200,"44":1200,"45":1200,"46":1260,"47":1260,"48":1440,"49":1260,"50":1260}};
+let PMODE=(()=>{try{return localStorage.getItem("plc_pmode")||"std";}catch(e){return "std";}})();
+const isUpd=s=>PMODE==="upd"&&!!PROMISE_UPD[s];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2300);}
+function parseDT(s){ if(s==null||s==="") return null;
+  if(s instanceof Date) return isNaN(s)?null:s;
+  const str=String(s).trim();
+  if(/^\d+(\.\d+)?$/.test(str)){ const v=+str; if(v>20000&&v<80000){ const u=new Date(Date.UTC(1899,11,30)+Math.round(v*86400000)); return new Date(u.getUTCFullYear(),u.getUTCMonth(),u.getUTCDate(),u.getUTCHours(),u.getUTCMinutes(),u.getUTCSeconds()); } }
+  let m=str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if(m) return new Date(+m[1],m[2]-1,+m[3],+m[4],+m[5],+(m[6]||0));
+  m=str.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})(?:[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?)?/i);
+  if(m){ let a=+m[1],b=+m[2],y=+m[3]; if(y<100) y+=2000; let mo=a,da=b; if(a>12){da=a;mo=b;}
+    let h=+(m[4]||0); const ap=(m[7]||"").toUpperCase(); if(ap==="PM"&&h<12) h+=12; if(ap==="AM"&&h===12) h=0;
+    const d=new Date(y,mo-1,da,h,+(m[5]||0),+(m[6]||0)); return isNaN(d)?null:d; }
+  let d=new Date(str); if(!isNaN(d)) return d; d=new Date(str.replace(" ","T")); return isNaN(d)?null:d; }
+function readFile(file,cb){ const ext=(file.name.split('.').pop()||'').toLowerCase();
+  if(ext==='xlsx'||ext==='xls'){ const fr=new FileReader(); fr.onload=e=>{ const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const p=n=>String(n).padStart(2,"0");
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:"",raw:true});
+      rows.forEach(r=>Object.keys(r).forEach(k=>{ const v=r[k];
+        if(/time|date/i.test(k) && typeof v==="number" && v>20000 && v<80000){ const d=parseDT(v);
+          r[k]=d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds()); }
+        else if(typeof v==="number") r[k]=String(v); }));
+      cb(rows); }; fr.readAsArrayBuffer(file); }
+  else Papa.parse(file,{header:true,skipEmptyLines:true,complete:r=>cb(r.data)}); }
+const num=v=>{const n=parseFloat(String(v==null?"":v).replace(/,/g,""));return isNaN(n)?null:n;};
+const storeOf=r=>String(r.delivery_station_code||r.Delivery_Station_Code||r.station||r.store||r.Store||"").trim().toUpperCase();
+const unitsOf=r=>num(r.units_picked!=null&&r.units_picked!==""?r.units_picked:(r.units??r.Units??r.quantity))||0;
+function plStage(r){ let v=num(r.pl_create_to_stage); if(v!=null) return v;
+  const a=parseDT(r.picklist_created_time), b=parseDT(r.staging_time); return a&&b?(b-a)/1000:null; }
+function lookup(s,u){ const t=(PMODE==="upd"&&PROMISE_UPD[s])||PROMISE[s]; if(!t) return null; if(t[u]) return t[u];
+  const ks=Object.keys(t).map(Number).sort((a,b)=>a-b); let best=null; ks.forEach(k=>{ if(k<=u) best=t[k]; });
+  return best!=null?best:t[ks[0]]; }
+let out=[], summary=[], dropRows=[], quickRows=[], quickMode=false;
+const TP_TARGET=170; function tpCol(v){ v=Math.round(v||0); return v>=TP_TARGET?'#10B981':v>=TP_TARGET-5?'#F59E0B':'#EF4444'; }
+function applyView(){ const full=["ptKpis","ptStorePanel","ptDropPanel","ptRefPanel"];
+  full.forEach(i=>$(i).classList.toggle("hide",quickMode||(i!=="ptRefPanel"&&!summary.length)));
+  $("ptQuickPanel").classList.toggle("hide",!quickMode||!summary.length);
+  $("ptView").textContent=quickMode?"📋 Full View":"📊 Quick View"; }
+function renderRef(){ const TB=Object.assign({},PROMISE,PMODE==="upd"?PROMISE_UPD:{}); const stores=Object.keys(TB);
+  const us=[...new Set(stores.flatMap(s=>Object.keys(TB[s]).map(Number)))].sort((a,b)=>a-b);
+  let h='<thead><tr><th>Store</th>'+us.map(u=>'<th>'+u+'u</th>').join('')+'</tr></thead><tbody>';
+  stores.forEach(s=>{ const up=PMODE==="upd"&&PROMISE_UPD[s]; h+='<tr><td>'+esc(s)+(up?' <span style="background:#FFE566;color:#000;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:800;">UPDATED</span>':'')+'</td>'+us.map(u=>'<td>'+(TB[s][u]!=null?(up&&PROMISE[s]&&PROMISE[s][u]!==TB[s][u]?'<b style="color:#c0392b">'+TB[s][u]+'</b>':TB[s][u]):'<span style="color:#b3bcc6">–</span>')+'</td>').join('')+'</tr>'; });
+  $("ptRefTable").innerHTML=h+'</tbody>'; }
+renderRef();
+const pct=(l,d)=>d?+(l/d*100).toFixed(1):0;
+function accSecs(r){ const a=parseDT(r.picklist_created_time), b=parseDT(r.pick_assignment_time); return a&&b?(b-a)/1000:null; }
+function topUnits(m){ return Object.keys(m).map(Number).sort((x,y)=>m[y]-m[x]||x-y).slice(0,3).map(u=>u+'u ('+m[u]+')').join(', '); }
+let DROP_MIN=5, lastRows=null; const winLbl=()=>DROP_MIN===60?"1-hour":DROP_MIN+"-min";
+function run(rows){
+  lastRows=rows; document.querySelectorAll(".ptWinLbl").forEach(e=>e.textContent=winLbl()); const WL=winLbl();
+  out=[]; const by={}, allU={};
+  const fileHasPromise=rows.some(r=>r.__hasP);
+  let first=null,last=null; rows.forEach(r=>{ const d=parseDT(r.picklist_created_time); if(d){ if(!first||d<first) first=d; if(!last||d>last) last=d; } });
+  const fmt=d=>d.toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",hour12:false});
+  const fmtFull=d=>d.toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
+  $("ptTill").textContent=last?"· till "+fmt(last):""; $("ptQuickTill").textContent=last?"· till "+fmt(last):"";
+  $("ptLastUpdVal").textContent=last?fmtFull(last):"—"; $("ptLastUpd").classList.toggle("hide",!last);
+  rows.forEach(r=>{ const s=storeOf(r), u=unitsOf(r), t=plStage(r), useF=r.__hasP&&!isUpd(s), p=useF?num(r.promise_utr):lookup(s,u), ls=p!=null&&t!=null&&t>p, acc=accSecs(r);
+    const reason=!ls?"":acc!=null&&acc>30?"Late acceptance (PL create → accept > 30s)":"Pick / pack delay";
+    const rr=Object.assign({},r); delete rr.__hasP; delete rr.__file;
+    out.push(Object.assign(rr,{source_file:r.__file,promise_utr_used:p==null?"":p,promise_source:useF?"File":isUpd(s)?"Updated table (13–16 Nov)":"Fixed table",probable_lateslam:p==null?"No reference":ls?"Yes":"No",
+      pl_create_to_accept_secs:acc==null?"":Math.round(acc),lateslam_reason:reason}));
+    const o=by[s]=by[s]||{o:0,l:0,n:0,u:0,acc:0,um:{}}; o.o++; o.u+=u; if(p==null) o.n++;
+    if(ls){ o.l++; o.um[u]=(o.um[u]||0)+1; allU[u]=(allU[u]||0)+1; if(acc!=null&&acc>30) o.acc++; } });
+  summary=Object.keys(by).sort().map(s=>({Store:s,Orders:by[s].o,"Late Slams":by[s].l,"Lateslam %":pct(by[s].l,by[s].o-by[s].n),
+    Units:by[s].u,"Most Lateslam Unit Orders":topUnits(by[s].um),"Late Acceptance >30s":by[s].acc,"Pick / Pack Delay":by[s].l-by[s].acc,_n:by[s].n}));
+  const T=summary.reduce((a,r)=>{a.o+=r.Orders;a.l+=r["Late Slams"];a.n+=r._n;a.u+=r.Units;a.acc+=r["Late Acceptance >30s"];return a;},{o:0,l:0,n:0,u:0,acc:0});
+  const MANL=manList().filter(m=>!by[m.s]), mO=MANL.reduce((a,m)=>a+m.o,0), mU=MANL.reduce((a,m)=>a+m.u,0);
+  MANL.forEach(m=>summary.push({Store:m.s,Orders:m.o,"Late Slams":"N/A","Lateslam %":"N/A",Units:m.u,"Most Lateslam Unit Orders":"N/A","Late Acceptance >30s":"N/A","Pick / Pack Delay":"N/A",_n:0,_man:1}));
+  summary.sort((a,b)=>a.Store.localeCompare(b.Store));
+  summary.push({Store:"Total",Orders:T.o+mO,"Late Slams":T.l,"Lateslam %":pct(T.l,T.o-T.n),Units:T.u+mU,"Most Lateslam Unit Orders":topUnits(allU),"Late Acceptance >30s":T.acc,"Pick / Pack Delay":T.l-T.acc,_n:T.n,_rawU:T.u});
+  let h='<thead><tr><th>Store</th><th>Orders</th><th>Late Slams</th><th>Lateslam %</th><th>Units</th><th>Most Lateslam Unit Orders</th><th>Late Acceptance &gt;30s</th><th>Pick / Pack Delay</th><th>Peak '+WL+' Drop</th><th>Late Slams in Peak</th></tr></thead><tbody>';
+  const W={}, pad=n=>String(n).padStart(2,"0");
+  rows.forEach((r,i)=>{ const d=parseDT(r.picklist_created_time); if(!d) return; const s=storeOf(r);
+    const b=new Date(d); b.setSeconds(0,0); const mm=Math.floor((b.getHours()*60+b.getMinutes())/DROP_MIN)*DROP_MIN; b.setHours(Math.floor(mm/60),mm%60,0,0);
+    const k=s+"|"+b.getTime(); const w=W[k]=W[k]||{s,b,o:0,l:0,u:0,ids:[],lsIds:[]}; w.o++; w.u+=unitsOf(r); const oid=String(r.order_id||"").trim(); w.ids.push(oid); if(out[i].probable_lateslam==="Yes") w.lsIds.push(oid); if(out[i].probable_lateslam==="Yes") w.l++; });
+  const wl=Object.values(W); const peak={};
+  wl.forEach(w=>{ if(!peak[w.s]||w.o>peak[w.s].o) peak[w.s]=w; });
+  const lab=b=>{ const e=new Date(b.getTime()+DROP_MIN*60000); return b.toLocaleDateString("en-GB",{day:"2-digit",month:"short"})+" "+pad(b.getHours())+":"+pad(b.getMinutes())+"–"+pad(e.getHours())+":"+pad(e.getMinutes()); };
+  dropRows=wl.filter(w=>w.l>0).sort((x,y)=>x.s.localeCompare(y.s)||x.b-y.b).map(w=>({Store:w.s,[WL+" Window"]:lab(w.b),"Orders Dropped":w.o,"Units Dropped":w.u,"Late Slams":w.l,"Lateslam %":pct(w.l,w.o),"Late Slam Order IDs":w.lsIds.join(", "),"All Order IDs":w.ids.join(", ")}));
+  summary.forEach(r=>{ const p=peak[r.Store]; if(p){ r["Peak "+WL+" Drop"]=p.o+" orders · "+p.u+" units @ "+lab(p.b).slice(7); r["Late Slams in Peak"]=p.l; } });
+  let dh='<thead><tr><th>Store</th><th>'+WL+' Window</th><th>Orders Dropped</th><th>Units Dropped</th><th>Late Slams</th><th>Lateslam %</th></tr></thead><tbody>';
+  let cur=null; dropRows.forEach(r=>{ if(r.Store!==cur){ cur=r.Store; const st=dropRows.filter(x=>x.Store===cur);
+      dh+='<tr style="background:#eef2f7;"><td colspan="6" style="text-align:left;font-weight:900;font-size:13px;">'+esc(cur)+' · '+st.length+' windows · <span class="lsv">'+st.reduce((a,x)=>a+x["Late Slams"],0)+'</span> late slams</td></tr>'; }
+    dh+='<tr><td>'+esc(r.Store)+'</td><td>'+r[WL+" Window"]+'</td><td>'+r["Orders Dropped"]+'</td><td>'+r["Units Dropped"]+'</td><td class="lsv" style="color:#c0392b;font-weight:800">'+r["Late Slams"]+'</td><td class="lsv">'+r["Lateslam %"]+'%</td></tr>'; });
+  if(!dropRows.length) dh+='<tr><td colspan="6">No late slams</td></tr>';
+  $("ptDropTable").innerHTML=dh+'</tbody>';
+  summary.forEach((r,i)=>{ const last=i===summary.length-1; h+='<tr'+(last?' style="font-weight:800"':'')+'><td>'+esc(r.Store)+'</td><td>'+r.Orders+'</td><td class="lsv" style="color:#c0392b;font-weight:800">'+r["Late Slams"]+'</td><td class="lsv">'+(r._man?'N/A':r["Lateslam %"]+'%')+'</td><td>'+r.Units+'</td><td>'+(r["Most Lateslam Unit Orders"]||'–')+'</td><td class="lsv">'+r["Late Acceptance >30s"]+'</td><td class="lsv">'+r["Pick / Pack Delay"]+'</td><td>'+(r["Peak "+WL+" Drop"]||'–')+'</td><td class="lsv">'+(r._man?'N/A':(r["Late Slams in Peak"]??''))+'</td></tr>'; });
+  $("ptStoreTable").innerHTML=h+'</tbody>';
+  const secS={}; rows.forEach(r=>{ const v=num(r.assignment_to_stage_time_secs)||0; [storeOf(r),"Total"].forEach(s=>{ secS[s]=(secS[s]||0)+v; }); });
+  // satellite stores (e.g. QDG5_SS) roll units + seconds into their parent store's throughput
+  const baseOf=s=>String(s).replace(/[_\s-]*SS$/i,""), names=new Set(summary.map(r=>r.Store));
+  const isSat=s=>s!=="Total"&&baseOf(s)!==s&&names.has(baseOf(s));
+  const tU={}, tS={}; summary.forEach(r=>{ const k=isSat(r.Store)?baseOf(r.Store):r.Store; tU[k]=(tU[k]||0)+(r._man?0:(r._rawU??r.Units)); tS[k]=(tS[k]||0)+(secS[r.Store]||0); });
+  quickRows=summary.map(r=>{ const sat=isSat(r.Store), hrs=(tS[r.Store]||0)/3600;
+    return {Store:r.Store,Orders:r.Orders,Units:r.Units,UPO:r.Orders?+(r.Units/r.Orders).toFixed(2):0,"Late Slams":r["Late Slams"],"LS %":r["Lateslam %"],"Throughput (units/hr)":r._man?"N/A":sat?"incl. in "+baseOf(r.Store):hrs>0?Math.round(tU[r.Store]/hrs):0}; });
+  const qc='padding:10px 22px;text-align:center;font-size:17px;white-space:nowrap;', qth='padding:10px 22px;text-align:center;font-size:13px;white-space:nowrap;';
+  let qh='<thead><tr>'+['Store','Orders','Units','UPO','Late Slams','LS %','Throughput (units/hr)'].map((h,i)=>'<th style="'+qth+(i?'':'text-align:left;')+'">'+h+'</th>').join('')+'</tr></thead><tbody>';
+  quickRows.forEach((r,i)=>{ const last=i===quickRows.length-1; qh+='<tr'+(last?' style="font-weight:800;background:#eef2f7"':'')+'><td style="'+qc+'text-align:left;font-weight:800;">'+esc(r.Store)+'</td><td style="'+qc+'">'+r.Orders.toLocaleString()+'</td><td style="'+qc+'">'+r.Units.toLocaleString()+'</td><td style="'+qc+'">'+r.UPO.toFixed(2)+'</td><td class="lsv" style="'+qc+'color:#c0392b;font-weight:800">'+r["Late Slams"].toLocaleString()+'</td><td class="lsv" style="'+qc+'">'+(r["LS %"]==="N/A"?"N/A":r["LS %"]+'%')+'</td>'+(typeof r["Throughput (units/hr)"]==="string"?'<td style="'+qc+'font-size:12px;color:#9aa5b1;">'+esc(r["Throughput (units/hr)"])+'</td>':'<td style="'+qc+'font-weight:800;color:'+tpCol(r["Throughput (units/hr)"])+'">'+(r["Throughput (units/hr)"]||'–').toLocaleString()+'</td>')+'</tr>'; });
+  $("ptQuickTable").innerHTML=qh+'</tbody>';
+  summary.forEach(r=>{ delete r._n; delete r._man; delete r._rawU; });
+  $("ptKpis").innerHTML=[{l:"Orders checked",v:T.o.toLocaleString()},{l:"Probable late slams",v:T.l.toLocaleString(),c:"alert",b:1},
+    {l:"Lateslam %",v:pct(T.l,T.o-T.n)+"%",b:1},{l:"Late acceptance >30s",v:T.acc.toLocaleString(),c:"warn",b:1},{l:"Stores",v:summary.length-1}]
+    .concat(T.n?[{l:"No promise (store not in table)",v:T.n,c:"warn"}]:[])
+    .map(k=>'<div class="kpi '+(k.c||'')+'"><div class="v'+(k.b?' lsv':'')+'">'+k.v+'</div><div class="l">'+k.l+'</div></div>').join('');
+  $("ptExport").disabled=false; $("ptView").disabled=false; applyView();
+}
+const inp=$("pf"), zone=$("pz");
+const load=files=>{ files=[...files]; if(!files.length) return; $("ps").textContent="reading…"; const all=[], modes=[]; let done=0;
+  files.forEach(file=>readFile(file,rows=>{ let pc=0;
+    rows.forEach(r=>{ r.__hasP=(num(r.promise_utr)||0)>0; if(r.__hasP) pc++; r.__file=file.name; all.push(r); });
+    modes.push(file.name+" — "+pc.toLocaleString()+" of "+rows.length.toLocaleString()+" orders have promise_utr in file (used as-is) · "+(rows.length-pc).toLocaleString()+" without → fixed promise table");
+    if(++done===files.length){ zone.classList.add("loaded");
+      $("ps").textContent="✓ "+files.length+" file"+(files.length>1?"s":"")+" · "+all.length.toLocaleString()+" rows";
+      $("ptMode").innerHTML=modes.map(esc).join("<br>"); run(all); } })); };
+inp.addEventListener("change",()=>load(inp.files));
+$("ptView").addEventListener("click",()=>{ quickMode=!quickMode; applyView(); });
+$("ptBlur").addEventListener("click",()=>{ const on=document.body.classList.toggle("ls-blur"); const b=$("ptBlur"); b.textContent=on?"👁 Show Lateslam":"🙈 Blur Lateslam"; b.setAttribute("aria-pressed",on); });
+zone.addEventListener("dragover",e=>e.preventDefault());
+zone.addEventListener("drop",e=>{e.preventDefault(); load(e.dataTransfer.files);});
+$("ptExport").addEventListener("click",()=>{ const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(quickRows),"Quick View");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(summary),"Store Summary");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out),"Order Detail");
+  if(dropRows.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(dropRows),winLbl()+" Drops");
+  const TBx=Object.assign({},PROMISE,PMODE==="upd"?PROMISE_UPD:{}); const ref=[]; Object.keys(TBx).forEach(s=>Object.keys(TBx[s]).forEach(u=>ref.push({Store:s,Units:+u,"promise_utr (sec)":TBx[s][u],Mode:PMODE==="upd"&&PROMISE_UPD[s]?"Updated":"Standard"})));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ref),"Promise Table");
+  XLSX.writeFile(wb,"Probable_Lateslam_"+new Date().toISOString().slice(0,10)+".xlsx"); toast("Excel downloaded"); });
+function manList(){ try{ return JSON.parse(localStorage.getItem("plc_manual")||"[]")||[]; }catch(e){ return []; } }
+function manSave(l){ try{ localStorage.setItem("plc_manual",JSON.stringify(l)); }catch(e){} manPaint(); if(lastRows){ run(lastRows); applyView&&applyView(); } }
+function manPaint(){ $("ptManList").innerHTML=manList().map(m=>'<span style="display:inline-flex;align-items:center;gap:8px;background:#eef2f7;border-radius:20px;padding:5px 6px 5px 12px;font-size:12px;font-weight:700;">'+esc(m.s)+' · '+m.o.toLocaleString()+' orders · '+m.u.toLocaleString()+' units<button type="button" data-rm="'+esc(m.s)+'" style="border:none;background:#d7dee6;width:20px;height:20px;border-radius:50%;cursor:pointer;font-weight:800;">×</button></span>').join(""); }
+$("ptManAdd").addEventListener("click",()=>{ const s=$("ptManS").value.trim().toUpperCase(), o=parseFloat($("ptManO").value), u=parseFloat($("ptManU").value);
+  if(!s){ $("ptManS").focus(); return; } if(!isFinite(o)&&!isFinite(u)){ $("ptManO").focus(); return; }
+  const l=manList().filter(m=>m.s!==s); l.push({s,o:isFinite(o)?o:0,u:isFinite(u)?u:0}); $("ptManS").value=$("ptManO").value=$("ptManU").value=""; manSave(l); });
+$("ptManList").addEventListener("click",e=>{ const s=e.target.getAttribute("data-rm"); if(s) manSave(manList().filter(m=>m.s!==s)); });
+manPaint();
+$("ptPMode").value=PMODE;
+$("ptPMode").addEventListener("change",e=>{ PMODE=e.target.value; try{localStorage.setItem("plc_pmode",PMODE);}catch(_){} renderRef(); if(lastRows){ run(lastRows); applyView&&applyView(); } toast(PMODE==="upd"?"Using updated promise for QHA5 & QDH5":"Using standard promise"); });
+$("ptDropWin").addEventListener("change",e=>{ DROP_MIN=+e.target.value; if(lastRows){ run(lastRows); applyView&&applyView(); } });
+</script>
+</body>
+</html>
