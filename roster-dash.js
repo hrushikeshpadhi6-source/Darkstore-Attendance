@@ -221,7 +221,64 @@ function buildSheet(c,headFn,name,title){
   [['Total P','P'],['Total A','A'],['Total SL','SL'],['Total WO','WO']].forEach(([l,x])=>rows.push(['','','','',l,'','','','','',...tot(x)]));
   rows.push(['','','','','Absenteeism %','','','','','',...dates.map(d=>{const g=x=>list.filter(p=>(p.cells[d]||'').replace('*','')===x).length,P=g('P'),A=g('A')+g('SL');return (P+A)?(A/(P+A)*100).toFixed(1):'';})]);
   rows.push([]);rows.push(['','','','','Key: P Present · A Absent · SL Sick Leave · WO Week Off · - not confirmed · N/A not joined yet / removed · blank = not on roster']);
-  downloadCsv(name,rows);
+  writeAttendanceXlsx(list,dates,title,name).catch(err=>{console.warn('xlsx',err);downloadCsv(name,rows);toast('Excel could not be made, downloaded CSV instead',true);});
+}
+// ─── Attendance sheet as a formatted Excel file: one header row with dates, frozen, with filter; status colours ───
+let EXCELJS_P=null;
+function loadExcelJs(){
+  if(window.ExcelJS) return Promise.resolve();
+  if(EXCELJS_P) return EXCELJS_P;
+  const one=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=()=>window.ExcelJS?res():rej(new Error('ExcelJS missing'));s.onerror=()=>{s.remove();rej(new Error('load '+src));};document.head.appendChild(s);});
+  EXCELJS_P=one('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js').catch(()=>one('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js')).catch(e=>{EXCELJS_P=null;throw e;});
+  return EXCELJS_P;
+}
+const XL_ST={P:['E5F4EC','0B6B3D',false],A:['FBD5DB','C00000',true],SL:['EFEAFB','5B3BB0',true],WO:['FDF1DC','9A5B00',false],'-':['F2F2F2','808080',false],'N/A':['F2F2F2','A0A0A0',false]};
+async function writeAttendanceXlsx(list,dates,title,name){
+  toast('Preparing Excel…');
+  await loadExcelJs();
+  const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('Attendance',{views:[{state:'frozen',xSplit:5,ySplit:2}]});
+  const fixed=['#','Emp ID','Store Code','Site','Name','Designation','Agency','Shift','Joining Date','Status'],sum=['Working Days (P)','Absent (A)','Sick Leave (SL)','Week Off (WO)','Pending','Absent %'];
+  const nF=fixed.length,nD=dates.length,nC=nF+nD+sum.length;
+  const dh=d=>{const x=dOf(d);return (title?String(x.getDate()):pad(x.getDate())+'-'+MON3[x.getMonth()])+'\n'+dayName(d).slice(0,3);};
+  const st=document.getElementById('mgSite').value;
+  const thin={style:'thin',color:{argb:'FFD0D7E2'}},box={top:thin,left:thin,bottom:thin,right:thin};
+  const fill=c=>({type:'pattern',pattern:'solid',fgColor:{argb:'FF'+c}});
+  // row 1: title
+  ws.mergeCells(1,1,1,Math.min(nC,nF+Math.max(nD,1)));
+  const t=ws.getCell(1,1);t.value='Attendance '+(title||(fmtDate(dates[0])+(dates.length>1?' to '+fmtDate(dates[dates.length-1]):'')))+' · '+(st?storeLabel(st):'All stores');
+  t.font={bold:true,size:14,color:{argb:'FFFFFFFF'}};t.fill=fill('1D3A6B');t.alignment={vertical:'middle'};ws.getRow(1).height=26;
+  // row 2: header (dates + day)
+  const hr=ws.getRow(2);hr.values=[...fixed,...dates.map(dh),...sum];hr.height=32;
+  hr.eachCell((c,i)=>{c.font={bold:true,color:{argb:'FFFFFFFF'},size:10};c.fill=fill('1D3A6B');c.alignment={horizontal:'center',vertical:'middle',wrapText:true};c.border=box;});
+  // data rows
+  list.forEach((p,i)=>{
+    const v=dates.map(d=>p.cells[d]||''),n=x=>v.filter(y=>y===x).length,P=n('P'),A=n('A'),S=n('SL'),W=n('WO'),pend=n('-');
+    const r=ws.addRow([i+1,empIdOf(p.store,p.name,p.vendor),p.store,p.site,p.name,p.designation,p.vendor,SHIFT_LBL[p.shift]||p.shift,p.join?fmtDate(p.join,{day:'2-digit',month:'short',year:'numeric'}):'',p.status||'',...v,P,A,S,W,pend,(P+A+S)?+((A+S)/(P+A+S)*100).toFixed(1):'']);
+    r.eachCell({includeEmpty:true},(c,ci)=>{c.border=box;c.font={size:10};
+      if(ci>nF&&ci<=nF+nD){c.alignment={horizontal:'center'};const s=XL_ST[c.value];if(s){c.fill=fill(s[0]);c.font={size:10,bold:s[2],color:{argb:'FF'+s[1]}};}}
+      else if(ci>nF+nD){c.alignment={horizontal:'center'};if(ci===nF+nD+2&&A)c.font={size:10,bold:true,color:{argb:'FFC00000'}};if(ci===nF+nD+6&&c.value!==''&&c.value>=10)c.font={size:10,bold:true,color:{argb:'FFC00000'}};}
+      if(ci===5)c.font={size:10,bold:true};});
+    if(String(p.status).startsWith('Removed'))r.getCell(10).font={size:10,color:{argb:'FFC00000'}};
+  });
+  const last=2+list.length;
+  ws.autoFilter={from:{row:2,column:1},to:{row:Math.max(last,2),column:nC}};
+  // per-date totals below (outside the filter)
+  ws.addRow([]);
+  const cnt=(d,x)=>list.filter(p=>p.cells[d]===x).length;
+  [['Total P','P','0B6B3D'],['Total A','A','C00000'],['Total SL','SL','5B3BB0'],['Total WO','WO','9A5B00']].forEach(([l,x,col])=>{
+    const r=ws.addRow(['','','','',l,'','','','','',...dates.map(d=>cnt(d,x))]);
+    r.eachCell((c,ci)=>{c.font={bold:true,size:10,color:{argb:'FF'+col}};if(ci>nF)c.alignment={horizontal:'center'};});});
+  const ar=ws.addRow(['','','','','Absent %','','','','','',...dates.map(d=>{const P=cnt(d,'P'),A=cnt(d,'A')+cnt(d,'SL');return (P+A)?+(A/(P+A)*100).toFixed(1):'';})]);
+  ar.eachCell((c,ci)=>{c.font={bold:true,size:10,color:{argb:ci>nF&&c.value>=10?'FFC00000':'FF15202E'}};if(ci>nF)c.alignment={horizontal:'center'};});
+  ws.addRow([]);ws.addRow(['','','','','Key: P Present, A Absent, SL Sick Leave, WO Week Off, - not confirmed, N/A not joined yet or removed, blank not on roster']).getCell(5).font={italic:true,size:9,color:{argb:'FF7D8A9C'}};
+  // widths
+  [5,12,10,14,26,16,13,9,13,16].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  for(let i=0;i<nD;i++)ws.getColumn(nF+1+i).width=title?5.5:8;
+  sum.forEach((s,i)=>ws.getColumn(nF+nD+1+i).width=11);
+  const buf=await wb.xlsx.writeBuffer();
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download=name.replace(/\.csv$/i,'')+'.xlsx';
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+  toast('Excel downloaded · '+list.length+' people');
 }
 function exportDetail(){
   const c=MG.last,rows=[['Date','Day','Store Code','Site','Emp ID','Name','Designation','Role','Agency','Shift','Timing','Status','Week Off Changed','Day Confirmed']];
