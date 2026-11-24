@@ -218,18 +218,24 @@ function addPersonForm(){
     '<button class="btn pri" onclick="addPerson()">Add</button><button class="btn" onclick="document.getElementById(\'addForm\').innerHTML=\'\'">Cancel</button></div>';
   document.getElementById('apName').focus();
 }
-function addPerson(){
+async function addPerson(){
   const g=id=>document.getElementById(id).value.trim();
   const name=g('apName').replace(/\s+/g,' ');if(!name){toast('Enter a name',true);return;}
-  const join=g('apJoin')||todayIso(),ds=viewDates().filter(d=>editable(d)&&d>=join);
-  if(!ds.length){toast('No editable roster dates in view from '+fmtShort(join)+' — upload a roster first',true);return;}
+  const join=g('apJoin')||todayIso(),store=SESSION.store,vd=viewDates();
+  if(join>vd[6]){toast('Joining date is after the days shown',true);return;}
+  // past joining date: needs the admin password, then fills every saved roster day from the joining date
+  if(join<todayIso()&&!ST.unlocked.rosterPast){askPw('Adding someone from a past joining date needs the admin password.',()=>{ST.unlocked.rosterPast=true;addPerson();});return;}
+  if(join<vd[0]){toast('Loading roster from '+fmtShort(join)+'…');try{await loadStoreDocs(store,'rost__',join,addDays(vd[0],-1),RD.rosters);}catch(e){}}
+  let lastD=vd[6];Object.values(RD.rosters).forEach(r=>{if(r&&r.store===store&&r.date>lastD)lastD=r.date;});
+  const all=rangeDates(join,lastD),ds=all.filter(d=>editable(d)),noRoster=all.filter(d=>!rowsFor(d)).length;
+  if(!ds.length){toast('No saved roster from '+fmtShort(join)+' — upload a roster first',true);return;}
   const start=g('apStart'),end=g('apEnd'),wo=g('apWo');
   const person={name,designation:g('apDesig'),vendor:g('apVendor'),defShift:g('apShift'),weekOff:wo,start,end,joinDate:join};
   let added=0;
   ds.forEach(d=>{const r=ensureEdit(d);if(r.some(y=>nk(y.name)===nk(name)))return;
     r.push(Object.assign({},person,{shift:person.defShift,off:wo===dayName(d),time:wo===dayName(d)?'':(start&&end?start+' - '+end:'')}));added++;});
   if(!added){toast(name+' is already on these dates',true);return;}
-  renderRoster();toast(name+' added from '+fmtShort(join)+' to '+added+' day(s) — earlier days show N/A · press Save changes');
+  renderRoster();toast(name+' added to '+added+' day(s) from '+fmtShort(join)+(noRoster?' · '+noRoster+' day(s) without a roster skipped':'')+' · press Save changes');
 }
 // ─── change week off: move a person's WO from one date to another (both in view) ───
 function woPeople(){const m=new Map();viewDates().forEach(d=>(rowsFor(d)||[]).forEach(x=>{if(!m.has(nk(x.name)))m.set(nk(x.name),x.name);}));return [...m.entries()].sort((a,b)=>a[1].localeCompare(b[1]));}

@@ -71,7 +71,10 @@ function loadMarks(){const d=getDay(SESSION.store,ST.date);ST.marks=Object.assig
 
 // ─── TODAY: mark exceptions, confirm each shift separately ───
 function isLocked(){return ST.date<todayIso()&&!ST.unlocked[ST.date];}
-function setDate(v){if(!v)return;if(v>todayIso()){toast('Cannot mark a future date',true);v=todayIso();}ST.date=v;loadMarks();renderToday();}
+async function setDate(v){if(!v)return;if(v>todayIso()){toast('Cannot mark a future date',true);v=todayIso();}
+  // older than the 5 weeks loaded at login: load that day's roster and attendance first, so nothing saved is overwritten
+  if(v<addDays(todayIso(),-35)&&!getDay(SESSION.store,v)){document.getElementById('stToday').innerHTML='<div class="loading"><span class="spin"></span></div>';try{await loadStoreDocs(SESSION.store,'rost__',v,v,RD.rosters);await loadStoreDocs(SESSION.store,'rday__',v,v,RD.days);}catch(e){}}
+  ST.date=v;loadMarks();renderToday();}
 function shiftOfKey(k){const r=getRoster(SESSION.store,ST.date),x=r&&r.rows.find(y=>nk(y.name)===k);return x?x.shift:null;}
 const hm=iso=>new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
 function renderToday(){
