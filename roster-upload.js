@@ -11,11 +11,12 @@ function renderRoster(){
   const store=SESSION.store,el=document.getElementById('stRoster');
   document.getElementById('stFoot').hidden=true;
   if(!ST.rFrom)ST.rFrom=todayIso();
-  const dates=viewDates(),missing=dates.filter(d=>!getRoster(store,d));
+  const dates=viewDates(),missing=dates.filter(d=>!getRoster(store,d)),short=dates.filter(d=>rosterShort(store,d));
   let h='<div class="row mb"><label class="fld">Show 7 days from<input class="inp" type="date" value="'+ST.rFrom+'" onchange="if(this.value){ST.rFrom=this.value;ST.edit=null;renderRoster()}"/></label>'+
-    '<button class="btn" onclick="ST.rFrom=addDays(ST.rFrom,-7);ST.edit=null;renderRoster()">‹ Prev</button><button class="btn" onclick="ST.rFrom=addDays(ST.rFrom,7);ST.edit=null;renderRoster()">Next ›</button>'+(missing.length?'<button class="btn pri" onclick="continueRoster()" title="Copy the previous week\'s roster to the days without one">Continue same roster</button>':'')+'</div>';
+    '<button class="btn" onclick="ST.rFrom=addDays(ST.rFrom,-7);ST.edit=null;renderRoster()">‹ Prev</button><button class="btn" onclick="ST.rFrom=addDays(ST.rFrom,7);ST.edit=null;renderRoster()">Next ›</button>'+(missing.length||short.length?'<button class="btn pri" onclick="continueRoster()" title="Copy the same roster to days without one, and add the missing people to days with only a few people">Continue same roster</button>':'')+'</div>';
   h+=missing.length?'<div class="note '+(missing.includes(todayIso())?'bad':'warn')+'"><b>No roster for '+missing.length+' of 7 days:</b> '+missing.map(fmtShort).join(', ')+'</div>'
     :'<div class="note ok"><b>Roster uploaded for all 7 days.</b></div>';
+  if(short.length) h+='<div class="note warn"><b>Only a few people on '+short.length+' day(s):</b> '+short.map(d=>fmtShort(d)+' ('+getRoster(store,d).rows.length+')').join(', ')+'. Press Continue same roster to add the missing people.</div>';
   h+='<div class="card"><div class="card-h"><div><h3>Upload roster</h3><div class="sub">CSV or Excel · one row per person · one column per date</div></div><button class="btn sm" onclick="downloadTemplate()">Download template ('+fmtShort(dates[0])+' – '+fmtShort(dates[6])+')</button></div><div class="card-b">'+
     '<label class="drop" ondragover="event.preventDefault();this.classList.add(\'over\')" ondragleave="this.classList.remove(\'over\')" ondrop="event.preventDefault();this.classList.remove(\'over\');onRosterFile(event.dataTransfer.files[0])">'+
     '<input type="file" accept=".csv,.xlsx,.xls" hidden onchange="onRosterFile(this.files[0]);this.value=\'\'"/>Drop the roster file here or <b style="color:var(--navy)">choose file</b>'+
@@ -26,8 +27,14 @@ function renderRoster(){
 
 // ─── template ───
 // ─── continue with the same roster: copy the previous week (same weekday) into days without a roster ───
+// A saved day with under half the people of the fullest roster within 2 weeks (e.g. an upload where most date cells were blank)
+function rosterShort(store,d){
+  const r=getRoster(store,d);if(!r)return false;
+  let mx=0;Object.values(RD.rosters).forEach(x=>{if(x&&x.store===store&&x.rows&&Math.abs(dOf(x.date)-dOf(d))<=14*864e5)mx=Math.max(mx,x.rows.length);});
+  return mx>=4&&r.rows.length<mx*0.5;
+}
 function continueRoster(){
-  const store=SESSION.store,all=viewDates().filter(d=>!getRoster(store,d)&&!(ST.edit&&ST.edit[d])),ds=all.filter(d=>!dateLocked(d));
+  const store=SESSION.store,all=viewDates().filter(d=>(!getRoster(store,d)||rosterShort(store,d))&&!(ST.edit&&ST.edit[d])),ds=all.filter(d=>!dateLocked(d));
   if(!all.length){toast('Roster already saved for all 7 days');return;}
   if(ds.length<all.length){askPw('Some of these days are in the past. Enter the admin password to copy the roster.',()=>{ST.unlocked.rosterPast=true;continueRoster();});return;}
   // who was not working on day d: removed before d, or joined after d
@@ -35,19 +42,25 @@ function continueRoster(){
   const out=(x,d)=>{const e=em.get(nk(x.name));if(!e)return false;
     if(e.status==='Removed'&&(!e.removedAt||e.removedAt.slice(0,10)<d||d>=todayIso()))return true;
     return !!(e.joinDate&&e.joinDate>d);};
-  let n=0,fwd=0,near=0;
+  let n=0,fwd=0,near=0,added=0;
+  // a source day must be a full roster (not one of the short days)
+  const full=d=>{const r=getRoster(store,d);return r&&r.rows.length&&!rosterShort(store,d)?r:null;};
   ds.forEach(d=>{
     // 1) same weekday in an earlier week  2) same weekday in a later week  3) the nearest saved roster day
     let src=null,how='back';
-    for(let w=1;w<=5&&!src;w++)src=getRoster(store,addDays(d,-7*w));
-    if(!src){how='fwd';for(let w=1;w<=5&&!src;w++)src=getRoster(store,addDays(d,7*w));}
-    if(!src){how='near';for(let i=1;i<=35&&!src;i++)src=getRoster(store,addDays(d,i))||getRoster(store,addDays(d,-i));}
+    for(let w=1;w<=5&&!src;w++)src=full(addDays(d,-7*w));
+    if(!src){how='fwd';for(let w=1;w<=5&&!src;w++)src=full(addDays(d,7*w));}
+    if(!src){how='near';for(let i=1;i<=35&&!src;i++)src=full(addDays(d,i))||full(addDays(d,-i));}
     if(!src)return;
     let rows=JSON.parse(JSON.stringify(src.rows)).filter(x=>!out(x,d));
     if(how==='near') rows=rows.map(x=>{const off=!!x.weekOff&&x.weekOff===dayName(d);return Object.assign(x,{shift:x.defShift||x.shift,off,time:off?'':(x.start&&x.end?x.start+' - '+x.end:'')});});
+    const cur=getRoster(store,d);
+    if(cur){ // short day: keep who is there, add the missing people
+      const have=new Set(cur.rows.map(x=>nk(x.name))),extra=rows.filter(x=>!have.has(nk(x.name)));
+      if(!extra.length)return;rows=JSON.parse(JSON.stringify(cur.rows)).concat(extra);added+=extra.length;}
     ST.edit=ST.edit||{};ST.edit[d]=rows;n++;if(how==='fwd')fwd++;if(how==='near')near++;});
   if(!n){toast('No saved roster found to copy — upload one',true);return;}
-  renderRoster();toast('Roster copied to '+n+' day(s)'+(fwd?' · '+fwd+' from the next week':'')+(near?' · '+near+' from the nearest day':'')+' — check and press Save changes');
+  renderRoster();toast('Roster filled for '+n+' day(s)'+(added?' · '+added+' missing people added':'')+(fwd?' · '+fwd+' from the next week':'')+(near?' · '+near+' from the nearest day':'')+' — check and press Save changes');
 }
 function downloadTemplate(){
   const store=SESSION.store,dates=viewDates();
