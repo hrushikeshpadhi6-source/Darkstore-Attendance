@@ -41,7 +41,7 @@ function continueRoster(){
   const em=new Map(empsOf(store,true).map(e=>[nk(e.name),e]));
   const out=(x,d)=>{const e=em.get(nk(x.name));if(!e)return false;
     if(e.status==='Removed'&&(!e.removedAt||e.removedAt.slice(0,10)<d||d>=todayIso()))return true;
-    return !!(e.joinDate&&e.joinDate>d);};
+    return e.source==='manual'&&!!(e.joinDate&&e.joinDate>d);};// joining date set by a roster upload is just the upload date, so it does not block
   let n=0,fwd=0,near=0,added=0;
   // a source day must be a full roster (not one of the short days)
   const full=d=>{const r=getRoster(store,d);return r&&r.rows.length&&!rosterShort(store,d)?r:null;};
@@ -52,7 +52,7 @@ function continueRoster(){
     if(!src){how='fwd';for(let w=1;w<=5&&!src;w++)src=full(addDays(d,7*w));}
     if(!src){how='near';for(let i=1;i<=35&&!src;i++)src=full(addDays(d,i))||full(addDays(d,-i));}
     if(!src)return;
-    let rows=JSON.parse(JSON.stringify(src.rows)).filter(x=>!out(x,d));
+    let rows=JSON.parse(JSON.stringify(src.rows)).filter(x=>!out(x,d)).map(x=>Object.assign(x,{joinDate:d<(x.joinDate||'9')?d:x.joinDate}));
     if(how==='near') rows=rows.map(x=>{const off=!!x.weekOff&&x.weekOff===dayName(d);return Object.assign(x,{shift:x.defShift||x.shift,off,time:off?'':(x.start&&x.end?x.start+' - '+x.end:'')});});
     const cur=getRoster(store,d);
     if(cur){ // short day: keep who is there, add the missing people
@@ -318,7 +318,7 @@ function shApply(){
 }
 async function saveEdits(){
   try{
-    const ppl=new Map();Object.values(ST.edit).flat().forEach(x=>ppl.set(nk(x.name),x));
+    const ppl=new Map();Object.values(ST.edit).flat().forEach(x=>{const k=nk(x.name),p=ppl.get(k),j=[p&&p.joinDate,x.joinDate].filter(Boolean).sort()[0];ppl.set(k,j?Object.assign({},x,{joinDate:j}):x);}); // earliest joining date seen wins
     const em=mergeEmps(SESSION.store,[...ppl.values()],SESSION.store);
     await Promise.all([saveRosterDates(SESSION.store,ST.edit,SESSION.store),saveEmps(SESSION.store,em.list)]);
     await syncRosterRemovals([SESSION.store]);
