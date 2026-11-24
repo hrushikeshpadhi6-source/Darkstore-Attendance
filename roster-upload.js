@@ -29,13 +29,25 @@ function renderRoster(){
 function continueRoster(){
   const store=SESSION.store,all=viewDates().filter(d=>!getRoster(store,d)&&!(ST.edit&&ST.edit[d])),ds=all.filter(d=>!dateLocked(d));
   if(!all.length){toast('Roster already saved for all 7 days');return;}
-  if(!ds.length){askPw('These days are in the past. Enter the admin password to copy the roster.',()=>{ST.unlocked.rosterPast=true;continueRoster();});return;}
-  const gone=new Set(empsOf(store,true).filter(e=>e.status==='Removed').map(e=>nk(e.name)));
-  let n=0;
-  ds.forEach(d=>{let src=null;for(let w=1;w<=5&&!src;w++)src=getRoster(store,addDays(d,-7*w));if(!src)return;
-    ST.edit=ST.edit||{};ST.edit[d]=JSON.parse(JSON.stringify(src.rows)).filter(x=>!gone.has(nk(x.name)));n++;});
-  if(!n){toast('No earlier roster found to copy — upload one',true);return;}
-  renderRoster();toast('Previous week copied to '+n+' day(s) — check and press Save changes');
+  if(ds.length<all.length){askPw('Some of these days are in the past. Enter the admin password to copy the roster.',()=>{ST.unlocked.rosterPast=true;continueRoster();});return;}
+  // who was not working on day d: removed before d, or joined after d
+  const em=new Map(empsOf(store,true).map(e=>[nk(e.name),e]));
+  const out=(x,d)=>{const e=em.get(nk(x.name));if(!e)return false;
+    if(e.status==='Removed'&&(!e.removedAt||e.removedAt.slice(0,10)<d||d>=todayIso()))return true;
+    return !!(e.joinDate&&e.joinDate>d);};
+  let n=0,fwd=0,near=0;
+  ds.forEach(d=>{
+    // 1) same weekday in an earlier week  2) same weekday in a later week  3) the nearest saved roster day
+    let src=null,how='back';
+    for(let w=1;w<=5&&!src;w++)src=getRoster(store,addDays(d,-7*w));
+    if(!src){how='fwd';for(let w=1;w<=5&&!src;w++)src=getRoster(store,addDays(d,7*w));}
+    if(!src){how='near';for(let i=1;i<=35&&!src;i++)src=getRoster(store,addDays(d,i))||getRoster(store,addDays(d,-i));}
+    if(!src)return;
+    let rows=JSON.parse(JSON.stringify(src.rows)).filter(x=>!out(x,d));
+    if(how==='near') rows=rows.map(x=>{const off=!!x.weekOff&&x.weekOff===dayName(d);return Object.assign(x,{shift:x.defShift||x.shift,off,time:off?'':(x.start&&x.end?x.start+' - '+x.end:'')});});
+    ST.edit=ST.edit||{};ST.edit[d]=rows;n++;if(how==='fwd')fwd++;if(how==='near')near++;});
+  if(!n){toast('No saved roster found to copy — upload one',true);return;}
+  renderRoster();toast('Roster copied to '+n+' day(s)'+(fwd?' · '+fwd+' from the next week':'')+(near?' · '+near+' from the nearest day':'')+' — check and press Save changes');
 }
 function downloadTemplate(){
   const store=SESSION.store,dates=viewDates();
