@@ -1,10 +1,15 @@
 // ═══ Darkstore Roster Pro — overtime (OT) entry & export ═══
 const OT={rows:[],from:null,to:null,store:'',sel:new Set()};
-const otId=r=>sid(r.store)+'_'+r.date+'_'+sid(nk(r.name)).replace(/\s/g,'_');
+// OT is kept in 'meta' (the collection the Firestore rules allow), one doc per person per day: ot__{date}__{store}__{name}
+const otId=r=>'ot__'+r.date+'__'+sid(r.store)+'__'+sid(nk(r.name)).replace(/\s/g,'_');
+const otOld=id=>!String(id).startsWith('ot__'); // saved by the earlier version in the 'ot' collection
+const otRef=id=>db.collection(otOld(id)?'ot':'meta').doc(id);
 async function otLoad(){
   if(!db){OT.rows=[];return;}
-  const s=await tmo(db.collection('ot').where('date','>=',OT.from).where('date','<=',OT.to).get(),10000);
-  OT.rows=s?s.docs.map(d=>Object.assign({id:d.id},d.data())):[];
+  const m=new Map();
+  try{const s=await tmo(rangeQ('ot__',OT.from,OT.to).get(),10000);if(s)s.docs.forEach(d=>m.set(d.id,Object.assign({id:d.id},d.data())));}catch(e){console.warn('ot load',e);toast('Could not load OT: '+e.message,true);}
+  try{const s=await tmo(db.collection('ot').where('date','>=',OT.from).where('date','<=',OT.to).get(),6000);if(s)s.docs.forEach(d=>{const r=Object.assign({id:d.id},d.data());if(![...m.values()].some(x=>x.store===r.store&&x.date===r.date&&nk(x.name)===nk(r.name)))m.set(d.id,r);});}catch(e){} // old records, if any
+  OT.rows=[...m.values()];
 }
 async function otEnter(){
   const t=todayIso();
@@ -55,16 +60,16 @@ async function otSave(){
   if(!db){toast('Not connected to Firebase',true);return;}
   const why=(document.getElementById('otWhy').value||'').trim(),b=db.batch(),at=new Date().toISOString();
   const recs=otPeople().filter(p=>OT.sel.has(nk(p.name))).map(p=>({store:OT.store,site:siteOf(OT.store),date:OT.date,name:p.name,designation:p.designation,vendor:p.vendor,hours:hrs,reason:why,at}));
-  recs.forEach(r=>b.set(db.collection('ot').doc(otId(r)),r));
-  const ok=await tmo(b.commit().then(()=>true),10000);
-  if(!ok){toast('Save failed — check connection',true);return;}
-  recs.forEach(r=>{const id=otId(r);OT.rows=OT.rows.filter(x=>x.id!==id);if(r.date>=OT.from&&r.date<=OT.to)OT.rows.push(Object.assign({id},r));});
+  recs.forEach(r=>b.set(db.collection('meta').doc(otId(r)),r));
+  let ok;try{ok=await tmo(b.commit().then(()=>true),10000);}catch(e){toast('Save failed: '+e.message,true);return;}
+  if(!ok){toast('Network is slow, OT may still be saving. Check the records list in a moment',true);return;}
+  recs.forEach(r=>{const id=otId(r);OT.rows=OT.rows.filter(x=>x.id!==id&&!(x.store===r.store&&x.date===r.date&&nk(x.name)===nk(r.name)&&otOld(x.id)));if(r.date>=OT.from&&r.date<=OT.to)OT.rows.push(Object.assign({id},r));});
   OT.sel.clear();renderOt();toast(hrs+' h OT saved for '+recs.length+' associate(s) on '+fmtShort(OT.date));
 }
 async function otDel(id){
   const r=OT.rows.find(x=>x.id===id);if(!r||!confirm('Remove '+r.hours+' h OT for '+r.name+' on '+fmtShort(r.date)+'?'))return;
-  const ok=await tmo(db.collection('ot').doc(id).delete().then(()=>true),8000);
-  if(!ok){toast('Remove failed',true);return;}
+  let ok;try{ok=await tmo(otRef(id).delete().then(()=>true),8000);}catch(e){toast('Remove failed: '+e.message,true);return;}
+  if(!ok){toast('Remove failed, check connection',true);return;}
   OT.rows=OT.rows.filter(x=>x.id!==id);renderOt();toast('OT removed');
 }
 function otExport(sheet){
